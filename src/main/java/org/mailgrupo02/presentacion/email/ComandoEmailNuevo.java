@@ -36,10 +36,10 @@ public class ComandoEmailNuevo {
                     : Arrays.asList(parsed[1].replaceAll("\"", "").split(",\\s*"));
 
             // Despachar al controlador correspondiente
-            if (UsuarioControlador.canHandle(cmd))    return UsuarioControlador.handle(cmd, params);
+            if (UsuarioControlador.canHandle(cmd))    return UsuarioControlador.handle(cmd, params, emailRemitente);
             if (ProveedorControlador.canHandle(cmd))  return ProveedorControlador.handle(cmd, params);
             if (ProductoControlador.canHandle(cmd))   return ProductoControlador.handle(cmd, params);
-            if (VentaControlador.canHandle(cmd))      return VentaControlador.handle(cmd, params);
+            if (VentaControlador.canHandle(cmd))      return VentaControlador.handle(cmd, params, emailRemitente);
             if (CompraControlador.canHandle(cmd))     return CompraControlador.handle(cmd, params);
             if (PedidoControlador.canHandle(cmd))     return PedidoControlador.handle(cmd, params, emailRemitente);
             if (InventarioControlador.canHandle(cmd)) return InventarioControlador.handle(cmd, params);
@@ -65,7 +65,10 @@ public class ComandoEmailNuevo {
                     "<strong>No est&aacute;s registrado</strong><br>" +
                     "El correo <strong>" + emailRemitente + "</strong> no tiene cuenta en el sistema.<br><br>" +
                     "Para registrarte env&iacute;a:<br>" +
-                    "<code>CREATEUSUARIO[TuNombre," + emailRemitente + ",TuContrase&ntilde;a,CLIENTE,TuTel&eacute;fono,TuDirecci&oacute;n]</code>" +
+                    "<code style=\"font-family:'Courier New',monospace;background-color:#f1f5f9;color:#1d4ed8;" +
+                    "padding:4px 10px;border-radius:4px;font-size:13px;display:block;margin-top:8px;" +
+                    "word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;\">" +
+                    "CREATEUSUARIO[TuNombre," + emailRemitente + ",TuContrase&ntilde;a,CLIENTE,TuTel&eacute;fono,TuDirecci&oacute;n]</code>" +
                     "</div>";
                 return PlantillaBase.envolver("Mi Perfil", cuerpo);
             }

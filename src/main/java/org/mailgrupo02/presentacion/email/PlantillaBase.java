@@ -170,7 +170,9 @@ public class PlantillaBase {
                     val = row.substring(start, Math.min(end, row.length())).trim();
                 }
                 sb.append("<td style=\"padding:9px 12px;border-bottom:1px solid #f1f5f9;" +
-                          "color:#1e293b;white-space:nowrap;border-right:1px solid #f1f5f9;\">")
+                          "color:#1e293b;border-right:1px solid #f1f5f9;" +
+                          "word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;" +
+                          "max-width:220px;\">")
                   .append(badgeEstado(val))
                   .append("</td>");
             }

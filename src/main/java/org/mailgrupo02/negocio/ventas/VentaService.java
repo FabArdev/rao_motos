@@ -212,6 +212,36 @@ public class VentaService {
             + String.format("%.2f", total) + extraInfo;
     }
 
+    public String obtenerPorCliente(int clienteId) throws SQLException {
+        List<VentaM> ventas = VentaM.obtenerPorCliente(clienteId);
+        if (ventas.isEmpty()) return "No tienes ventas registradas.";
+        return mapear(ventas);
+    }
+
+    public VentaN leerVentaCliente(int ventaId, int clienteId) throws SQLException {
+        VentaM v = VentaM.leer(ventaId);
+        if (v.getClienteId() != clienteId)
+            throw new SQLException("La venta no pertenece a tu cuenta.");
+        VentaN n = new VentaN();
+        n.setId(v.getId());
+        n.setClienteId(v.getClienteId());
+        n.setFecha(v.getFecha() != null ? v.getFecha().toString() : "N/A");
+        n.setMontoTotal(v.getMontoTotal());
+        n.setTipoVenta(v.getTipoVenta());
+        n.setMetodoPago(v.getMetodoPago());
+        n.setEstado(v.getEstado());
+        DetalleVentaM detM = new DetalleVentaM();
+        n.setDetalles(detM.obtenerPorVenta(ventaId));
+        if ("CREDITO".equals(v.getTipoVenta())) {
+            CreditoM credito = CreditoM.obtenerPorVenta(ventaId);
+            if (credito != null) {
+                n.setCredito(credito);
+                n.setCuotas(new PagoCuotaM().obtenerPorCredito(credito.getId()));
+            }
+        }
+        return n;
+    }
+
     public String eliminarVenta(int id) throws SQLException {
         VentaValidator.validarEliminarVenta(id);
         return VentaM.eliminar(id);

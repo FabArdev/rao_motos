@@ -151,10 +151,13 @@ public class PedidoControlador {
     }
 
     static String msgNoRegistrado(String email) {
+        String codeStyle = "font-family:'Courier New',monospace;background-color:#f1f5f9;color:#1d4ed8;" +
+                           "padding:4px 10px;border-radius:4px;font-size:13px;display:block;margin:6px 0;" +
+                           "word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;";
         return "Tu correo <strong>" + email + "</strong> no est&aacute; registrado en el sistema.<br><br>" +
                "Para registrarte env&iacute;a este comando en el asunto:<br>" +
-               "<code>CREATEUSUARIO[TuNombre," + email + ",TuContrase&ntilde;a,CLIENTE,TuTel&eacute;fono,TuDirecci&oacute;n]</code><br><br>" +
+               "<code style=\"" + codeStyle + "\">CREATEUSUARIO[TuNombre," + email + ",TuContrase&ntilde;a,CLIENTE,TuTel&eacute;fono,TuDirecci&oacute;n]</code>" +
                "Ejemplo:<br>" +
-               "<code>CREATEUSUARIO[Juan Perez," + email + ",clave123,CLIENTE,70000000,Av. Principal 123]</code>";
+               "<code style=\"" + codeStyle + "\">CREATEUSUARIO[Juan Perez," + email + ",clave123,CLIENTE,70000000,Av. Principal 123]</code>";
     }
 }

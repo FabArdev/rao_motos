@@ -181,9 +181,11 @@ public class Main {
                 long pfTxId;
                 try {
                     monto = Double.parseDouble(parts[1]);
-                    pfTxId = Long.parseLong(parts[3]);
+                    // PagoFacil puede devolver el ID como "12345" o "12345.0"
+                    pfTxId = (long) Double.parseDouble(parts[3]);
                 } catch (NumberFormatException e) {
-                    System.err.println("[Reconciliacion] Error al parsear transaccion " + txId + ": " + e.getMessage());
+                    System.err.println("[Reconciliacion] Error al parsear transaccion " + txId
+                        + " | valor='" + parts[3] + "': " + e.getMessage());
                     continue;
                 }
 
@@ -235,16 +237,53 @@ public class Main {
                 String subj = extraer(correo, "Subject: ", 9);
                 System.out.println("  De: " + from + " | " + subj);
                 String emailRemitente = extraerEmail(from);
+
+                // Ignorar rebotes, notificaciones del sistema y bucles de auto-respuesta
+                if (esCorreoSistema(emailRemitente, subj)) {
+                    System.out.println("  [IGNORADO] Correo de sistema/rebote — no se procesa ni responde.");
+                    return;
+                }
+
                 String resp = cmd.evaluarYEjecutar(subj, emailRemitente);
-                smtp.enviarCorreo(extraerEmail(from), "Re: " + subj, resp);
+                smtp.enviarCorreo(emailRemitente, "Re: " + subj, resp);
                 System.out.println("  Enviado (" + resp.length() + " chars)");
-                // Marcar backup necesario tras cualquier operación de escritura
                 if (esComandoEscritura(subj)) {
                     backupNecesario = true;
                 }
             } catch (Exception e) {
                 System.err.println("  Error: " + e.getMessage());
             }
+        }
+
+        private boolean esCorreoSistema(String email, String subject) {
+            if (email == null) return true;
+            String emailLower   = email.toLowerCase();
+            String subjectLower = subject != null ? subject.toLowerCase() : "";
+
+            // Direcciones de rebote y sistema que nunca deben recibir respuesta
+            if (emailLower.startsWith("mailer-daemon")
+                    || emailLower.startsWith("postmaster@")
+                    || emailLower.startsWith("noreply@")
+                    || emailLower.startsWith("no-reply@")
+                    || emailLower.startsWith("donotreply@")
+                    || emailLower.startsWith("daemon@")
+                    || emailLower.contains("mailer-daemon")) {
+                return true;
+            }
+
+            // Asuntos típicos de rebotes y notificaciones automáticas
+            if (subjectLower.startsWith("mail delivery")
+                    || subjectLower.startsWith("returned mail")
+                    || subjectLower.startsWith("delivery status")
+                    || subjectLower.startsWith("delivery failure")
+                    || subjectLower.startsWith("undeliverable")
+                    || subjectLower.startsWith("auto:")
+                    || subjectLower.startsWith("automatic reply")
+                    || subjectLower.startsWith("out of office")) {
+                return true;
+            }
+
+            return false;
         }
 
         private boolean esComandoEscritura(String subject) {

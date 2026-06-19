@@ -119,6 +119,29 @@ public class VentaM {
         return ventas;
     }
 
+    public static List<VentaM> obtenerPorCliente(int clienteId) throws SQLException {
+        List<VentaM> ventas = new ArrayList<>();
+        String sql = "SELECT * FROM venta WHERE cliente_id = ? ORDER BY fecha DESC";
+        try (Connection conn = Conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, clienteId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    VentaM v = new VentaM();
+                    v.setId(rs.getInt("id"));
+                    v.setClienteId(rs.getInt("cliente_id"));
+                    v.setFecha(rs.getTimestamp("fecha"));
+                    v.setMontoTotal(rs.getDouble("monto_total"));
+                    v.setTipoVenta(rs.getString("tipo_venta"));
+                    v.setMetodoPago(rs.getString("metodo_pago"));
+                    v.setEstado(rs.getString("estado"));
+                    ventas.add(v);
+                }
+            }
+        }
+        return ventas;
+    }
+
     public static String actualizar(VentaM venta) throws SQLException {
         String sql = "UPDATE venta SET cliente_id=?, fecha=?, monto_total=?, tipo_venta=?, metodo_pago=?, estado=? WHERE id=?";
         Connection conn = null;

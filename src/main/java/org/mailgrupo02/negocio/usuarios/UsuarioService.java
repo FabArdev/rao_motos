@@ -71,6 +71,19 @@ public class UsuarioService {
         return u != null ? u.getId() : -1;
     }
 
+    /** Cliente actualiza sus propios datos identificándose por email (sin tocar rol ni activo). */
+    public String actualizarPerfil(String email, String nombre, String password,
+            String telefono, String direccion) throws SQLException {
+        UsuarioM u = UsuarioM.buscarPorEmail(email);
+        if (u == null) return "Error: no existe un usuario con el correo " + email + ".";
+        if (nombre    != null && !nombre.isBlank())    u.setNombre(nombre);
+        if (password  != null && !password.isBlank())  u.setPassword(password);
+        if (telefono  != null && !telefono.isBlank())  u.setTelefono(telefono);
+        if (direccion != null && !direccion.isBlank()) u.setDireccion(direccion);
+        UsuarioM.actualizar(u);
+        return "Perfil actualizado exitosamente (ID: " + u.getId() + ")";
+    }
+
     /**
      * Cambia el rol de un usuario migrando sus datos a la subtabla correcta.
      * Elimina la fila antigua en cliente/proveedor/propietario e inserta en la nueva.

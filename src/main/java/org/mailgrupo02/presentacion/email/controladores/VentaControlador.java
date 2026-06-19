@@ -4,6 +4,7 @@ import org.mailgrupo02.datos.modelo.CreditoM;
 import org.mailgrupo02.datos.modelo.UsuarioM;
 import org.mailgrupo02.datos.modelo.VentaM;
 import org.mailgrupo02.negocio.pagos.PagoFacilService;
+import org.mailgrupo02.negocio.usuarios.UsuarioService;
 import org.mailgrupo02.negocio.ventas.VentaService;
 import org.mailgrupo02.presentacion.email.PlantillaBase;
 import org.mailgrupo02.presentacion.email.PVentas;
@@ -21,13 +22,15 @@ public class VentaControlador {
             case "CREARVENTA_CREDITO":
             case "GETVENTA":
             case "DELETEVENTA":
+            case "MISVENTAS":
+            case "MIVENTA":
                 return true;
             default:
                 return false;
         }
     }
 
-    public static String handle(String cmd, List<String> params) {
+    public static String handle(String cmd, List<String> params, String emailRemitente) {
         try {
             VentaService service = new VentaService(new VentaM(), new CreditoM());
             String rawResult;
@@ -45,7 +48,7 @@ public class VentaControlador {
                 }
 
                 case "CREARVENTA_CONTADO": {
-                    if (params.size() < 4) return PVentas.generarHtml(cmd, "Error: se requieren 4 parámetros [clienteId,fecha,montoTotal,metodoPago].");
+                    if (params.size() < 4) return PVentas.generarHtml(cmd, "Error: se requieren 4 par&aacute;metros [clienteId,fecha,montoTotal,metodoPago].");
                     String metodo = params.get(3).trim();
                     int cId = Integer.parseInt(params.get(0).trim());
                     double monto = Double.parseDouble(params.get(2).trim());
@@ -61,7 +64,7 @@ public class VentaControlador {
                 }
 
                 case "CREARVENTA_CREDITO":
-                    if (params.size() < 6) return PVentas.generarHtml(cmd, "Error: se requieren 6 parámetros [clienteId,fecha,montoTotal,nroCuotas,tasaInteres,metodoPago].");
+                    if (params.size() < 6) return PVentas.generarHtml(cmd, "Error: se requieren 6 par&aacute;metros [clienteId,fecha,montoTotal,nroCuotas,tasaInteres,metodoPago].");
                     rawResult = service.crearVentaCredito(
                         Integer.parseInt(params.get(0).trim()),
                         Timestamp.valueOf(params.get(1).trim()),
@@ -75,6 +78,23 @@ public class VentaControlador {
                     if (params.isEmpty()) return PVentas.generarHtml(cmd, "Error: se requiere el ID de la venta.");
                     rawResult = service.eliminarVenta(Integer.parseInt(params.get(0).trim()));
                     break;
+
+                // ── Comandos CLIENTE ──────────────────────────────────────────────
+
+                case "MISVENTAS": {
+                    int clienteId = new UsuarioService(null).buscarIdPorEmail(emailRemitente);
+                    if (clienteId < 0) return PVentas.generarHtml(cmd, PedidoControlador.msgNoRegistrado(emailRemitente));
+                    rawResult = service.obtenerPorCliente(clienteId);
+                    break;
+                }
+
+                case "MIVENTA": {
+                    if (params.isEmpty()) return PVentas.generarHtml(cmd, "Error: se requiere el ID de la venta.");
+                    int clienteId = new UsuarioService(null).buscarIdPorEmail(emailRemitente);
+                    if (clienteId < 0) return PVentas.generarHtml(cmd, PedidoControlador.msgNoRegistrado(emailRemitente));
+                    rawResult = service.leerVentaCliente(Integer.parseInt(params.get(0).trim()), clienteId).toString();
+                    break;
+                }
 
                 default:
                     rawResult = "Error: Comando de ventas no soportado.";

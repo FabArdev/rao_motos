@@ -21,13 +21,14 @@ public class UsuarioControlador {
             case "DELETEUSUARIO":
             case "GETUSUARIO":
             case "CAMBIARROL":
+            case "ACTUALIZARPERFIL":
                 return true;
             default:
                 return false;
         }
     }
 
-    public static String handle(String cmd, List<String> params) {
+    public static String handle(String cmd, List<String> params, String emailRemitente) {
         try {
             UsuarioService service = new UsuarioService(new UsuarioM());
 
@@ -109,6 +110,28 @@ public class UsuarioControlador {
                     int id = Integer.parseInt(params.get(0).trim());
                     String nuevoRol = params.get(1).trim().toUpperCase();
                     return PUsuarios.generarHtml(cmd, service.cambiarRol(id, nuevoRol));
+                }
+
+                case "ACTUALIZARPERFIL": {
+                    if (params.size() < 4)
+                        return PUsuarios.generarHtml(cmd, "Error: se requieren 4 par&aacute;metros [nombre,password,telefono,direccion].");
+                    org.mailgrupo02.negocio.usuarios.UsuarioN antes = null;
+                    try {
+                        int selfId = service.buscarIdPorEmail(emailRemitente);
+                        if (selfId < 0) return PUsuarios.generarHtml(cmd, PedidoControlador.msgNoRegistrado(emailRemitente));
+                        antes = service.leerUsuario(selfId);
+                    } catch (Exception e) {
+                        return PUsuarios.generarHtml(cmd, "Error: " + e.getMessage());
+                    }
+                    String msg = service.actualizarPerfil(emailRemitente,
+                        params.get(0).trim(), params.get(1).trim(),
+                        params.get(2).trim(), params.get(3).trim());
+                    int newId = extraerId(msg);
+                    if (newId > 0) {
+                        org.mailgrupo02.negocio.usuarios.UsuarioN despues = service.leerUsuario(newId);
+                        return PUsuarios.generarHtml(cmd, diffUsuario(antes, despues));
+                    }
+                    return PUsuarios.generarHtml(cmd, msg);
                 }
 
                 default:
