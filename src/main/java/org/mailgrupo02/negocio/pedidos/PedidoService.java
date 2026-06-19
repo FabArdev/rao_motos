@@ -1,6 +1,7 @@
 package org.mailgrupo02.negocio.pedidos;
 
 import org.mailgrupo02.datos.modelo.*;
+import org.mailgrupo02.negocio.inventario.InventarioService;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -25,12 +26,43 @@ public class PedidoService {
 
     /**
      * Cliente: crea un pedido con sus productos en una sola operación.
+     * Verifica existencia, estado activo y stock disponible antes de crear nada.
      * items = array de [productoId, cantidad].
      */
     public String crearConProductos(int clienteId, int[][] items) throws SQLException {
         if (items == null || items.length == 0) {
             return "Error: debe especificar al menos un producto.";
         }
+
+        InventarioService invService = new InventarioService();
+
+        // ── Fase 1: validar todo antes de escribir nada ───────────────────────
+        StringBuilder errores = new StringBuilder();
+        ProductoM[] productos = new ProductoM[items.length];
+        for (int i = 0; i < items.length; i++) {
+            int productoId = items[i][0];
+            int cantidad   = items[i][1];
+            ProductoM p = ProductoM.leer(productoId);
+            if (p == null || !p.isActivo()) {
+                errores.append("\n  • Producto ID ").append(productoId).append(": no existe o está inactivo.");
+                continue;
+            }
+            productos[i] = p;
+            int stock = invService.obtenerStock(productoId);
+            if (stock < 0) {
+                errores.append("\n  • ").append(p.getNombre())
+                       .append(": sin inventario registrado (stock = 0).");
+            } else if (stock < cantidad) {
+                errores.append("\n  • ").append(p.getNombre())
+                       .append(": stock insuficiente — disponible: ").append(stock)
+                       .append(", solicitado: ").append(cantidad).append(".");
+            }
+        }
+        if (errores.length() > 0) {
+            return "No se pudo crear el pedido por problemas de stock:" + errores.toString();
+        }
+
+        // ── Fase 2: crear el pedido y sus detalles ────────────────────────────
         PedidoM pedido = new PedidoM();
         pedido.setClienteId(clienteId);
         pedido.setFecha(new Timestamp(System.currentTimeMillis()));
@@ -38,21 +70,17 @@ public class PedidoService {
         int pedidoId = PedidoM.crear(pedido);
 
         StringBuilder resumen = new StringBuilder();
-        for (int[] item : items) {
-            int productoId = item[0];
-            int cantidad   = item[1];
-            ProductoM p = ProductoM.leer(productoId);
-            if (p == null || !p.isActivo()) {
-                return "Error: producto ID " + productoId + " no existe o está inactivo.";
-            }
+        for (int i = 0; i < items.length; i++) {
+            int productoId = items[i][0];
+            int cantidad   = items[i][1];
             PedidoDetalleM det = new PedidoDetalleM();
             det.setPedidoId(pedidoId);
             det.setProductoId(productoId);
             det.setCantidad(cantidad);
             PedidoDetalleM.crear(det);
-            resumen.append("\n  • ").append(p.getNombre())
+            resumen.append("\n  • ").append(productos[i].getNombre())
                    .append(" x").append(cantidad)
-                   .append(" — Bs. ").append(String.format("%.2f", p.getPrecioVentaBase() * cantidad));
+                   .append(" — Bs. ").append(String.format("%.2f", productos[i].getPrecioVentaBase() * cantidad));
         }
         return "Pedido registrado exitosamente (ID: " + pedidoId + ")" + resumen.toString();
     }
@@ -96,14 +124,59 @@ public class PedidoService {
 
     public String despacharPedido(int id) throws SQLException {
         PedidoM pedido = PedidoM.leer(id);
+        if (pedido == null) return "Error: pedido #" + id + " no encontrado.";
+        if ("DESPACHADO".equals(pedido.getEstado())) return "Error: el pedido ya fue despachado.";
+        if ("ANULADO".equals(pedido.getEstado()))    return "Error: el pedido está anulado.";
+
+        List<PedidoDetalleM> detalles = PedidoDetalleM.obtenerPorPedido(id);
+        InventarioService invService = new InventarioService();
+
+        // ── Verificar stock antes de despachar ────────────────────────────────
+        StringBuilder errores = new StringBuilder();
+        for (PedidoDetalleM det : detalles) {
+            int stock = invService.obtenerStock(det.getProductoId());
+            ProductoM p = ProductoM.leer(det.getProductoId());
+            String nombre = p != null ? p.getNombre() : "ID:" + det.getProductoId();
+            if (stock < 0) {
+                errores.append("\n  • ").append(nombre).append(": sin inventario registrado.");
+            } else if (stock < det.getCantidad()) {
+                errores.append("\n  • ").append(nombre)
+                       .append(": stock insuficiente — disponible: ").append(stock)
+                       .append(", requerido: ").append(det.getCantidad()).append(".");
+            }
+        }
+        if (errores.length() > 0) {
+            return "No se puede despachar el pedido #" + id + " por stock insuficiente:" + errores.toString();
+        }
+
+        // ── Descontar stock de cada producto ──────────────────────────────────
+        for (PedidoDetalleM det : detalles) {
+            invService.registrarEgreso(det.getProductoId(), det.getCantidad(), "Despacho Pedido #" + id);
+        }
+
         pedido.setEstado("DESPACHADO");
         return PedidoM.actualizar(pedido);
     }
 
     public String anularPedido(int id) throws SQLException {
         PedidoM pedido = PedidoM.leer(id);
+        if (pedido == null) return "Error: pedido #" + id + " no encontrado.";
+        if ("ANULADO".equals(pedido.getEstado())) return "Error: el pedido ya está anulado.";
+
+        boolean fueDespachado = "DESPACHADO".equals(pedido.getEstado());
         pedido.setEstado("ANULADO");
-        return PedidoM.actualizar(pedido);
+        String resultado = PedidoM.actualizar(pedido);
+
+        // Si ya estaba despachado, restaurar el stock
+        if (fueDespachado) {
+            List<PedidoDetalleM> detalles = PedidoDetalleM.obtenerPorPedido(id);
+            InventarioService invService = new InventarioService();
+            for (PedidoDetalleM det : detalles) {
+                invService.registrarIngreso(det.getProductoId(), det.getCantidad(), "Anulación Pedido #" + id);
+            }
+            return resultado + " (stock restaurado por anulación de pedido despachado)";
+        }
+        return resultado;
     }
 
     public String agregarDetalle(int pedidoId, int productoId, int cantidad) throws SQLException {

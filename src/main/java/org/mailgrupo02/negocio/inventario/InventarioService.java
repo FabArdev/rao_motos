@@ -170,6 +170,18 @@ public class InventarioService {
         }
     }
 
+    /** Devuelve el stock actual del producto, o -1 si no tiene fila de inventario. */
+    public int obtenerStock(int productoId) throws SQLException {
+        String sql = "SELECT stock_actual FROM inventario WHERE producto_id = ?";
+        try (Connection conn = Conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productoId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("stock_actual") : -1;
+            }
+        }
+    }
+
     private String mapear(List<InventarioM> lista) throws SQLException {
         StringBuilder sb = new StringBuilder();
         String format = "%-5s %-30s %-12s %-20s %-15s%n";
