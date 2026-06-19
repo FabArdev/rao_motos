@@ -15,8 +15,8 @@ public class UsuarioValidator {
             throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
         }
 
-        if (rol == null || (!rol.equals("PROPIETARIO") && !rol.equals("PROVEEDOR") && !rol.equals("CLIENTE"))) {
-            throw new IllegalArgumentException("El rol debe ser PROPIETARIO, PROVEEDOR o CLIENTE");
+        if (rol == null || (!rol.equals("PROPIETARIO") && !rol.equals("CLIENTE"))) {
+            throw new IllegalArgumentException("El rol debe ser PROPIETARIO o CLIENTE");
         }
     }
 

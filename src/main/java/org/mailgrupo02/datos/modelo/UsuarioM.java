@@ -106,7 +106,7 @@ public class UsuarioM {
 
     public static List<UsuarioM> obtenerTodos() throws SQLException {
         List<UsuarioM> usuarios = new ArrayList<>();
-        String sql = "SELECT * FROM usuario WHERE rol != 'PROVEEDOR' ORDER BY id";
+        String sql = "SELECT * FROM usuario ORDER BY id";
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;

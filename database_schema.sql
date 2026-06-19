@@ -20,7 +20,7 @@ CREATE TABLE usuario
     foto_url    VARCHAR(500),
     password    VARCHAR(255)        NOT NULL,
     rol         VARCHAR(20)         NOT NULL
-                    CHECK (rol IN ('PROPIETARIO', 'PROVEEDOR', 'CLIENTE')),
+                    CHECK (rol IN ('PROPIETARIO', 'CLIENTE')),
     activo      BOOLEAN             DEFAULT TRUE,
     fecha_reg   TIMESTAMP           DEFAULT CURRENT_TIMESTAMP
 );
@@ -44,17 +44,18 @@ CREATE TABLE cliente
 );
 
 -- -------------------------------------------------------
--- Subtabla: PROVEEDOR
+-- PROVEEDOR (entidad comercial independiente, sin cuenta de usuario)
 -- -------------------------------------------------------
 CREATE TABLE proveedor
 (
-    id                  INTEGER PRIMARY KEY,
+    id                  SERIAL PRIMARY KEY,
     razon_social        VARCHAR(255) NOT NULL,
     contacto_principal  VARCHAR(100),
-    CONSTRAINT fk_proveedor_usuario
-        FOREIGN KEY (id) REFERENCES usuario (id)
-        ON DELETE CASCADE
+    telefono            VARCHAR(20),
+    activo              BOOLEAN DEFAULT TRUE
 );
+
+CREATE INDEX idx_proveedor_activo ON proveedor (activo);
 
 -- -------------------------------------------------------
 -- Subtabla: PROPIETARIO

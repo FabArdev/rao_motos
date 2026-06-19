@@ -96,7 +96,7 @@ public class TestRunner {
         note("clienteId extraído = " + clienteId);
 
         String rProv = enviar(
-            "CREATEUSUARIO[Test Proveedor,testprov@runner.com,pass456,PROVEEDOR,79001002,Av. Prueba 200]");
+            "CREATEPROVEEDOR[Test Proveedor,Contacto Test,79001002]");
         proveedorId = extractId(rProv);
         note("proveedorId extraído = " + proveedorId);
 
@@ -242,7 +242,7 @@ public class TestRunner {
         if (ventaCreditoId > 0) enviar("DELETEVENTA["   + ventaCreditoId + "]");
         if (productoId     > 0) enviar("DELETEPRODUCTO[" + productoId    + "]");
         if (clienteId      > 0) enviar("DELETEUSUARIO[" + clienteId      + "]");
-        if (proveedorId    > 0) enviar("DELETEUSUARIO[" + proveedorId    + "]");
+        if (proveedorId    > 0) enviar("DELETEPROVEEDOR[" + proveedorId    + "]");
 
         // ════════════════════════════════════════════════════════════════════
         // RESUMEN

@@ -81,6 +81,9 @@ public class PAyuda {
              + "<em>contacto</em> &rarr; nombre del contacto principal<br>"
              + "<em>telefono</em> &rarr; tel&eacute;fono de contacto",
              "CREATEPROVEEDOR[Honda Bolivia,Carlos Mamani,77712345]"},
+            {"UPDATEPROVEEDOR[id,razonSocial,contacto,telefono]",
+             "Actualiza datos de un proveedor.",
+             "UPDATEPROVEEDOR[1,Honda Bolivia,Luis Perez,76543210]"},
             {"DELETEPROVEEDOR[id]",
              "Elimina un proveedor del sistema.",
              "DELETEPROVEEDOR[1]"},
@@ -108,8 +111,8 @@ public class PAyuda {
              "DELETEUSUARIO[1]"},
             {"CAMBIARROL[userId,nuevoRol]",
              "Cambia el rol de un usuario y migra sus datos de subtabla.<br>"
-             + "<em>nuevoRol</em> &rarr; <code>PROPIETARIO</code> / <code>CLIENTE</code> / <code>PROVEEDOR</code>",
-             "CAMBIARROL[5,PROVEEDOR]"},
+             + "<em>nuevoRol</em> &rarr; <code>PROPIETARIO</code> / <code>CLIENTE</code>",
+             "CAMBIARROL[5,PROPIETARIO]"},
         }));
 
         // ── PROPIETARIO ─ Productos ──────────────────────────────────────────

@@ -35,14 +35,6 @@ public class UsuarioService {
                 c.crear();
                 break;
             }
-            case "PROVEEDOR": {
-                ProveedorM p = new ProveedorM();
-                p.setId(userId);
-                p.setRazonSocial(nombre);
-                p.setContactoPrincipal(nombre);
-                p.crear();
-                break;
-            }
             case "PROPIETARIO": {
                 PropietarioM p = new PropietarioM();
                 p.setId(userId);
@@ -85,8 +77,8 @@ public class UsuarioService {
      */
     public String cambiarRol(int userId, String nuevoRol) throws SQLException {
         nuevoRol = nuevoRol.toUpperCase().trim();
-        if (!nuevoRol.equals("PROPIETARIO") && !nuevoRol.equals("PROVEEDOR") && !nuevoRol.equals("CLIENTE")) {
-            return "Error: rol inválido. Use PROPIETARIO, PROVEEDOR o CLIENTE.";
+        if (!nuevoRol.equals("PROPIETARIO") && !nuevoRol.equals("CLIENTE")) {
+            return "Error: rol inválido. Use PROPIETARIO o CLIENTE.";
         }
         UsuarioM u = UsuarioM.leer(userId);
         String rolActual = u.getRol();
@@ -95,7 +87,6 @@ public class UsuarioService {
         // Eliminar de la subtabla actual
         switch (rolActual) {
             case "CLIENTE":     new ClienteM().eliminar(userId); break;
-            case "PROVEEDOR":   new ProveedorM().eliminar(userId); break;
             case "PROPIETARIO": new PropietarioM().eliminar(userId); break;
         }
 
@@ -110,14 +101,6 @@ public class UsuarioService {
                 c.setNitCi("N/A");
                 c.setTipoCliente("REGULAR");
                 c.crear();
-                break;
-            }
-            case "PROVEEDOR": {
-                ProveedorM p = new ProveedorM();
-                p.setId(userId);
-                p.setRazonSocial(u.getNombre());
-                p.setContactoPrincipal(u.getNombre());
-                p.crear();
                 break;
             }
             case "PROPIETARIO": {

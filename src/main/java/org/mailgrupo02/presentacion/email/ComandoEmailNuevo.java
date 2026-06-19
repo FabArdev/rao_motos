@@ -60,17 +60,17 @@ public class ComandoEmailNuevo {
             UsuarioM u = UsuarioM.buscarPorEmail(emailRemitente);
             if (u == null) {
                 String cuerpo =
-                    "<h2 class=\"card-title\">&#128100; ¿Quién eres?</h2>" +
-                    "<div class=\"alert alert-error\">" +
-                    "<strong>No estás registrado</strong><br>" +
+                    "<h2 style=\"font-size:18px;font-weight:700;color:#111827;margin:0 0 14px 0;padding-bottom:10px;border-bottom:2px solid #e5e7eb;\">&#128100; &iquest;Qui&eacute;n eres?</h2>" +
+                    "<div style=\"background-color:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:16px 20px;color:#991b1b;font-size:15px;\">" +
+                    "<strong>No est&aacute;s registrado</strong><br>" +
                     "El correo <strong>" + emailRemitente + "</strong> no tiene cuenta en el sistema.<br><br>" +
                     "Para registrarte env&iacute;a:<br>" +
-                    "<code>CREATEUSUARIO[TuNombre," + emailRemitente + ",TuContraseña,TuTeléfono,TuDirección]</code>" +
+                    "<code>CREATEUSUARIO[TuNombre," + emailRemitente + ",TuContrase&ntilde;a,TuTel&eacute;fono,TuDirecci&oacute;n]</code>" +
                     "</div>";
                 return PlantillaBase.envolver("Mi Perfil", cuerpo);
             }
             String cuerpo =
-                "<h2 class=\"card-title\">&#128100; Tu perfil</h2>" +
+                "<h2 style=\"font-size:18px;font-weight:700;color:#111827;margin:0 0 14px 0;padding-bottom:10px;border-bottom:2px solid #e5e7eb;\">&#128100; Tu perfil</h2>" +
                 "<table style=\"width:100%;border-collapse:collapse;font-size:17px;\">" +
                 fila("ID",            String.valueOf(u.getId())) +
                 fila("Nombre",        nvl(u.getNombre())) +

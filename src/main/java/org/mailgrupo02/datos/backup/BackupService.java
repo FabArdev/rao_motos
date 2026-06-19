@@ -15,7 +15,8 @@ public class BackupService {
 
     // Orden FK-safe: primero las tablas padre, luego las hijas
     private static final String[] TABLAS_ORDEN = {
-        "usuario", "cliente", "proveedor", "propietario",
+        "proveedor",                                            // entidad independiente
+        "usuario", "cliente", "propietario",                   // jerarquía de usuarios
         "producto", "inventario", "movimiento_inventario",
         "compra", "detalle_compra",
         "pedido", "detalle_pedido",
@@ -25,6 +26,7 @@ public class BackupService {
 
     // Solo las tablas con columna id SERIAL (necesitan reset de secuencia)
     private static final String[] TABLAS_CON_SERIAL = {
+        "proveedor",
         "usuario", "producto", "inventario", "movimiento_inventario",
         "compra", "detalle_compra", "pedido", "detalle_pedido",
         "venta", "detalle_venta", "credito", "pago_cuota"

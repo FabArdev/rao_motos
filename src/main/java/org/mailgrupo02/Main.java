@@ -254,7 +254,7 @@ public class Main {
                 || s.startsWith("CREAR")  || s.startsWith("ANULAR") || s.startsWith("DESPACHAR")
                 || s.startsWith("REGISTRAR") || s.startsWith("PROCESAR") || s.startsWith("CAMBIAR")
                 || s.startsWith("PEDIDO[") || s.startsWith("CANCELAR") || s.startsWith("PAGAR")
-                || s.startsWith("CREATEPROVEEDOR") || s.startsWith("DELETEPROVEEDOR");
+                || s.startsWith("CREATEPROVEEDOR") || s.startsWith("UPDATEPROVEEDOR") || s.startsWith("DELETEPROVEEDOR");
         }
 
         private String extraerEmail(String from) {

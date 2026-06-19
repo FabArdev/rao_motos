@@ -1,11 +1,9 @@
 package org.mailgrupo02.presentacion.email.controladores;
 
-import org.mailgrupo02.datos.conexion.Conexion;
 import org.mailgrupo02.datos.modelo.ProveedorM;
-import org.mailgrupo02.datos.modelo.UsuarioM;
 import org.mailgrupo02.presentacion.email.PlantillaBase;
 
-import java.sql.*;
+import java.sql.SQLException;
 import java.util.List;
 
 public class ProveedorControlador {
@@ -17,6 +15,7 @@ public class ProveedorControlador {
             case "LISTARPROVEEDORES":
             case "GETPROVEEDOR":
             case "DELETEPROVEEDOR":
+            case "UPDATEPROVEEDOR":
                 return true;
             default: return false;
         }
@@ -30,22 +29,35 @@ public class ProveedorControlador {
                     return html("Listado de Proveedores", listar());
 
                 case "GETPROVEEDOR": {
-                    if (params.isEmpty()) return html("Error", "Error: se requiere el ID del proveedor.");
+                    if (params.isEmpty())
+                        return html("Error", "Error: se requiere el ID del proveedor.");
                     return html("Detalle de Proveedor", detalle(Integer.parseInt(params.get(0).trim())));
                 }
 
                 case "CREATEPROVEEDOR": {
-                    if (params.isEmpty()) return html("Error",
-                        "Error: se requieren al menos 2 parámetros [razonSocial,contacto,telefono].");
+                    if (params.size() < 2)
+                        return html("Error", "Error: se requieren al menos 2 parámetros [razonSocial,contacto,telefono].");
                     String razonSocial = params.get(0).trim();
-                    String contacto    = params.size() > 1 ? params.get(1).trim() : "";
+                    String contacto    = params.get(1).trim();
                     String telefono    = params.size() > 2 ? params.get(2).trim() : "";
                     return html("Registrar Proveedor", crear(razonSocial, contacto, telefono));
                 }
 
+                case "UPDATEPROVEEDOR": {
+                    if (params.size() < 4)
+                        return html("Error", "Error: se requieren 4 parámetros [id,razonSocial,contacto,telefono].");
+                    return html("Actualizar Proveedor", actualizar(
+                        Integer.parseInt(params.get(0).trim()),
+                        params.get(1).trim(),
+                        params.get(2).trim(),
+                        params.get(3).trim()));
+                }
+
                 case "DELETEPROVEEDOR": {
-                    if (params.isEmpty()) return html("Error", "Error: se requiere el ID del proveedor.");
-                    return html("Eliminar Proveedor", eliminar(Integer.parseInt(params.get(0).trim())));
+                    if (params.isEmpty())
+                        return html("Error", "Error: se requiere el ID del proveedor.");
+                    return html("Eliminar Proveedor",
+                        ProveedorM.eliminar(Integer.parseInt(params.get(0).trim())));
                 }
 
                 default:
@@ -56,83 +68,57 @@ public class ProveedorControlador {
         }
     }
 
-    // ── Crear: usuario interno (sin login) + subtabla proveedor ──────────────
-    private static String crear(String razonSocial, String contacto, String telefono) throws SQLException {
-        UsuarioM u = new UsuarioM();
-        u.setNombre(razonSocial);
-        u.setEmail("prv-" + System.currentTimeMillis() + "@rao.interno");
-        u.setPassword("*");
-        u.setRol("PROVEEDOR");
-        u.setTelefono(telefono);
-        u.setActivo(true);
-        int userId = UsuarioM.crear(u);
+    // ── CRUD ─────────────────────────────────────────────────────────────────
 
+    private static String crear(String razonSocial, String contacto, String telefono) throws SQLException {
         ProveedorM p = new ProveedorM();
-        p.setId(userId);
         p.setRazonSocial(razonSocial);
         p.setContactoPrincipal(contacto);
-        p.crear();
-
-        return "Proveedor registrado exitosamente (ID: " + userId + ")";
+        p.setTelefono(telefono);
+        p.setActivo(true);
+        int id = p.crear();
+        return "Proveedor registrado exitosamente (ID: " + id + ")";
     }
 
-    // ── Listar: JOIN usuario + proveedor, muestra campos de negocio ───────────
+    private static String actualizar(int id, String razonSocial, String contacto, String telefono)
+            throws SQLException {
+        ProveedorM p = ProveedorM.leer(id);
+        if (p == null) return "Error: Proveedor no encontrado.";
+        p.setRazonSocial(razonSocial);
+        p.setContactoPrincipal(contacto);
+        p.setTelefono(telefono);
+        return p.actualizar() + " (ID: " + id + ")";
+    }
+
     private static String listar() throws SQLException {
+        List<ProveedorM> lista = ProveedorM.obtenerTodos();
         StringBuilder sb = new StringBuilder();
         String fmt = "%-5s %-30s %-25s %-15s %-6s%n";
         sb.append(String.format(fmt, "ID", "Razón Social", "Contacto", "Teléfono", "Activo"));
         sb.append("--------------------------------------------------------------------------------------------\r\n");
-        String sql = "SELECT u.id, p.razon_social, p.contacto_principal, u.telefono, u.activo " +
-                     "FROM proveedor p JOIN usuario u ON p.id = u.id ORDER BY u.id";
-        try (Connection conn = Conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                sb.append(String.format(fmt,
-                    rs.getInt("id"),
-                    nvl(rs.getString("razon_social")),
-                    nvl(rs.getString("contacto_principal")),
-                    nvl(rs.getString("telefono")),
-                    rs.getBoolean("activo") ? "SI" : "NO"));
-            }
+        for (ProveedorM p : lista) {
+            sb.append(String.format(fmt,
+                p.getId(),
+                nvl(p.getRazonSocial()),
+                nvl(p.getContactoPrincipal()),
+                nvl(p.getTelefono()),
+                p.isActivo() ? "SI" : "NO"));
         }
         return sb.toString();
     }
 
-    // ── Detalle de un proveedor ───────────────────────────────────────────────
     private static String detalle(int id) throws SQLException {
-        String sql = "SELECT u.id, p.razon_social, p.contacto_principal, u.telefono, u.activo " +
-                     "FROM proveedor p JOIN usuario u ON p.id = u.id WHERE u.id = ?";
-        try (Connection conn = Conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return "Razón Social: " + nvl(rs.getString("razon_social")) +
-                           " | Contacto: " + nvl(rs.getString("contacto_principal")) +
-                           " | Teléfono: " + nvl(rs.getString("telefono")) +
-                           " | Activo: " + (rs.getBoolean("activo") ? "SI" : "NO") +
-                           " (ID: " + id + ")";
-                }
-                return "Error: Proveedor no encontrado.";
-            }
-        }
+        ProveedorM p = ProveedorM.leer(id);
+        if (p == null) return "Error: Proveedor no encontrado.";
+        return "Razón Social: " + nvl(p.getRazonSocial()) +
+               " | Contacto: " + nvl(p.getContactoPrincipal()) +
+               " | Teléfono: " + nvl(p.getTelefono()) +
+               " | Activo: " + (p.isActivo() ? "SI" : "NO") +
+               " (ID: " + id + ")";
     }
 
-    // ── Eliminar: borra el usuario (CASCADE elimina la subtabla) ─────────────
-    private static String eliminar(int id) throws SQLException {
-        String sql = "DELETE FROM usuario WHERE id = ? AND rol = 'PROVEEDOR'";
-        try (Connection conn = Conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            int rows = ps.executeUpdate();
-            return rows > 0
-                ? "Proveedor eliminado exitosamente (ID: " + id + ")"
-                : "Error: Proveedor no encontrado o ID no corresponde a un proveedor.";
-        }
-    }
+    // ── Presentación ─────────────────────────────────────────────────────────
 
-    // ── HTML wrapper ──────────────────────────────────────────────────────────
     private static String html(String titulo, String resultado) {
         StringBuilder body = new StringBuilder();
         body.append(PlantillaBase.titulo(titulo));
