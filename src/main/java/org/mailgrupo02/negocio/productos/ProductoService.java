@@ -24,7 +24,8 @@ public class ProductoService {
             String descripcion, double precioVentaBase) throws SQLException {
         ProductoValidator.validarCampos(codigo, nombre, marca, modelo, descripcion, precioVentaBase);
         ProductoM productoMObj = cargar(0, codigo, nombre, marca, modelo, descripcion, precioVentaBase, true);
-        return ProductoM.crear(productoMObj);
+        int id = ProductoM.crear(productoMObj);
+        return "Producto creado con éxito (ID: " + id + ")";
     }
 
     public String actualizarProducto(int id, String codigo, String nombre, String marca, String modelo,

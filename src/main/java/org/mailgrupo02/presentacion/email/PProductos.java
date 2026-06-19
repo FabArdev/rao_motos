@@ -9,13 +9,14 @@ public class PProductos {
         StringBuilder body = new StringBuilder();
         body.append("<h2 class=\"card-title\">").append(describir(comando)).append("</h2>");
 
-        boolean esError = resultado.trim().toLowerCase().startsWith("error");
-
-        if (resultado.contains("---") || resultado.contains("===")) {
+        if (resultado.startsWith("<div class=\"detalle")) {
+            body.append(resultado);
+        } else if (resultado.contains("---") || resultado.contains("===")) {
             body.append("<div class=\"table-container\"><pre class=\"table-pre\">")
                 .append(escapar(resultado))
                 .append("</pre></div>");
         } else {
+            boolean esError = resultado.trim().toLowerCase().startsWith("error");
             String cls = esError ? "alert-error" : "alert-success";
             String titulo = esError ? "ERROR EN LA OPERACIÓN" : "OPERACIÓN EXITOSA";
             body.append("<div class=\"alert ").append(cls).append("\">")
@@ -49,15 +50,28 @@ public class PProductos {
                ".container{max-width:680px;margin:30px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.10);border:1px solid #e2e8f0;}\n" +
                ".header{background:linear-gradient(135deg," + COLOR1 + "," + COLOR2 + ");padding:30px 20px;text-align:center;color:#fff;}\n" +
                ".header h1{margin:0;font-size:26px;font-weight:800;letter-spacing:3px;text-transform:uppercase;}\n" +
-               ".header p{margin:0;font-size:12px;letter-spacing:0.5px;opacity:0.75;}\n" +
+               ".header p{margin:0;font-size:13px;letter-spacing:0.5px;opacity:0.75;}\n" +
                ".content{padding:30px 28px;}\n" +
-               ".card-title{font-size:20px;font-weight:700;margin-top:0;margin-bottom:16px;color:" + COLOR1 + ";border-bottom:2px solid #fee2e2;padding-bottom:8px;}\n" +
-               ".alert{padding:16px;border-radius:12px;margin-bottom:20px;font-size:16px;line-height:1.6;}\n" +
+               ".card-title{font-size:22px;font-weight:700;margin-top:0;margin-bottom:16px;color:" + COLOR1 + ";border-bottom:2px solid #fee2e2;padding-bottom:8px;}\n" +
+               ".alert{padding:18px;border-radius:12px;margin-bottom:20px;font-size:18px;line-height:1.65;}\n" +
                ".alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}\n" +
                ".alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}\n" +
                ".table-container{overflow-x:auto;margin-top:8px;}\n" +
-               ".table-pre{font-family:'Courier New',Courier,monospace;font-size:14px;background:#f8fafc;padding:16px;border-radius:10px;border:1px solid #e2e8f0;white-space:pre;color:#1e293b;line-height:1.55;margin:0;}\n" +
-               ".footer{background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;}\n" +
+               ".table-pre{font-family:'Courier New',Courier,monospace;font-size:16px;background:#f8fafc;padding:18px;border-radius:10px;border:1px solid #e2e8f0;white-space:pre;color:#1e293b;line-height:1.6;margin:0;}\n" +
+               ".footer{background:#f8fafc;padding:20px;text-align:center;font-size:14px;color:#64748b;border-top:1px solid #e2e8f0;}\n" +
+               ".badge-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:12px 16px;border-radius:8px;font-size:18px;font-weight:700;margin-bottom:16px;display:block;}\n" +
+               ".badge-edit{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:12px 16px;border-radius:8px;font-size:18px;font-weight:700;margin-bottom:16px;display:block;}\n" +
+               ".badge-del{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;font-size:18px;font-weight:700;margin-bottom:16px;display:block;}\n" +
+               ".dt{width:100%;border-collapse:collapse;margin-top:8px;}\n" +
+               ".dt td{padding:11px 14px;border-bottom:1px solid #f1f5f9;font-size:17px;vertical-align:top;}\n" +
+               ".dt .fl{font-weight:700;color:#374151;width:36%;background:#f8fafc;}\n" +
+               ".dt .fv{color:#1e293b;}\n" +
+               ".dif{width:100%;border-collapse:collapse;margin-top:10px;}\n" +
+               ".dif th{background:#374151;color:#fff;padding:10px 14px;font-size:15px;font-weight:600;text-align:left;}\n" +
+               ".dif td{padding:11px 14px;border-bottom:1px solid #f1f5f9;font-size:17px;vertical-align:top;}\n" +
+               ".dif .fn{font-weight:700;color:#374151;background:#f8fafc;width:28%;}\n" +
+               ".dif .bef{color:#991b1b;background:#fef2f2;}\n" +
+               ".dif .aft{color:#166534;background:#f0fdf4;font-weight:600;}\n" +
                "</style>\n</head>\n<body>\n" +
                "<div class=\"container\">\n" +
                "<div class=\"header\"><h1>RAO MOTOS</h1><div style=\"width:40px;height:2px;background:rgba(255,255,255,0.30);margin:10px auto 8px;border-radius:1px;\"></div><p>Catálogo de Productos</p></div>\n" +

@@ -41,13 +41,14 @@ public class ProductoM {
     public Timestamp getFechaReg() { return fechaReg; }
     public void setFechaReg(Timestamp fechaReg) { this.fechaReg = fechaReg; }
 
-    public static String crear(ProductoM producto) throws SQLException {
+    public static int crear(ProductoM producto) throws SQLException {
         String sql = "INSERT INTO producto (codigo, nombre, marca, modelo, descripcion, precio_venta_base, foto_url, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Connection conn = null;
         PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
             conn = Conexion.conectar();
-            pstmt = conn.prepareStatement(sql);
+            pstmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
             pstmt.setString(1, producto.codigo);
             pstmt.setString(2, producto.nombre);
             pstmt.setString(3, producto.marca);
@@ -56,11 +57,14 @@ public class ProductoM {
             pstmt.setDouble(6, producto.precioVentaBase);
             pstmt.setString(7, producto.fotoUrl);
             pstmt.setBoolean(8, producto.activo);
-            int rows = pstmt.executeUpdate();
-            return rows > 0 ? "Producto creado con éxito" : "Error al crear producto";
+            pstmt.executeUpdate();
+            rs = pstmt.getGeneratedKeys();
+            if (rs.next()) return rs.getInt(1);
+            throw new SQLException("No se pudo obtener el ID del producto creado");
         } catch (SQLException e) {
             throw new SQLException("Error al crear producto: " + e.getMessage());
         } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) {}
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
             if (conn != null) try { conn.close(); } catch (SQLException e) {}
         }

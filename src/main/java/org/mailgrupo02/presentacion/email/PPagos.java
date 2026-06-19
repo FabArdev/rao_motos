@@ -2,8 +2,8 @@ package org.mailgrupo02.presentacion.email;
 
 public class PPagos {
 
-    private static final String COLOR1 = "#b91c1c";
-    private static final String COLOR2 = "#7f1d1d";
+    private static final String COLOR1 = "#1e3a8a";
+    private static final String COLOR2 = "#1e40af";
 
     public static String generarHtml(String comando, String resultado) {
         StringBuilder body = new StringBuilder();
@@ -11,7 +11,6 @@ public class PPagos {
 
         boolean esError = resultado.trim().toLowerCase().startsWith("error");
 
-        // HTML embebido (QR de PagoFácil)
         if (resultado.contains("<img") || resultado.contains("<div style")) {
             body.append("<div class=\"alert alert-info\">")
                 .append("<strong>SOLICITUD DE PAGO GENERADA</strong><br>")
@@ -55,16 +54,16 @@ public class PPagos {
                ".container{max-width:680px;margin:30px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.10);border:1px solid #e2e8f0;}\n" +
                ".header{background:linear-gradient(135deg," + COLOR1 + "," + COLOR2 + ");padding:30px 20px;text-align:center;color:#fff;}\n" +
                ".header h1{margin:0;font-size:26px;font-weight:800;letter-spacing:3px;text-transform:uppercase;}\n" +
-               ".header p{margin:0;font-size:12px;letter-spacing:0.5px;opacity:0.75;}\n" +
+               ".header p{margin:0;font-size:13px;letter-spacing:0.5px;opacity:0.75;}\n" +
                ".content{padding:30px 28px;}\n" +
-               ".card-title{font-size:20px;font-weight:700;margin-top:0;margin-bottom:16px;color:" + COLOR1 + ";border-bottom:2px solid #fee2e2;padding-bottom:8px;}\n" +
-               ".alert{padding:16px;border-radius:12px;margin-bottom:20px;font-size:16px;line-height:1.6;}\n" +
-               ".alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}\n" +
+               ".card-title{font-size:22px;font-weight:700;margin-top:0;margin-bottom:16px;color:" + COLOR1 + ";border-bottom:2px solid #bfdbfe;padding-bottom:8px;}\n" +
+               ".alert{padding:18px;border-radius:12px;margin-bottom:20px;font-size:18px;line-height:1.65;}\n" +
+               ".alert-success{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;}\n" +
                ".alert-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}\n" +
-               ".alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;}\n" +
+               ".alert-info{background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;}\n" +
                ".table-container{overflow-x:auto;margin-top:8px;}\n" +
-               ".table-pre{font-family:'Courier New',Courier,monospace;font-size:14px;background:#f8fafc;padding:16px;border-radius:10px;border:1px solid #e2e8f0;white-space:pre;color:#1e293b;line-height:1.55;margin:0;}\n" +
-               ".footer{background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;}\n" +
+               ".table-pre{font-family:'Courier New',Courier,monospace;font-size:16px;background:#eff6ff;padding:18px;border-radius:10px;border:1px solid #bfdbfe;white-space:pre;color:#1e293b;line-height:1.6;margin:0;}\n" +
+               ".footer{background:#f8fafc;padding:20px;text-align:center;font-size:14px;color:#64748b;border-top:1px solid #e2e8f0;}\n" +
                "</style>\n</head>\n<body>\n" +
                "<div class=\"container\">\n" +
                "<div class=\"header\"><h1>RAO MOTOS</h1><div style=\"width:40px;height:2px;background:rgba(255,255,255,0.30);margin:10px auto 8px;border-radius:1px;\"></div><p>Pagos y Créditos</p></div>\n" +
