@@ -205,7 +205,7 @@ class PagoFacilService
             $montoQr = $this->resolverMontoQr($monto);
 
             $qrData = [
-                'paymentMethod' => 1, // QR Comercio
+                'paymentMethod' => 34,
                 'clientName' => 'Cliente',
                 'documentType' => 1, // CI
                 'documentId' => '00000000',
@@ -216,7 +216,7 @@ class PagoFacilService
                 'currency' => 2, // BOB
                 'clientCode' => (string) $ventaId,
                 'companyTransactionId' => $companyTransactionId,
-                'tcUrlCallBack' => $callbackUrl,
+                'callbackUrl' => $callbackUrl,
                 'orderDetail' => [
                     [
                         'serial' => 1,
@@ -255,10 +255,11 @@ class PagoFacilService
                     'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
                 ];
             } catch (\Exception $e) {
-                Log::warning('⚠️ [PagoFácil] API real falló, usando QR simulado local', [
+                Log::warning('⚠️ [PagoFácil] API real falló, consultando servicios habilitados...', [
                     'venta_id' => $ventaId,
                     'error' => $e->getMessage(),
                 ]);
+                $this->listarServiciosHabilitados();
 
                 return $this->generarQrSimuladoLocal($companyTransactionId, $montoQr, $glosa ?? "Venta #{$ventaId}");
             }
@@ -300,7 +301,7 @@ class PagoFacilService
             $montoQr = $this->resolverMontoQr($monto);
 
             $qrData = [
-                'paymentMethod' => 1, // QR Comercio
+                'paymentMethod' => 34,
                 'clientName' => 'Cliente',
                 'documentType' => 1, // CI
                 'documentId' => '00000000',
@@ -311,7 +312,7 @@ class PagoFacilService
                 'currency' => 2, // BOB
                 'clientCode' => (string) $cuotaId,
                 'companyTransactionId' => $companyTransactionId,
-                'tcUrlCallBack' => $callbackUrl,
+                'callbackUrl' => $callbackUrl,
                 'orderDetail' => [
                     [
                         'serial' => 1,
@@ -350,10 +351,11 @@ class PagoFacilService
                     'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
                 ];
             } catch (\Exception $e) {
-                Log::warning('⚠️ [PagoFácil] API real falló, usando QR simulado local para cuota', [
+                Log::warning('⚠️ [PagoFácil] API real falló, consultando servicios habilitados...', [
                     'cuota_id' => $cuotaId,
                     'error' => $e->getMessage(),
                 ]);
+                $this->listarServiciosHabilitados();
 
                 return $this->generarQrSimuladoLocal($companyTransactionId, $montoQr, $glosa ?? "Pago Cuota #{$cuotaId}");
             }
@@ -494,6 +496,32 @@ class PagoFacilService
         }
 
         return 'unknown';
+    }
+
+    /**
+     * Consulta los servicios habilitados para la empresa (diagnóstico).
+     * endpoint: POST /list-enabled-services
+     */
+    protected function listarServiciosHabilitados(): void
+    {
+        try {
+            $headers = $this->obtenerHeaders();
+            $response = Http::withHeaders($headers)
+                ->timeout(10)
+                ->post("{$this->apiUrl}/list-enabled-services");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info('📋 [PagoFácil] Servicios habilitados', ['data' => $data]);
+            } else {
+                Log::warning('⚠️ [PagoFácil] Error al listar servicios', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('❌ [PagoFácil] Excepción al listar servicios', ['error' => $e->getMessage()]);
+        }
     }
 
     /**

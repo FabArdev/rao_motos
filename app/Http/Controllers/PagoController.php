@@ -71,17 +71,35 @@ class PagoController extends Controller
     /**
      * Confirmación del pago (callback de PagoFácil o botón "ya pagué" de la demo).
      * Sin auth: PagoFácil llama por servidor. Idempotente.
+     * Formato de callback de PagoFácil:
+     *   { "error":0, "status":1, "message":"Pago realizado correctamente", "values":true }
+     * Identifica la transacción por paymentNumber, pagofacilTransactionId o similar.
      */
     public function confirmarCuota(Request $request)
     {
-        $paymentNumber = $request->input('paymentNumber') ?? $request->input('payment_number');
-        $transactionId = $request->input('pagofacilTransactionId') ?? $request->input('transaction_id');
+        Log::info('📩 [PagoFácil] Callback recibido', ['payload' => $request->all(), 'query' => $request->query()]);
+
+        $paymentNumber = $request->input('paymentNumber')
+            ?? $request->input('payment_number')
+            ?? $request->input('paymentnumber')
+            ?? $request->query('paymentNumber')
+            ?? $request->query('payment_number');
+
+        $transactionId = $request->input('pagofacilTransactionId')
+            ?? $request->input('pagofacil_transaction_id')
+            ?? $request->input('transaction_id')
+            ?? $request->input('transactionId')
+            ?? $request->query('pagofacilTransactionId');
 
         $cuota = PagoCuota::when($paymentNumber, fn ($q) => $q->where('pago_facil_payment_number', $paymentNumber))
             ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_transaction_id', $transactionId))
             ->first();
 
         if (! $cuota) {
+            Log::warning('⚠️ [PagoFácil] Callback: cuota no encontrada', [
+                'paymentNumber' => $paymentNumber, 'transactionId' => $transactionId,
+            ]);
+
             return response()->json(['ok' => false, 'error' => 'Cuota no encontrada'], 404);
         }
         if ($cuota->estado === 'PAGADO') {
@@ -90,6 +108,8 @@ class PagoController extends Controller
 
         $cuota->update(['pago_facil_status' => 'completed']);
         $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
+
+        Log::info('✅ [PagoFácil] Callback: cuota pagada', ['cuota' => $cuota->id]);
 
         return response()->json(['ok' => true]);
     }
