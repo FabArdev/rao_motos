@@ -22,15 +22,17 @@ class PagoController extends Controller
         private CreditoService $creditos,
     ) {}
 
-    /** El cliente genera el QR para pagar una cuota propia. */
+    /** Genera el QR para pagar una cuota (cliente propio, o admin/vendedor). */
     public function generarQrCuota(Request $request, PagoCuota $cuota)
     {
         $cuota->load('credito.venta');
-        if ($cuota->credito?->venta?->cliente_id !== $request->user()->id) {
+        $esAdminOVendedor = $request->user()?->tieneRol('admin') || $request->user()?->tieneRol('vendedor');
+        if (!$esAdminOVendedor && $cuota->credito?->venta?->cliente_id !== $request->user()->id) {
             throw new NotFoundHttpException;
         }
         if ($cuota->estado === 'PAGADO') {
-            return redirect()->route('mis-creditos.show', $cuota->credito_id)->with('error', 'La cuota ya fue pagada.');
+            $route = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
+            return redirect()->route($route, $cuota->credito_id)->with('error', 'La cuota ya fue pagada.');
         }
 
         $monto = (float) $cuota->monto_cuota + (float) $this->creditos->calcularMora($cuota);
@@ -47,15 +49,21 @@ class PagoController extends Controller
                 'pago_facil_status' => $qr['status'] ?? 'pending',
             ]);
 
+            $redirectRoute = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
+
             return Inertia::render('Pagos/Qr', [
                 'cuota' => $cuota->only(['id', 'numero_cuota', 'monto_cuota', 'credito_id']),
                 'monto' => $monto,
                 'qr' => $qr,
+                'redirectRoute' => $redirectRoute,
+                'redirectParams' => ['credito' => $cuota->credito_id],
             ]);
         } catch (\Throwable $e) {
             Log::error('PagoFácil QR cuota falló', ['cuota' => $cuota->id, 'error' => $e->getMessage()]);
 
-            return redirect()->route('mis-creditos.show', $cuota->credito_id)
+            $redirectRoute = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
+
+            return redirect()->route($redirectRoute, $cuota->credito_id)
                 ->with('error', 'No se pudo generar el QR (verifique la conexión con PagoFácil). Intente el pago en caja.');
         }
     }

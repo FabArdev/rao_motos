@@ -216,7 +216,7 @@ class PagoFacilService
                 'currency' => 2, // BOB
                 'clientCode' => (string) $ventaId,
                 'companyTransactionId' => $companyTransactionId,
-                'tcUrlCallBack' => $this->callbackUrl,
+                'tcUrlCallBack' => $callbackUrl,
                 'orderDetail' => [
                     [
                         'serial' => 1,
@@ -231,30 +231,37 @@ class PagoFacilService
 
             Log::info('📋 [PagoFácil] Datos preparados para venta', ['qr_data' => $qrData]);
 
-            // Generar QR real
-            $response = $this->generateQr($qrData);
+            try {
+                $response = $this->generateQr($qrData);
 
-            Log::info('✅ [PagoFácil] QR generado exitosamente para venta', [
-                'response' => $response,
-                'tiene_transactionId' => isset($response['transactionId']),
-                'tiene_qrBase64' => isset($response['qrBase64']),
-            ]);
+                Log::info('✅ [PagoFácil] QR generado exitosamente para venta', [
+                    'response' => $response,
+                    'tiene_transactionId' => isset($response['transactionId']),
+                    'tiene_qrBase64' => isset($response['qrBase64']),
+                ]);
 
-            // Convertir qrBase64 a formato data URI para compatibilidad
-            $qrImage = $response['qrBase64']
-                ? 'data:image/png;base64,'.$response['qrBase64']
-                : null;
+                $qrImage = $response['qrBase64']
+                    ? 'data:image/png;base64,'.$response['qrBase64']
+                    : null;
 
-            return [
-                'success' => true,
-                'transaction_id' => $response['transactionId'],
-                'payment_number' => $companyTransactionId,
-                'qr_image' => $qrImage,
-                'status' => 'pending',
-                'monto' => $monto,
-                'glosa' => $glosa ?? "Venta #{$ventaId}",
-                'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
-            ];
+                return [
+                    'success' => true,
+                    'transaction_id' => $response['transactionId'],
+                    'payment_number' => $companyTransactionId,
+                    'qr_image' => $qrImage,
+                    'status' => 'pending',
+                    'monto' => $monto,
+                    'glosa' => $glosa ?? "Venta #{$ventaId}",
+                    'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
+                ];
+            } catch (\Exception $e) {
+                Log::warning('⚠️ [PagoFácil] API real falló, usando QR simulado local', [
+                    'venta_id' => $ventaId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return $this->generarQrSimuladoLocal($companyTransactionId, $montoQr, $glosa ?? "Venta #{$ventaId}");
+            }
         } catch (\Exception $e) {
             Log::error('❌ [PagoFácil] Error al generar QR para venta', [
                 'venta_id' => $ventaId,
@@ -304,7 +311,7 @@ class PagoFacilService
                 'currency' => 2, // BOB
                 'clientCode' => (string) $cuotaId,
                 'companyTransactionId' => $companyTransactionId,
-                'tcUrlCallBack' => $this->callbackUrl,
+                'tcUrlCallBack' => $callbackUrl,
                 'orderDetail' => [
                     [
                         'serial' => 1,
@@ -319,30 +326,37 @@ class PagoFacilService
 
             Log::info('📋 [PagoFácil] Datos preparados para cuota', ['qr_data' => $qrData]);
 
-            // Generar QR real
-            $response = $this->generateQr($qrData);
+            try {
+                $response = $this->generateQr($qrData);
 
-            Log::info('✅ [PagoFácil] QR generado exitosamente para cuota', [
-                'response' => $response,
-                'tiene_transactionId' => isset($response['transactionId']),
-                'tiene_qrBase64' => isset($response['qrBase64']),
-            ]);
+                Log::info('✅ [PagoFácil] QR generado exitosamente para cuota', [
+                    'response' => $response,
+                    'tiene_transactionId' => isset($response['transactionId']),
+                    'tiene_qrBase64' => isset($response['qrBase64']),
+                ]);
 
-            // Convertir qrBase64 a formato data URI para compatibilidad
-            $qrImage = $response['qrBase64']
-                ? 'data:image/png;base64,'.$response['qrBase64']
-                : null;
+                $qrImage = $response['qrBase64']
+                    ? 'data:image/png;base64,'.$response['qrBase64']
+                    : null;
 
-            return [
-                'success' => true,
-                'transaction_id' => $response['transactionId'],
-                'payment_number' => $companyTransactionId,
-                'qr_image' => $qrImage,
-                'status' => 'pending',
-                'monto' => $monto,
-                'glosa' => $glosa ?? "Pago Cuota #{$cuotaId}",
-                'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
-            ];
+                return [
+                    'success' => true,
+                    'transaction_id' => $response['transactionId'],
+                    'payment_number' => $companyTransactionId,
+                    'qr_image' => $qrImage,
+                    'status' => 'pending',
+                    'monto' => $monto,
+                    'glosa' => $glosa ?? "Pago Cuota #{$cuotaId}",
+                    'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
+                ];
+            } catch (\Exception $e) {
+                Log::warning('⚠️ [PagoFácil] API real falló, usando QR simulado local para cuota', [
+                    'cuota_id' => $cuotaId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return $this->generarQrSimuladoLocal($companyTransactionId, $montoQr, $glosa ?? "Pago Cuota #{$cuotaId}");
+            }
         } catch (\Exception $e) {
             Log::error('❌ [PagoFácil] Error al generar QR para cuota', [
                 'cuota_id' => $cuotaId,
@@ -480,6 +494,30 @@ class PagoFacilService
         }
 
         return 'unknown';
+    }
+
+    /**
+     * Genera un QR simulado local cuando la API de PagoFácil no está disponible.
+     * ⚠️ Este QR NO es un código de pago real — solo codifica texto con los datos
+     * de la transacción. Ningún banco lo reconocerá. Es un fallback para que la
+     * interfaz no se rompa y el operador pueda confirmar manualmente con "Ya pagó".
+     */
+    protected function generarQrSimuladoLocal(string $transactionId, float $monto, string $glosa): array
+    {
+        $dataCodificada = urlencode("Pago RAO MOTOS - {$glosa} - {$transactionId}");
+        $qrImage = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl={$dataCodificada}&choe=UTF-8";
+
+        return [
+            'success' => true,
+            'transaction_id' => $transactionId,
+            'payment_number' => $transactionId,
+            'qr_image' => $qrImage,
+            'status' => 'pending',
+            'monto' => $monto,
+            'glosa' => $glosa,
+            'expiration' => now()->addHours(2)->toIso8601String(),
+            'simulado' => true,
+        ];
     }
 
     /**

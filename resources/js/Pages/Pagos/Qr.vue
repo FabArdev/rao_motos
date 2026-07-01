@@ -2,18 +2,19 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
-const props = defineProps({ cuota: Object, monto: Number, qr: Object });
+const props = defineProps({ cuota: Object, monto: Number, qr: Object, redirectRoute: { type: String, default: 'mis-creditos.show' }, redirectParams: { type: Object, default: () => ({}) } });
+
+const esSimulado = props.qr?.simulado === true;
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
 
-// Botón de demo que simula el callback de PagoFácil (webhook JSON) confirmando el pago.
 const yaPague = async () => {
     await fetch(route('pagofacil.confirmar-cuota'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ payment_number: props.qr.payment_number, transaction_id: props.qr.transaction_id }),
     });
-    router.visit(route('mis-creditos.show', props.cuota.credito_id));
+    router.visit(route(props.redirectRoute, props.redirectParams));
 };
 </script>
 
@@ -25,6 +26,11 @@ const yaPague = async () => {
                 <h5 class="fw-bold">Cuota #{{ cuota.numero_cuota }}</h5>
                 <div class="fs-4 text-primary mb-3">{{ fmt(monto) }}</div>
 
+                <div v-if="esSimulado" class="alert alert-danger mb-3 py-2 small">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>QR no funcional:</strong> la API de PagoFácil no respondió. Este código QR <strong>no puede ser escaneado</strong> para pagar. Usa el botón "Ya realicé el pago" solo si el cliente pagó en caja.
+                </div>
+
                 <img v-if="qr.qr_image" :src="qr.qr_image" alt="QR PagoFácil" class="img-fluid border rounded mb-3" style="max-width: 260px;" />
                 <div v-else class="alert alert-warning">No se recibió la imagen del QR.</div>
 
@@ -32,7 +38,7 @@ const yaPague = async () => {
 
                 <div class="d-grid gap-2">
                     <button class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
-                    <Link :href="route('mis-creditos.show', cuota.credito_id)" class="btn btn-outline-secondary">Volver</Link>
+                    <Link :href="route(redirectRoute, redirectParams)" class="btn btn-outline-secondary">Volver</Link>
                 </div>
             </div>
         </div>

@@ -9,12 +9,16 @@ const page = usePage();
 const metodoSel = ref('');
 
 const badge = (e) => ({ VIGENTE: 'bg-info text-dark', PAGADO: 'bg-success', MOROSO: 'bg-danger', PENDIENTE: 'bg-warning text-dark', VENCIDO: 'bg-danger' }[e] ?? 'bg-secondary');
-const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
+const fmt = (n) => `Bs. ${Number(n ?? 0).toFixed(2)}`;
 
 const pagar = (cuota) => {
     if (confirm(`¿Registrar el pago de la cuota #${cuota.numero_cuota}?`)) {
         router.post(route('creditos.pagar-cuota', cuota.id), { metodo_pago_id: metodoSel.value || null }, { preserveScroll: true });
     }
+};
+
+const generarQR = (cuota) => {
+    router.post(route('pagofacil.generar-qr-cuota', cuota.id));
 };
 </script>
 
@@ -55,7 +59,10 @@ const pagar = (cuota) => {
                             <td class="text-end">{{ fmt(Number(c.monto_cuota) + Number(c.mora_actual)) }}</td>
                             <td><span class="badge" :class="badge(c.estado)">{{ c.estado }}</span></td>
                             <td class="text-end">
-                                <button v-if="c.estado !== 'PAGADO'" class="btn btn-sm btn-success" @click="pagar(c)">Registrar pago</button>
+                                <div v-if="c.estado !== 'PAGADO'" class="d-flex gap-1 justify-content-end">
+                                    <button class="btn btn-sm btn-outline-primary" @click="generarQR(c)" title="Generar QR para pago"><i class="bi bi-qr-code"></i></button>
+                                    <button class="btn btn-sm btn-success" @click="pagar(c)">Registrar pago</button>
+                                </div>
                                 <span v-else class="text-muted small">{{ c.fecha_pago }}</span>
                             </td>
                         </tr>
