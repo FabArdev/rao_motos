@@ -41,7 +41,8 @@ class PagoController extends Controller
         $metodoQr = MetodoPago::where('nombre', 'QR')->value('id');
 
         // Si ya hay un QR pendiente y no ha expirado, reusarlo
-        $qrExpirado = $cuota->pago_facil_expires_at && Carbon::parse($cuota->pago_facil_expires_at)->isPast();
+        // Si no tiene expires_at (QR previo a la migración), se considera expirado
+        $qrExpirado = !$cuota->pago_facil_expires_at || Carbon::parse($cuota->pago_facil_expires_at)->isPast();
         if ($cuota->pago_facil_transaction_id && $cuota->pago_facil_qr_image && $cuota->pago_facil_status === 'pending' && !$qrExpirado) {
             $qrExistente = [
                 'success' => true,
