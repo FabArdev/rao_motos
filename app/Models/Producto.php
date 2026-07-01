@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Producto extends Model
 {
@@ -14,12 +15,19 @@ class Producto extends Model
         'foto_url', 'activo',
     ];
 
+    protected $appends = ['foto_completa'];
+
     protected $casts = [
         'precio_venta_base' => 'decimal:2',
         'precio_mayorista' => 'decimal:2',
         'cantidad_minima_mayorista' => 'integer',
         'activo' => 'boolean',
     ];
+
+    public function getFotoCompletaAttribute(): ?string
+    {
+        return $this->foto_url ? asset('storage/' . $this->foto_url) : null;
+    }
 
     public function inventario()
     {

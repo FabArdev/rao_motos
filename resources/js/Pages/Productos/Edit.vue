@@ -19,7 +19,7 @@ const form = useForm({
     activo: !!props.producto.activo,
 });
 
-const preview = ref(props.producto.foto_url ? `/storage/${props.producto.foto_url}` : null);
+const preview = ref(props.producto.foto_completa ?? null);
 const onFile = (e) => {
     const file = e.target.files[0];
     form.foto = file ?? null;

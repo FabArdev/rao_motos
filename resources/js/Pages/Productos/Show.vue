@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({ producto: Object });
 const bs = (n) => 'Bs. ' + Number(n).toFixed(2);
-const foto = props.producto.foto_url ? `/storage/${props.producto.foto_url}` : null;
+const foto = props.producto.foto_completa ?? null;
 </script>
 
 <template>

@@ -16,7 +16,7 @@ const desactivar = (p) => {
 };
 
 const bs = (n) => 'Bs. ' + Number(n).toFixed(2);
-const foto = (p) => (p.foto_url ? `/storage/${p.foto_url}` : null);
+const foto = (p) => p.foto_completa ?? null;
 </script>
 
 <template>

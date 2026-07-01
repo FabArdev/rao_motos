@@ -21,7 +21,7 @@ const quitar = (i) => carrito.value.splice(i, 1);
 const totalItems = computed(() => carrito.value.reduce((s, i) => s + i.cantidad, 0));
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
-const img = (url) => url ? `/storage/${url}` : null;
+const img = (p) => p.foto_completa ?? null;
 
 const form = useForm({ items: [] });
 const enviar = () => {
@@ -47,7 +47,7 @@ const enviar = () => {
                     <div v-for="p in productos.data" :key="p.id" class="col-md-6 col-xl-4">
                         <div class="card h-100 shadow-sm border-0">
                             <div class="ratio ratio-4x3 bg-light d-flex align-items-center justify-content-center">
-                                <img v-if="img(p.foto_url)" :src="img(p.foto_url)" class="object-fit-cover" alt="" />
+                                <img v-if="img(p)" :src="img(p)" class="object-fit-cover" alt="" />
                                 <i v-else class="bi bi-box-seam fs-1 text-muted"></i>
                             </div>
                             <div class="card-body">

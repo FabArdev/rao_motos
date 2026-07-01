@@ -10,7 +10,7 @@ defineProps({
 });
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
-const img = (url) => (url ? `/storage/${url}` : null);
+const img = (p) => p.foto_completa ?? null;
 </script>
 
 <template>
@@ -106,7 +106,7 @@ const img = (url) => (url ? `/storage/${url}` : null);
                     <div v-for="p in productos" :key="p.id" class="col-6 col-md-4 col-lg-3">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="ratio ratio-4x3 bg-light d-flex align-items-center justify-content-center">
-                                <img v-if="img(p.foto_url)" :src="img(p.foto_url)" class="object-fit-cover" alt="" />
+                                <img v-if="img(p)" :src="img(p)" class="object-fit-cover" alt="" />
                                 <i v-else class="bi bi-box-seam fs-1 text-muted"></i>
                             </div>
                             <div class="card-body">
