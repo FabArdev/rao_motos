@@ -2,204 +2,133 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\StoreUsuarioRequest;
+use App\Http\Requests\UpdateUsuarioRequest;
+use App\Models\Cliente;
 use App\Models\Role;
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of users.
-     */
     public function index(Request $request)
     {
-        $this->authorize('viewAny', User::class);
+        $q = $request->string('q')->toString();
 
-        $query = User::with('role')
-            ->orderBy('created_at', 'desc');
-
-        // Filtros
-        if ($request->filled('buscar')) {
-            $buscar = $request->buscar;
-            $query->where(function($q) use ($buscar) {
-                $q->where('nombre', 'ilike', "%{$buscar}%")
-                  ->orWhere('apellidos', 'ilike', "%{$buscar}%")
-                  ->orWhere('ci', 'ilike', "%{$buscar}%")
-                  ->orWhere('email', 'ilike', "%{$buscar}%");
-            });
-        }
-
-        if ($request->filled('role_id')) {
-            $query->where('role_id', $request->role_id);
-        }
-
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado === 'activo');
-        }
-
-        $usuarios = $query->paginate(15)->withQueryString();
-
-        // Estadísticas
-        $totalUsuarios = User::count();
-        $usuariosActivos = User::where('estado', true)->count();
-        $usuariosInactivos = User::where('estado', false)->count();
-
-        $roles = Role::all(['id', 'nombre']);
+        $usuarios = User::with('role')
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('nombre', 'ilike', "%{$q}%")
+                        ->orWhere('apellidos', 'ilike', "%{$q}%")
+                        ->orWhere('email', 'ilike', "%{$q}%")
+                        ->orWhere('ci', 'ilike', "%{$q}%");
+                });
+            })
+            ->orderBy('nombre')
+            ->paginate(12)
+            ->withQueryString();
 
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
-            'roles' => $roles,
-            'filters' => $request->only(['buscar', 'role_id', 'estado']),
-            'estadisticas' => [
-                'total' => $totalUsuarios,
-                'activos' => $usuariosActivos,
-                'inactivos' => $usuariosInactivos,
-            ],
+            'filtros' => ['q' => $q],
         ]);
     }
 
-    /**
-     * Show the form for creating a new user.
-     */
     public function create()
     {
-        $this->authorize('create', User::class);
-
-        $roles = Role::all(['id', 'nombre']);
-
         return Inertia::render('Usuarios/Create', [
-            'roles' => $roles,
+            'roles' => Role::orderBy('id')->get(['id', 'nombre']),
         ]);
     }
 
-    /**
-     * Store a newly created user in storage.
-     */
-    public function store(StoreUserRequest $request)
+    public function store(StoreUsuarioRequest $request)
     {
         $data = $request->validated();
-        $data['password'] = Hash::make($data['password']);
-        $data['estado'] = $data['estado'] ?? true;
 
-        $usuario = User::create($data);
+        DB::transaction(function () use ($data) {
+            $user = User::create([
+                'nombre' => $data['nombre'],
+                'apellidos' => $data['apellidos'],
+                'ci' => $data['ci'],
+                'telefono' => $data['telefono'],
+                'direccion' => $data['direccion'] ?? null,
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'role_id' => $data['role_id'],
+                'estado' => $data['estado'] ?? true,
+            ]);
 
-        return redirect()->route('usuarios.index')
-            ->with('success', 'Usuario creado exitosamente.');
+            if ($this->esRolCliente($data['role_id'])) {
+                Cliente::updateOrCreate(['id' => $user->id], ['nit_ci' => $data['nit_ci'] ?? null]);
+            }
+        });
+
+        return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
     }
 
-    /**
-     * Display the specified user.
-     */
     public function show(User $usuario)
     {
-        $this->authorize('view', $usuario);
+        $usuario->load('role', 'cliente');
 
-        $usuario->load(['role', 'ventas' => function($query) {
-            $query->latest()->take(5);
-        }]);
-
-        // Estadísticas del usuario
-        $stats = [
-            'total_ventas' => $usuario->ventas()->count(),
-            'total_gastado' => $usuario->ventas()->sum('total'),
-            'creditos_activos' => $usuario->ventas()->whereHas('credito', function($query) {
-                $query->where('estado', '!=', 'pagado');
-            })->count(),
-            'total_credito' => $usuario->ventas()->whereHas('credito', function($query) {
-                $query->where('estado', '!=', 'pagado');
-            })->with('credito')->get()->sum(function($venta) {
-                return $venta->credito ? $venta->credito->monto_pendiente : 0;
-            }),
-        ];
-
-        return Inertia::render('Usuarios/Show', [
-            'usuario' => $usuario,
-            'estadisticas' => $stats,
-        ]);
+        return Inertia::render('Usuarios/Show', ['usuario' => $usuario]);
     }
 
-    /**
-     * Show the form for editing the specified user.
-     */
     public function edit(User $usuario)
     {
-        $this->authorize('update', $usuario);
-
-        $usuario->load('role');
-        $roles = Role::all(['id', 'nombre']);
+        $usuario->load('cliente');
 
         return Inertia::render('Usuarios/Edit', [
             'usuario' => $usuario,
-            'roles' => $roles,
+            'roles' => Role::orderBy('id')->get(['id', 'nombre']),
         ]);
     }
 
-    /**
-     * Update the specified user in storage.
-     */
-    public function update(UpdateUserRequest $request, User $usuario)
+    public function update(UpdateUsuarioRequest $request, User $usuario)
     {
         $data = $request->validated();
 
-        $usuario->update($data);
+        DB::transaction(function () use ($data, $usuario) {
+            $usuario->fill([
+                'nombre' => $data['nombre'],
+                'apellidos' => $data['apellidos'],
+                'ci' => $data['ci'],
+                'telefono' => $data['telefono'],
+                'direccion' => $data['direccion'] ?? null,
+                'email' => $data['email'],
+                'role_id' => $data['role_id'],
+                'estado' => $data['estado'] ?? $usuario->estado,
+            ]);
 
-        return redirect()->route('usuarios.index')
-            ->with('success', 'Usuario actualizado exitosamente.');
+            if (! empty($data['password'])) {
+                $usuario->password = Hash::make($data['password']);
+            }
+
+            $usuario->save();
+
+            if ($this->esRolCliente($data['role_id'])) {
+                Cliente::updateOrCreate(['id' => $usuario->id], ['nit_ci' => $data['nit_ci'] ?? null]);
+            }
+        });
+
+        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    /**
-     * Remove the specified user from storage.
-     */
-    public function destroy(User $usuario)
+    public function destroy(Request $request, User $usuario)
     {
-        $this->authorize('delete', $usuario);
-
-        // Prevenir que el usuario se elimine a sí mismo
-        if ($usuario->id === auth()->id()) {
-            return redirect()->route('usuarios.index')
-                ->with('error', 'No puedes eliminar tu propia cuenta.');
-        }
-
-        // Prevenir eliminar usuarios con créditos activos
-        $tieneCreditosActivos = $usuario->ventas()->whereHas('credito', function($query) {
-            $query->where('estado', '!=', 'pagado');
-        })->exists();
-        
-        if ($tieneCreditosActivos) {
-            return redirect()->route('usuarios.index')
-                ->with('error', 'No se puede eliminar un usuario con créditos activos.');
+        if ($usuario->id === $request->user()->id) {
+            return back()->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
         $usuario->delete();
 
-        return redirect()->route('usuarios.index')
-            ->with('success', 'Usuario eliminado exitosamente.');
+        return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado.');
     }
 
-    /**
-     * Toggle user status (active/inactive).
-     */
-    public function toggleEstado(User $usuario)
+    private function esRolCliente($roleId): bool
     {
-        $this->authorize('update', $usuario);
-
-        if ($usuario->id === auth()->id()) {
-            return redirect()->route('usuarios.index')
-                ->with('error', 'No puedes desactivar tu propia cuenta.');
-        }
-
-        $usuario->update([
-            'estado' => !$usuario->estado
-        ]);
-
-        $estado = $usuario->estado ? 'activado' : 'desactivado';
-
-        return redirect()->route('usuarios.index')
-            ->with('success', "Usuario {$estado} exitosamente.");
+        return optional(Role::find($roleId))->nombre === 'cliente';
     }
 }
-

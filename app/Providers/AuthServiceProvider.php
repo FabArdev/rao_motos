@@ -2,30 +2,26 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
     /**
      * The model to policy mappings for the application.
+     * (Las policies RAO MOTOS se registran a medida que se construyen los CU.)
      *
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        \App\Models\Producto::class => \App\Policies\ProductoPolicy::class,
-        \App\Models\Categoria::class => \App\Policies\CategoriaPolicy::class,
-        \App\Models\Promocion::class => \App\Policies\PromocionPolicy::class,
-        \App\Models\User::class => \App\Policies\UserPolicy::class,
-        \App\Models\Carrito::class => \App\Policies\CarritoPolicy::class,
-        \App\Models\Venta::class => \App\Policies\VentaPolicy::class,
+        //
     ];
 
-    /**
-     * Register any authentication / authorization services.
-     */
     public function boot(): void
     {
-        //
+        // RN1: el admin es superusuario, salta todas las policies.
+        Gate::before(function ($user, $ability) {
+            return $user->esAdmin() ? true : null;
+        });
     }
 }

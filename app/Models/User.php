@@ -2,27 +2,24 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
-use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Laravel\Jetstream\HasProfilePhoto;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasProfilePhoto, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasProfilePhoto, Notifiable, TwoFactorAuthenticatable;
 
-    /**
-     * Campos asignables en masiva.
-     */
     protected $fillable = [
         'nombre',
         'apellidos',
         'ci',
         'telefono',
+        'direccion',
         'email',
         'password',
         'role_id',
@@ -30,9 +27,6 @@ class User extends Authenticatable
         'fecha_nacimiento',
     ];
 
-    /**
-     * Campos ocultos.
-     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -40,115 +34,95 @@ class User extends Authenticatable
         'two_factor_secret',
     ];
 
-    /**
-     * Atributos agregados al array/JSON.
-     */
     protected $appends = [
         'name',
         'profile_photo_url',
     ];
 
-    /**
-     * Casts.
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'estado' => 'boolean',
         'fecha_nacimiento' => 'date',
     ];
 
-    /**
-     * Relaciones
-     */
+    /* ---------------------------------------------------------------------
+     | Relaciones
+     * ------------------------------------------------------------------- */
     public function role()
     {
         return $this->belongsTo(Role::class);
     }
 
-    public function ventas()
+    /** Subtabla 1:1 (solo si el usuario es cliente). */
+    public function cliente()
     {
-        return $this->hasMany(Venta::class);
+        return $this->hasOne(Cliente::class, 'id');
     }
 
+    /** Ventas en las que este usuario fue el vendedor. */
     public function ventasComoVendedor()
     {
         return $this->hasMany(Venta::class, 'vendedor_id');
     }
 
-    public function carrito()
+    public function notificaciones()
     {
-        return $this->hasOne(Carrito::class);
+        return $this->hasMany(Notificacion::class, 'usuario_id');
     }
 
-    public function reportes()
-    {
-        return $this->hasMany(Reporte::class);
-    }
-
-    /**
-     * Helpers de rol
-     */
-    public function tieneRol($rol)
+    /* ---------------------------------------------------------------------
+     | Helpers de rol  (RAO MOTOS: admin | vendedor | almacenero | mecanico | cliente)
+     * ------------------------------------------------------------------- */
+    public function tieneRol($rol): bool
     {
         return $this->role && strcasecmp($this->role->nombre, $rol) === 0;
     }
 
-    public function esPropietario()
+    public function esAdmin(): bool
     {
-        return $this->tieneRol('Propietario');
+        return $this->tieneRol('admin');
     }
 
-    public function esVendedor()
+    public function esVendedor(): bool
     {
-        return $this->tieneRol('Vendedor');
+        return $this->tieneRol('vendedor');
     }
 
-    public function esCliente()
+    public function esAlmacenero(): bool
     {
-        return $this->tieneRol('Cliente');
+        return $this->tieneRol('almacenero');
     }
 
-    /**
-     * Compatibilidad: algunos controladores usan esAdministrador() para
-     * verificar permisos elevados. Interpretamos "administrador" como
-     * cualquier usuario con rol Propietario o Vendedor.
-     */
-    public function esAdministrador()
+    public function esMecanico(): bool
     {
-        return $this->esPropietario() || $this->esVendedor();
+        return $this->tieneRol('mecanico');
     }
 
-    /**
-     * Mutators para formateo automático
-     */
+    public function esCliente(): bool
+    {
+        return $this->tieneRol('cliente');
+    }
+
+    /* ---------------------------------------------------------------------
+     | Mutators / Accessors
+     * ------------------------------------------------------------------- */
     protected function nombre(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => ucfirst(strtolower($value)),
-        );
+        return Attribute::make(set: fn ($value) => ucwords(strtolower($value)));
     }
 
     protected function apellidos(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => ucwords(strtolower($value)),
-        );
+        return Attribute::make(set: fn ($value) => ucwords(strtolower($value)));
     }
 
     protected function email(): Attribute
     {
-        return Attribute::make(
-            set: fn($value) => strtolower($value),
-        );
+        return Attribute::make(set: fn ($value) => $value ? strtolower($value) : $value);
     }
 
-    /**
-     * Accessor para nombre completo
-     */
     protected function name(): Attribute
     {
-        return Attribute::make(
-            get: fn() => trim($this->nombre . ' ' . $this->apellidos),
-        );
+        return Attribute::make(get: fn () => trim($this->nombre.' '.$this->apellidos));
     }
 }

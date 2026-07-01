@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // RN12: cada día marca cuotas vencidas, calcula mora y pone créditos en MOROSO.
+        $schedule->command('creditos:marcar-vencidas')->dailyAt('01:00');
     }
 
     /**

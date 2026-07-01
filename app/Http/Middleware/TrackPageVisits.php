@@ -8,9 +8,7 @@ use Illuminate\Http\Request;
 
 class TrackPageVisits
 {
-    public function __construct(protected PageVisitService $pageVisitService)
-    {
-    }
+    public function __construct(protected PageVisitService $pageVisitService) {}
 
     /**
      * Handle an incoming request.
@@ -18,7 +16,7 @@ class TrackPageVisits
     public function handle(Request $request, Closure $next)
     {
         // Solo registrar si el usuario está autenticado
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return $next($request);
         }
 

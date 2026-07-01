@@ -1,14 +1,16 @@
 {
-    "name": "laravel/laravel",
+    "name": "grupo02sa/rao-motos",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "RAO MOTOS — Sistema de ventas al crédito de repuestos y taller de reparación (INF-513).",
     "keywords": [
         "laravel",
-        "framework"
+        "rao-motos",
+        "inf513"
     ],
     "license": "MIT",
     "require": {
         "php": "^8.1",
+        "barryvdh/laravel-dompdf": "^3.1",
         "guzzlehttp/guzzle": "^7.2",
         "inertiajs/inertia-laravel": "^1.0",
         "laravel/framework": "^10.10",

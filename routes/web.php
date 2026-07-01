@@ -3,42 +3,50 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\MenuController;
-use App\Http\Controllers\CreditoController;
-use App\Http\Controllers\PagoController;
-use App\Http\Controllers\SearchController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\VentaController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\CategoriaController;
-use App\Http\Controllers\PromocionController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\MetodoPagoController;
-use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\CompraController;
+use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\VentaController;
+use App\Http\Controllers\CreditoController;
 use App\Http\Controllers\PedidoController;
-use App\Http\Controllers\PedidoOnlineController;
-use App\Http\Controllers\PagoCuotaController;
+use App\Http\Controllers\CatalogoController;
+use App\Http\Controllers\MisPedidosController;
+use App\Http\Controllers\TallerController;
+use App\Http\Controllers\MiTallerController;
+use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\BitacoraController;
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\MisCreditosController;
+use App\Http\Controllers\MiCuentaController;
+use App\Http\Controllers\BuscarController;
+use App\Http\Controllers\PagoController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes — RAO MOTOS
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
+| Las rutas de autenticación las registra Jetstream/Fortify.
+| Las rutas de negocio se agregan por CU (usuarios, productos, ventas, taller, ...).
 */
 
 Route::get('/', function () {
+    // Catálogo público de repuestos para la vitrina de inicio.
+    $productos = \App\Models\Producto::with('inventario:id,producto_id,stock_actual')
+        ->where('activo', true)
+        ->orderByDesc('id')
+        ->limit(8)
+        ->get(['id', 'codigo', 'nombre', 'marca', 'modelo', 'precio_venta_base', 'precio_mayorista', 'cantidad_minima_mayorista', 'foto_url']);
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
+        'productos' => $productos,
     ]);
 });
 
@@ -46,191 +54,120 @@ Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
+    'bitacora',
     'track.visits',
 ])->group(function () {
-    
-    // API para obtener menú dinámico
-    Route::get('/api/menu', [MenuController::class, 'getMenuItems'])->name('api.menu');
-    
-    // API de búsqueda global
-    Route::get('/api/search/all', [SearchController::class, 'search'])->name('api.search');
-    
-    // Dashboard - Todos los roles autenticados
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // ============================================
-    // GESTIÓN DE CARRITO Y PEDIDOS
-    // ============================================
-    
-    // Carrito - Todos los usuarios autenticados
-    Route::get('/mi-carrito', [CarritoController::class, 'index'])->name('carritos.index');
-    Route::post('/carrito/agregar', [CarritoController::class, 'store'])->name('carritos.store');
-    Route::put('/carrito/{carritoDetalle}', [CarritoController::class, 'update'])->name('carritos.update');
-    Route::delete('/carrito/{carritoDetalle}', [CarritoController::class, 'destroy'])->name('carritos.destroy');
-    Route::delete('/carrito', [CarritoController::class, 'vaciar'])->name('carritos.vaciar');
-    
-    // Pedidos - Checkout y confirmación
-    Route::get('/checkout', [PedidoController::class, 'checkout'])->name('pedidos.checkout');
-    Route::post('/pedidos/procesar', [PedidoController::class, 'store'])->name('pedidos.store');
-    Route::get('/pedidos/{venta}/confirmacion', [PedidoController::class, 'confirmacion'])->name('pedidos.confirmacion');
-
-    // Carrito legacy (antiguo sistema)
-    Route::prefix('carrito')->name('cart.')->group(function () {
-        Route::get('/', [CartController::class, 'get'])->name('get');
-        Route::post('/add', [CartController::class, 'add'])->name('add');
-        Route::put('/{id}', [CartController::class, 'update'])->name('update');
-        Route::delete('/{id}', [CartController::class, 'remove'])->name('remove');
-        Route::delete('/', [CartController::class, 'clear'])->name('clear');
-        Route::post('/sync', [CartController::class, 'sync'])->name('sync');
-        // Pagos QR para cuotas de créditos - permitir Cliente, Propietario y Vendedor
-        Route::post('/cuotas/{id}/generar-qr', [PagoCuotaController::class, 'generarQRCuota'])
-            ->middleware('role:Cliente,Propietario,Vendedor')
-            ->name('cuotas.generar-qr');
-        Route::get('/pagos/{id}/estado', [PagoCuotaController::class, 'verificarEstadoPago'])
-            ->middleware('role:Cliente,Propietario,Vendedor')
-            ->name('pagos.verificar-estado');
-
+    // CU1 — Gestión de usuarios (solo admin)
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
     });
 
-    // Página del carrito
-    Route::get('/carrito/ver', function () {
-        return Inertia::render('Cart/Index');
-    })->name('cart.page');
+    // CU2 — Gestión de productos / CU3 Proveedores·Compras / CU5 Inventario (almacenero; admin superusuario)
+    Route::middleware('role:admin,almacenero')->group(function () {
+        Route::resource('productos', ProductoController::class)->parameters(['productos' => 'producto']);
+        Route::resource('proveedores', ProveedorController::class)->parameters(['proveedores' => 'proveedor']);
 
-    // Ventas
-    Route::get('/ventas', [VentaController::class, 'index'])->name('ventas.index');
-    Route::get('/ventas/{id}/detalles', [VentaController::class, 'show'])->name('ventas.show');
-    Route::post('/ventas/contado', [VentaController::class, 'storeVentaContado'])->name('ventas.contado');
-    Route::post('/ventas/credito', [VentaController::class, 'storeVentaCredito'])->middleware('role:Propietario,Vendedor')->name('ventas.credito');
+        Route::post('compras/{compra}/recibir', [CompraController::class, 'recibir'])->name('compras.recibir');
+        Route::post('compras/{compra}/anular', [CompraController::class, 'anular'])->name('compras.anular');
+        Route::resource('compras', CompraController::class)->parameters(['compras' => 'compra'])->except(['edit', 'update']);
 
-    // Boletas/Facturas
-    Route::get('/ventas/{id}/boleta', [InvoiceController::class, 'show'])->name('invoices.show');
-    Route::get('/ventas/{id}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
-    Route::get('/ventas/{id}/ticket', [InvoiceController::class, 'ticket'])->name('invoices.ticket');
-
-    // ============================================
-    // MÓDULOS CRUD COMPLETO - SOLO PROPIETARIO
-    // ============================================
-    Route::middleware('role:Propietario')->group(function () {
-        // Productos (CRUD completo con URLs en español, solo para propietario)
-        Route::get('productos/crear', [ProductoController::class, 'create'])->name('productos.create');
-        Route::get('productos/{producto}/editar', [ProductoController::class, 'edit'])->name('productos.edit');
-        Route::delete('productos/{producto}/imagenes/{imagen}', [ProductoController::class, 'deleteImage'])->name('productos.deleteImage');
-        Route::resource('productos', ProductoController::class)->only(['store', 'update', 'destroy']);
-
-        // Categorías (CRUD completo con URLs en español)
-        Route::get('categorias/crear', [CategoriaController::class, 'create'])->name('categorias.create');
-        Route::get('categorias/{categoria}/editar', [CategoriaController::class, 'edit'])->name('categorias.edit');
-        Route::get('categorias/{categoria}/detalles', [CategoriaController::class, 'show'])->name('categorias.show');
-        Route::resource('categorias', CategoriaController::class)->except(['create', 'edit', 'show']);
-
-        // Promociones (CRUD completo - movido aquí para consistencia con Productos/Categorías)
-        Route::get('promociones/crear', [PromocionController::class, 'create'])->name('promociones.create');
-        Route::get('promociones/{promocion}/editar', [PromocionController::class, 'edit'])->name('promociones.edit');
-        Route::resource('promociones', PromocionController::class)->only(['store', 'update', 'destroy'])->parameters(['promociones' => 'promocion']);
-
-        // Usuarios (CRUD completo con URLs en español)
-        Route::get('usuarios/crear', [UserController::class, 'create'])->name('usuarios.create');
-        Route::get('usuarios/{usuario}/editar', [UserController::class, 'edit'])->name('usuarios.edit');
-        Route::get('usuarios/{usuario}/detalles', [UserController::class, 'show'])->name('usuarios.show');
-        Route::post('usuarios/{usuario}/toggle-estado', [UserController::class, 'toggleEstado'])->name('usuarios.toggle-estado');
-        Route::resource('usuarios', UserController::class)->except(['create', 'edit', 'show']);
-
-        // Métodos de Pago (CRUD completo)
-        Route::resource('metodos-pago', MetodoPagoController::class);
-
-        // Créditos (editar y eliminar)
-        Route::get('/creditos/{id}/edit', [CreditoController::class, 'edit'])->name('creditos.edit');
-        Route::put('/creditos/{id}', [CreditoController::class, 'update'])->name('creditos.update');
-        Route::delete('/creditos/{id}', [CreditoController::class, 'destroy'])->name('creditos.destroy');
-
-        // Pagos (editar y eliminar)
-        Route::get('/pagos/{id}/edit', [PagoController::class, 'edit'])->name('pagos.edit');
-        Route::put('/pagos/{id}', [PagoController::class, 'update'])->name('pagos.update');
-        Route::delete('/pagos/{id}', [PagoController::class, 'destroy'])->name('pagos.destroy');
+        Route::get('inventario', [InventarioController::class, 'index'])->name('inventario.index');
+        Route::get('inventario/{inventario}', [InventarioController::class, 'show'])->name('inventario.show');
+        Route::post('inventario/{inventario}/ajuste', [InventarioController::class, 'ajuste'])->name('inventario.ajuste');
     });
 
-    // Permitir listar y ver productos a todos los autenticados
-    Route::get('productos', [ProductoController::class, 'index'])->name('productos.index');
-    Route::get('productos/{producto}/detalles', [ProductoController::class, 'show'])->name('productos.show');
+    // CU6 — Ventas (vendedor; admin superusuario)
+    Route::middleware('role:admin,vendedor')->group(function () {
+        Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
+        Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['index', 'create', 'store', 'show']);
 
-    // Permitir listar y ver promociones a todos los autenticados
-    Route::get('promociones', [PromocionController::class, 'index'])->name('promociones.index');
-    Route::get('promociones/{promocion}/detalles', [PromocionController::class, 'show'])->name('promociones.show');
+        // CU7 — Créditos y cobranza
+        Route::get('creditos', [CreditoController::class, 'index'])->name('creditos.index');
+        Route::get('creditos/{credito}', [CreditoController::class, 'show'])->name('creditos.show');
+        Route::post('cuotas/{cuota}/pagar', [CreditoController::class, 'pagarCuota'])->name('creditos.pagar-cuota');
 
-    // Reportes - Solo Propietario y Vendedor
-    Route::middleware('role:Propietario,Vendedor')->group(function () {
-        Route::get('/reportes', [ReportController::class, 'index'])->name('reportes.index');
-        Route::get('/reportes/{tipo}', [ReportController::class, 'show'])->name('reportes.show');
-        Route::get('/reportes/{tipo}/pdf', [ReportController::class, 'pdf'])->name('reportes.pdf');
+        // CU4 — Pedidos (gestión por el vendedor)
+        Route::get('pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
+        Route::get('pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+        Route::post('pedidos/{pedido}/aprobar', [PedidoController::class, 'aprobar'])->name('pedidos.aprobar');
+        Route::post('pedidos/{pedido}/rechazar', [PedidoController::class, 'rechazar'])->name('pedidos.rechazar');
+        Route::post('pedidos/{pedido}/despachar', [PedidoController::class, 'despachar'])->name('pedidos.despachar');
     });
 
-    // Créditos - Propietario y Vendedor
-    Route::middleware('role:Propietario,Vendedor')->group(function () {
-        Route::get('/creditos', [CreditoController::class, 'index'])->name('creditos.index');
-        Route::get('/creditos/{id}/detalles', [CreditoController::class, 'show'])->name('creditos.show');
-        Route::post('/creditos/pago', [CreditoController::class, 'registrarPago'])->name('creditos.registrar-pago');
-        Route::post('/creditos/actualizar-estados', [CreditoController::class, 'actualizarEstados'])->name('creditos.actualizar-estados');
-        Route::get('/creditos/reporte/mora', [CreditoController::class, 'reporteMora'])->name('creditos.reporte-mora');
+    // CU4 (cliente) — Catálogo y mis pedidos
+    Route::middleware('role:cliente')->group(function () {
+        Route::get('catalogo', [CatalogoController::class, 'index'])->name('catalogo.index');
+        Route::post('catalogo/pedido', [CatalogoController::class, 'store'])->name('catalogo.pedido');
+        Route::get('mis-pedidos', [MisPedidosController::class, 'index'])->name('mis-pedidos.index');
+        Route::get('mis-pedidos/{pedido}', [MisPedidosController::class, 'show'])->name('mis-pedidos.show');
     });
 
-    // Pagos - Propietario y Vendedor
-    Route::middleware('role:Propietario,Vendedor')->group(function () {
-        Route::get('/pagos', [PagoController::class, 'index'])->name('pagos.index');
-        Route::get('/pagos/{id}/detalles', [PagoController::class, 'show'])->name('pagos.show');
-        Route::get('/pagos/registrar', [PagoController::class, 'create'])->name('pagos.create');
-        Route::post('/pagos', [PagoController::class, 'store'])->name('pagos.store');
-        Route::get('/pagos/buscar-cuotas', [PagoController::class, 'buscarCuotas'])->name('pagos.buscar-cuotas');
-        Route::get('/pagos/historial/{cuotaId}', [PagoController::class, 'historialCuota'])->name('pagos.historial');
+    // CU9 — Taller
+    Route::middleware('role:admin,vendedor,almacenero,mecanico')->group(function () {
+        Route::get('taller', [TallerController::class, 'index'])->name('taller.index');
+        Route::get('taller/{orden}', [TallerController::class, 'show'])->name('taller.show');
+    });
+    Route::middleware('role:admin,mecanico')->group(function () {
+        Route::get('taller-nueva/create', [TallerController::class, 'create'])->name('taller.create');
+        Route::post('taller', [TallerController::class, 'store'])->name('taller.store');
+        Route::post('taller/{orden}/diagnosticar', [TallerController::class, 'diagnosticar'])->name('taller.diagnosticar');
+        Route::post('taller/{orden}/solicitar-repuestos', [TallerController::class, 'solicitarRepuestos'])->name('taller.solicitar-repuestos');
+        Route::post('taller/{orden}/terminar', [TallerController::class, 'terminar'])->name('taller.terminar');
+    });
+    Route::middleware('role:admin,almacenero')->group(function () {
+        Route::post('taller-repuesto/{detalle}/aprobar', [TallerController::class, 'aprobarRepuesto'])->name('taller.aprobar-repuesto');
+        Route::post('taller-repuesto/{detalle}/rechazar', [TallerController::class, 'rechazarRepuesto'])->name('taller.rechazar-repuesto');
+    });
+    Route::middleware('role:admin,vendedor')->group(function () {
+        Route::post('taller/{orden}/facturar', [TallerController::class, 'facturar'])->name('taller.facturar');
+        Route::post('taller/{orden}/entregar', [TallerController::class, 'entregar'])->name('taller.entregar');
     });
 
-    // Gestión de Pedidos - Propietario y Vendedor
-    Route::middleware('role:Propietario,Vendedor')->group(function () {
-        Route::get('/pedidos', [\App\Http\Controllers\GestionPedidosController::class, 'index'])->name('pedidos.index');
-        Route::get('/pedidos/crear', [\App\Http\Controllers\GestionPedidosController::class, 'create'])->name('pedidos.create');
-        Route::post('/pedidos', [\App\Http\Controllers\GestionPedidosController::class, 'store'])->name('pedidos.admin.store');
-        Route::get('/pedidos/{id}/detalles', [\App\Http\Controllers\GestionPedidosController::class, 'show'])->name('pedidos.show');
-        Route::get('/pedidos/{id}/editar', [\App\Http\Controllers\GestionPedidosController::class, 'edit'])->name('pedidos.edit');
-        Route::put('/pedidos/{id}', [\App\Http\Controllers\GestionPedidosController::class, 'update'])->name('pedidos.update');
-        Route::patch('/pedidos/{id}/accion', [\App\Http\Controllers\GestionPedidosController::class, 'accion'])->name('pedidos.accion');
-        Route::patch('/pedidos/{id}/marcar-enviado', [PedidoOnlineController::class, 'marcarComoEnviado'])->name('pedidos.marcar-enviado');
-        Route::post('/pedidos/{id}/verificar-pago', [\App\Http\Controllers\GestionPedidosController::class, 'verificarPago'])->name('pedidos.verificar-pago');
+    // CU9 (cliente) — Mi taller
+    Route::middleware('role:cliente')->group(function () {
+        Route::get('mi-taller', [MiTallerController::class, 'index'])->name('mi-taller.index');
+        Route::get('mi-taller/{orden}', [MiTallerController::class, 'show'])->name('mi-taller.show');
+        Route::post('mi-taller/{orden}/aprobar-presupuesto', [MiTallerController::class, 'aprobarPresupuesto'])->name('mi-taller.aprobar-presupuesto');
+        Route::post('mi-taller/{orden}/rechazar-presupuesto', [MiTallerController::class, 'rechazarPresupuesto'])->name('mi-taller.rechazar-presupuesto');
     });
 
-    // Mis Créditos y Pagos - Solo Cliente
-    Route::middleware('role:Cliente')->group(function () {
-        // Mis Créditos
-        Route::get('/mis-creditos', [\App\Http\Controllers\MisCreditosController::class, 'index'])->name('mis-creditos.index');
-        Route::get('/mis-creditos/{id}/detalles', [\App\Http\Controllers\MisCreditosController::class, 'show'])->name('mis-creditos.show');
-        Route::post('/mis-creditos/pago', [\App\Http\Controllers\MisCreditosController::class, 'registrarPago'])->name('mis-creditos.registrar-pago');
+    // Búsqueda global del negocio (REQ9)
+    Route::get('buscar', [BuscarController::class, 'index'])->name('buscar');
 
-        Route::post('/pagos/generar-qr', [PagoController::class, 'generarQR'])->name('pagos.generar-qr');
-        
-        // Mis Pedidos - Solo Cliente
-        Route::get('/mis-pedidos', [\App\Http\Controllers\MisPedidosController::class, 'index'])->name('mis-pedidos.index');
-        Route::get('/mis-pedidos/{id}/detalles', [\App\Http\Controllers\MisPedidosController::class, 'show'])->name('mis-pedidos.show');
-        
-        // Mis Pagos - Solo Cliente
-        Route::get('/mis-pagos', [\App\Http\Controllers\MisPagosController::class, 'index'])->name('mis-pagos.index');
+    // Notificaciones in-app (todos los roles autenticados)
+    Route::get('notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
+    Route::post('notificaciones/{notificacion}/leida', [NotificacionController::class, 'marcarLeida'])->name('notificaciones.leida');
+    Route::post('notificaciones/todas', [NotificacionController::class, 'marcarTodas'])->name('notificaciones.todas');
 
-        // Pedidos Online - Cliente crea pedido desde carrito
-        Route::post('/carrito/realizar-pedido', [PedidoOnlineController::class, 'realizarPedido'])->name('carrito.realizar-pedido');
-        
-        // Pagos QR para cuotas de créditos (definidas abajo con middleware ampliado)
+    // Configuración y Bitácora (solo admin)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
+        Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
+        Route::get('bitacora', [BitacoraController::class, 'index'])->name('bitacora.index');
+    });
+
+    // CU8 — Reportes (admin, vendedor, almacenero)
+    Route::middleware('role:admin,vendedor,almacenero')->group(function () {
+        Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('reportes/ventas', [ReporteController::class, 'ventas'])->name('reportes.ventas');
+        Route::get('reportes/creditos', [ReporteController::class, 'creditos'])->name('reportes.creditos');
+        Route::get('reportes/inventario', [ReporteController::class, 'inventario'])->name('reportes.inventario');
+        Route::get('reportes/top-productos', [ReporteController::class, 'topProductos'])->name('reportes.top-productos');
+    });
+
+    // Cliente — Mis créditos y Mi cuenta
+    Route::middleware('role:cliente')->group(function () {
+        Route::get('mis-creditos', [MisCreditosController::class, 'index'])->name('mis-creditos.index');
+        Route::get('mis-creditos/{credito}', [MisCreditosController::class, 'show'])->name('mis-creditos.show');
+        Route::post('mis-creditos/{credito}/cuota/{cuota}/pagar', [MisCreditosController::class, 'pagar'])->name('mis-creditos.pagar');
+        Route::get('mi-cuenta', [MiCuentaController::class, 'index'])->name('mi-cuenta.index');
+
+        // Pago de cuota por QR (PagoFácil)
+        Route::post('pago-qr/cuota/{cuota}', [PagoController::class, 'generarQrCuota'])->name('pagofacil.generar-qr-cuota');
     });
 });
 
-// ============================================
-// WEBHOOKS DE PAGOFACIL (SIMULADOS)
-// Estas rutas NO requieren autenticación
-// ============================================
-Route::post('/webhook/pagofacil-simulado/venta', [PedidoOnlineController::class, 'webhookVentaSimulado'])->name('webhook.pagofacil.venta');
-Route::post('/webhook/pagofacil-simulado/cuota', [PagoCuotaController::class, 'webhookCuotaSimulado'])->name('webhook.pagofacil.cuota');
-Route::post('/pagofacil/callback', [PedidoOnlineController::class, 'pagofacilCallback'])->name('pagofacil.callback');
-
-// ============================================
-// ENDPOINTS DE PRUEBA (SOLO DESARROLLO)
-// Eliminar en producción
-// ============================================
-Route::post('/pagofacil-simulado/confirmar-pago', [PedidoOnlineController::class, 'confirmarPagoSimulado'])->name('pagofacil.confirmar-simulado');
-Route::post('/pagofacil-simulado/confirmar-pago-cuota', [PagoCuotaController::class, 'confirmarPagoSimulado'])->name('pagofacil.confirmar-cuota-simulado');
+// Callback/webhook de PagoFácil (sin auth ni CSRF: lo invoca el servidor de PagoFácil). RN13.
+Route::post('webhook/pagofacil-simulado/cuota', [PagoController::class, 'confirmarCuota'])->name('pagofacil.confirmar-cuota');

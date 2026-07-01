@@ -2,53 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Venta;
+use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class MisPedidosController extends Controller
 {
-    /**
-     * Muestra los pedidos del cliente autenticado
-     */
     public function index(Request $request)
     {
-        $user = $request->user();
+        $pedidos = Pedido::with('venta')
+            ->withCount('detalles')
+            ->where('cliente_id', $request->user()->id)
+            ->latest('fecha')
+            ->paginate(12);
 
-        // Filtrar por estado si se envía
-        $estado = $request->input('estado', 'pendiente');
-
-        $query = Venta::with(['vendedor', 'metodoPago', 'detalles.producto'])
-            ->where('user_id', $user->id);
-
-        if ($estado === 'pendiente') {
-            $query->where('estado', 'pendiente');
-        } elseif ($estado === 'pagado') {
-            $query->whereIn('estado', ['pagado', 'completada']);
-        }
-
-        $pedidos = $query->orderByDesc('created_at')->paginate(10);
-
-        return Inertia::render('MisPedidos/Index', [
-            'pedidos' => $pedidos,
-            'filtro' => $estado,
-        ]);
+        return Inertia::render('MisPedidos/Index', ['pedidos' => $pedidos]);
     }
 
-    /**
-     * Muestra el detalle de un pedido específico
-     */
-    public function show($id)
+    public function show(Request $request, Pedido $pedido)
     {
-        $user = auth()->user();
+        // Un cliente solo ve sus propios pedidos.
+        if ($pedido->cliente_id !== $request->user()->id) {
+            throw new NotFoundHttpException;
+        }
 
-        $pedido = Venta::with(['vendedor', 'metodoPago', 'detalles.producto', 'credito.cuotas'])
-            ->where('id', $id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+        $pedido->load(['detalles.producto', 'venta']);
 
-        return Inertia::render('MisPedidos/Show', [
-            'pedido' => $pedido,
-        ]);
+        return Inertia::render('MisPedidos/Show', ['pedido' => $pedido]);
     }
 }

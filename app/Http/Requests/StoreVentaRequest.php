@@ -14,44 +14,30 @@ class StoreVentaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'metodo_pago_id' => 'required|exists:metodos_pago,id',
-            'tipo_venta' => 'required|in:contado,credito',
-            // Campos para crédito
-            'meses_plazo' => 'required_if:tipo_venta,credito|nullable|integer|min:1|max:36',
-            'tasa_interes' => 'required_if:tipo_venta,credito|nullable|numeric|min:0|max:100',
-            'fecha_primer_pago' => 'required_if:tipo_venta,credito|nullable|date|after:today',
+            'cliente_id' => ['required', 'exists:cliente,id'],
+            'tipo_venta' => ['required', 'in:CONTADO,CREDITO'],
+            'metodo_pago' => ['required', 'in:EFECTIVO,QR'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.producto_id' => ['required', 'exists:producto,id'],
+            'items.*.cantidad' => ['required', 'integer', 'min:1'],
+            'numero_cuotas' => ['required_if:tipo_venta,CREDITO', 'nullable', 'integer', 'min:2'],
+            'tasa_interes' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'metodo_pago_id.required' => 'El método de pago es obligatorio.',
-            'metodo_pago_id.exists' => 'El método de pago seleccionado no existe.',
-            'tipo_venta.required' => 'El tipo de venta es obligatorio.',
-            'tipo_venta.in' => 'El tipo de venta debe ser contado o crédito.',
-            'meses_plazo.required_if' => 'Los meses de plazo son obligatorios para ventas a crédito.',
-            'meses_plazo.integer' => 'Los meses de plazo deben ser un número entero.',
-            'meses_plazo.min' => 'Los meses de plazo deben ser al menos 1.',
-            'meses_plazo.max' => 'Los meses de plazo no pueden exceder 36.',
-            'tasa_interes.required_if' => 'La tasa de interés es obligatoria para ventas a crédito.',
-            'tasa_interes.numeric' => 'La tasa de interés debe ser un número.',
-            'tasa_interes.min' => 'La tasa de interés no puede ser negativa.',
-            'tasa_interes.max' => 'La tasa de interés no puede exceder 100%.',
-            'fecha_primer_pago.required_if' => 'La fecha del primer pago es obligatoria para ventas a crédito.',
-            'fecha_primer_pago.date' => 'La fecha del primer pago debe ser una fecha válida.',
-            'fecha_primer_pago.after' => 'La fecha del primer pago debe ser posterior a hoy.',
-        ];
-    }
-
-    public function attributes(): array
-    {
-        return [
-            'metodo_pago_id' => 'método de pago',
-            'tipo_venta' => 'tipo de venta',
-            'meses_plazo' => 'meses de plazo',
-            'tasa_interes' => 'tasa de interés',
-            'fecha_primer_pago' => 'fecha del primer pago',
+            'cliente_id.required' => 'Debe seleccionar un cliente.',
+            'cliente_id.exists' => 'El cliente seleccionado no existe.',
+            'tipo_venta.required' => 'Indique si la venta es al contado o a crédito.',
+            'metodo_pago.required' => 'Indique el método de pago.',
+            'items.required' => 'La venta debe tener al menos un producto.',
+            'items.min' => 'La venta debe tener al menos un producto.',
+            'items.*.producto_id.required' => 'Seleccione un producto en cada línea.',
+            'items.*.cantidad.min' => 'La cantidad debe ser al menos 1.',
+            'numero_cuotas.required_if' => 'Una venta a crédito requiere el número de cuotas.',
+            'numero_cuotas.min' => 'El crédito debe tener al menos 2 cuotas.',
         ];
     }
 }

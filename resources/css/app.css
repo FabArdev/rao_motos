@@ -115,6 +115,90 @@ body {
 }
 
 /* ========================================
+   LEGIBILIDAD DEL TEXTO SEGÚN EL TEMA
+   (la letra siempre debe contrastar con el fondo)
+   ======================================== */
+
+/* El texto principal sigue el color del tema en todos los elementos base */
+.card,
+.list-group-item,
+.table,
+.dropdown-menu,
+.modal-content,
+.offcanvas {
+    color: var(--text-primary, #212121);
+}
+
+/* .text-dark solía quedar invisible sobre fondos oscuros → sigue el tema */
+.text-dark {
+    color: var(--text-primary, #212121) !important;
+}
+
+/* Encabezados y texto secundario legibles */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary, #212121);
+}
+
+/* --- Ajustes específicos del MODO NOCHE (fondos oscuros) --- */
+[data-mode="noche"] {
+    color: var(--text-primary);
+}
+
+[data-mode="noche"] .card,
+[data-mode="noche"] .list-group-item,
+[data-mode="noche"] .dropdown-menu,
+[data-mode="noche"] .modal-content {
+    background-color: var(--card-bg, #1e1e1e);
+    border-color: var(--border-color, #424242);
+    color: var(--text-primary, #e0e0e0);
+}
+
+/* Fondos "blancos" fijos (card-header, topbar) pasan al color de tarjeta del tema */
+[data-mode="noche"] .bg-white {
+    background-color: var(--card-bg, #1e1e1e) !important;
+    color: var(--text-primary, #e0e0e0) !important;
+}
+
+/* Texto atenuado legible en noche */
+[data-mode="noche"] .text-muted,
+[data-mode="noche"] small.text-muted,
+[data-mode="noche"] .card-text.text-muted {
+    color: var(--text-secondary, #bdbdbd) !important;
+    opacity: 0.9;
+}
+
+/* Tablas: cabecera y celdas legibles */
+[data-mode="noche"] .table {
+    color: var(--text-primary, #e0e0e0);
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text-primary, #e0e0e0);
+}
+[data-mode="noche"] .table-light,
+[data-mode="noche"] .table-light > th,
+[data-mode="noche"] .table-light > td,
+[data-mode="noche"] thead.table-light th {
+    background-color: var(--bg-secondary, #2c2c2c) !important;
+    color: var(--text-primary, #e0e0e0) !important;
+    border-color: var(--border-color, #424242) !important;
+}
+[data-mode="noche"] .table > :not(caption) > * > * {
+    color: var(--text-primary, #e0e0e0);
+}
+
+/* Campos de formulario legibles en noche */
+[data-mode="noche"] .form-control,
+[data-mode="noche"] .form-select,
+[data-mode="noche"] .input-group-text {
+    background-color: var(--card-bg, #1e1e1e);
+    color: var(--text-primary, #e0e0e0);
+    border-color: var(--border-color, #424242);
+}
+[data-mode="noche"] .form-control::placeholder {
+    color: var(--text-secondary, #bdbdbd);
+    opacity: 0.7;
+}
+
+/* ========================================
    TAMAÑOS DE FUENTE
    ======================================== */
 

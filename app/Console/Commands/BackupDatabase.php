@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 
 class BackupDatabase extends Command
 {
@@ -29,22 +28,23 @@ class BackupDatabase extends Command
         $this->info('Iniciando backup de base de datos...');
 
         // Verificar que existe pg_dump
-        if (!$this->verificarPgDump()) {
+        if (! $this->verificarPgDump()) {
             $this->error('❌ No se encontró pg_dump en el sistema.');
             $this->error('Asegúrate de tener PostgreSQL instalado y pg_dump en tu PATH.');
+
             return 1;
         }
 
         // Crear directorio de backups si no existe
         $backupDir = storage_path('app/backups');
-        if (!file_exists($backupDir)) {
+        if (! file_exists($backupDir)) {
             mkdir($backupDir, 0755, true);
             $this->info("📁 Directorio de backups creado: {$backupDir}");
         }
 
         // Generar nombre de archivo
-        $filename = 'backup_' . date('Ymd_His') . '.sql';
-        $filepath = $backupDir . DIRECTORY_SEPARATOR . $filename;
+        $filename = 'backup_'.date('Ymd_His').'.sql';
+        $filepath = $backupDir.DIRECTORY_SEPARATOR.$filename;
 
         // Obtener configuración de base de datos
         $dbHost = config('database.connections.pgsql.host');
@@ -70,19 +70,21 @@ class BackupDatabase extends Command
 
         if ($returnVar === 0 && file_exists($filepath)) {
             $size = $this->formatBytes(filesize($filepath));
-            $this->info("✅ Backup completado exitosamente!");
+            $this->info('✅ Backup completado exitosamente!');
             $this->info("📄 Archivo: {$filename}");
             $this->info("📦 Tamaño: {$size}");
             $this->info("📂 Ubicación: {$filepath}");
+
             return 0;
         } else {
             $this->error('❌ Error al generar el backup.');
-            if (!empty($output)) {
+            if (! empty($output)) {
                 $this->error('Salida del comando:');
                 foreach ($output as $line) {
                     $this->error($line);
                 }
             }
+
             return 1;
         }
     }
@@ -94,6 +96,7 @@ class BackupDatabase extends Command
     {
         $command = PHP_OS_FAMILY === 'Windows' ? 'where pg_dump' : 'which pg_dump';
         exec($command, $output, $returnVar);
+
         return $returnVar === 0;
     }
 
@@ -107,6 +110,7 @@ class BackupDatabase extends Command
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
         $pow = min($pow, count($units) - 1);
         $bytes /= pow(1024, $pow);
-        return round($bytes, $precision) . ' ' . $units[$pow];
+
+        return round($bytes, $precision).' '.$units[$pow];
     }
 }

@@ -2,96 +2,85 @@
 
 namespace App\Services;
 
+use App\Models\DetalleVenta;
+use App\Models\Producto;
 use App\Models\Venta;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Crea ventas (mostrador, desde pedido o desde taller) con el mismo pipeline.
+ * El total lo calcula el servidor por línea (RN11); el precio por línea sale del
+ * umbral mayorista del producto (RN3). El stock se descuenta aquí una sola vez,
+ * salvo que el origen ya lo haya descontado (pedido/taller → descontarStock=false, RN18).
+ */
 class VentaService
 {
-    /**
-     * Generar número único de venta
-     */
-    public function generarNumeroVenta(): string
-    {
-        $fecha = Carbon::now()->format('Ymd');
-        $ultimaVenta = Venta::whereDate('created_at', Carbon::today())
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $secuencial = $ultimaVenta ? intval(substr($ultimaVenta->numero_venta, -4)) + 1 : 1;
-
-        return 'V-' . $fecha . '-' . str_pad($secuencial, 4, '0', STR_PAD_LEFT);
-    }
+    public function __construct(private InventarioService $inventario) {}
 
     /**
-     * Calcular totales de la venta
+     * @param  array  $data  {
+     *                       cliente_id, vendedor_id, tipo_venta[CONTADO|CREDITO], metodo_pago[EFECTIVO|QR],
+     *                       estado?, descontar_stock?(bool, def true),
+     *                       items: [ { producto_id?, descripcion?, cantidad, precio_unitario? } ]
+     *                       }
      */
-    public function calcularTotales(array $detalles): array
+    public function crear(array $data): Venta
     {
-        $subtotal = 0;
-        $descuentoTotal = 0;
+        $descontarStock = $data['descontar_stock'] ?? true;
 
-        foreach ($detalles as $detalle) {
-            $subtotal += $detalle['precio_unitario'] * $detalle['cantidad'];
-            $descuentoTotal += $detalle['descuento'] * $detalle['cantidad'];
-        }
+        return DB::transaction(function () use ($data, $descontarStock) {
+            $lineas = [];
+            $total = 0;
 
-        $total = $subtotal - $descuentoTotal;
+            foreach ($data['items'] as $item) {
+                $cantidad = (int) $item['cantidad'];
 
-        return [
-            'subtotal' => round($subtotal, 2),
-            'descuento' => round($descuentoTotal, 2),
-            'total' => round($total, 2),
-        ];
-    }
+                if (! empty($item['producto_id'])) {
+                    $producto = Producto::findOrFail($item['producto_id']);
+                    // Precio por línea según el umbral del producto (RN3), nunca tecleado.
+                    $precio = $producto->precioPara($cantidad);
+                    $descripcion = null;
+                    $productoId = $producto->id;
+                } else {
+                    // Línea de servicio / mano de obra: el precio viene dado.
+                    $precio = (float) $item['precio_unitario'];
+                    $descripcion = $item['descripcion'] ?? 'Servicio';
+                    $productoId = null;
+                }
 
-    /**
-     * Verificar disponibilidad de stock para venta
-     */
-    public function verificarStock(array $detalles): array
-    {
-        $errores = [];
-
-        foreach ($detalles as $detalle) {
-            $producto = \App\Models\Producto::find($detalle['producto_id']);
-            
-            if (!$producto) {
-                $errores[] = "Producto con ID {$detalle['producto_id']} no encontrado";
-                continue;
+                $total += $precio * $cantidad;
+                $lineas[] = compact('productoId', 'descripcion', 'cantidad', 'precio');
             }
 
-            if ($producto->stock < $detalle['cantidad']) {
-                $errores[] = "Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock}, Solicitado: {$detalle['cantidad']}";
-            }
-        }
+            $venta = Venta::create([
+                'numero_venta' => null,
+                'cliente_id' => $data['cliente_id'],
+                'vendedor_id' => $data['vendedor_id'] ?? null,
+                'fecha' => now(),
+                'monto_total' => round($total, 2),
+                'tipo_venta' => $data['tipo_venta'],
+                'metodo_pago' => $data['metodo_pago'],
+                'estado' => $data['estado'] ?? 'PENDIENTE',
+            ]);
 
-        return $errores;
-    }
+            $venta->update(['numero_venta' => 'V-'.str_pad($venta->id, 6, '0', STR_PAD_LEFT)]);
 
-    /**
-     * Descontar stock de productos vendidos
-     */
-    public function descontarStock(array $detalles): void
-    {
-        foreach ($detalles as $detalle) {
-            $producto = \App\Models\Producto::find($detalle['producto_id']);
-            
-            if ($producto) {
-                $producto->decrement('stock', $detalle['cantidad']);
-            }
-        }
-    }
+            foreach ($lineas as $l) {
+                DetalleVenta::create([
+                    'venta_id' => $venta->id,
+                    'producto_id' => $l['productoId'],
+                    'descripcion' => $l['descripcion'],
+                    'cantidad' => $l['cantidad'],
+                    'precio_unitario' => $l['precio'],
+                ]);
 
-    /**
-     * Restaurar stock (al anular venta)
-     */
-    public function restaurarStock(Venta $venta): void
-    {
-        foreach ($venta->detalles as $detalle) {
-            $producto = $detalle->producto;
-            
-            if ($producto) {
-                $producto->increment('stock', $detalle->cantidad);
+                // El stock sale físicamente aquí, salvo que ya se haya descontado en el origen.
+                if ($descontarStock && $l['productoId']) {
+                    $this->inventario->egreso($l['productoId'], $l['cantidad'], "Venta {$venta->numero_venta}");
+                }
             }
-        }
+
+            return $venta;
+        });
     }
 }

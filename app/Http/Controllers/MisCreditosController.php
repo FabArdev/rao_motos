@@ -3,138 +3,65 @@
 namespace App\Http\Controllers;
 
 use App\Models\Credito;
+use App\Models\PagoCuota;
+use App\Services\CreditoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class MisCreditosController extends Controller
 {
-    /**
-     * Muestra los créditos del cliente autenticado
-     */
+    public function __construct(private CreditoService $creditos) {}
+
     public function index(Request $request)
     {
-        $user = $request->user();
+        $creditos = Credito::with('venta')
+            ->whereHas('venta', fn ($q) => $q->where('cliente_id', $request->user()->id))
+            ->latest()
+            ->paginate(12);
 
-        // Filtros
-        $estado = $request->input('estado', '');
-        $search = $request->input('search', '');
+        return Inertia::render('MisCreditos/Index', ['creditos' => $creditos]);
+    }
 
-        $query = Credito::with(['venta', 'venta.user', 'cuotas'])
-            ->whereHas('venta', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
+    public function show(Request $request, Credito $credito)
+    {
+        $credito->load(['venta', 'cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
+        $this->autorizar($request, $credito);
 
-        if ($estado) {
-            $query->where('estado', $estado);
-        }
+        $cuotas = $credito->cuotas->map(function (PagoCuota $c) {
+            $arr = $c->toArray();
+            $arr['mora_actual'] = $c->estado === 'PAGADO' ? (float) $c->mora : $this->creditos->calcularMora($c);
 
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->whereHas('venta', function($ventaQuery) use ($search) {
-                    $ventaQuery->where('numero_venta', 'like', "%{$search}%");
-                });
-            });
-        }
+            return $arr;
+        });
 
-        $creditos = $query->orderBy('created_at', 'desc')->paginate(10);
-
-        return Inertia::render('MisCreditos/Index', [
-            'creditos' => $creditos,
-            'filtros' => $request->only(['estado', 'search'])
-        ]);
+        return Inertia::render('MisCreditos/Show', ['credito' => $credito, 'cuotas' => $cuotas]);
     }
 
     /**
-     * Detalle de un crédito del cliente autenticado
+     * Pago de una cuota por el cliente. La integración QR (PagoFácil) se conecta
+     * en la fase de pagos; por ahora registra el pago de la cuota propia.
      */
-    public function show($id)
+    public function pagar(Request $request, Credito $credito, PagoCuota $cuota)
     {
-        $user = auth()->user();
+        $this->autorizar($request, $credito->load('venta'));
 
-        $credito = Credito::with([
-            'venta.user',
-            'venta.detalles.producto',
-            'cuotas.pagos.metodoPago',
-            'cuotas' => function($q) {
-                $q->orderBy('numero_cuota');
-            }
-        ])->whereHas('venta', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
-        })->findOrFail($id);
+        if ($cuota->credito_id !== $credito->id) {
+            throw new NotFoundHttpException;
+        }
+        if ($cuota->estado === 'PAGADO') {
+            return back()->with('error', 'La cuota ya fue pagada.');
+        }
 
-        return Inertia::render('MisCreditos/Show', [
-            'credito' => $credito,
-        ]);
+        $this->creditos->registrarPagoCuota($cuota);
+
+        return back()->with('success', "Cuota #{$cuota->numero_cuota} pagada correctamente.");
     }
 
-    /**
-     * Registrar pago de una cuota por el cliente autenticado
-     */
-    public function registrarPago(Request $request)
+    private function autorizar(Request $request, Credito $credito): void
     {
-        $user = $request->user();
-        $request->validate([
-            'cuota_id' => 'required|exists:cuotas,id',
-            'monto' => 'required|numeric|min:0.01',
-            'fecha' => 'required|date',
-        ]);
-
-        $cuota = \App\Models\Cuota::with('credito.venta')->findOrFail($request->cuota_id);
-
-        // Verificar que la cuota pertenezca al usuario autenticado
-        if ($cuota->credito->venta->user_id !== $user->id) {
-            abort(403, 'No autorizado para pagar esta cuota.');
-        }
-
-        if ($request->monto > $cuota->monto_pendiente) {
-            return back()->withErrors([
-                'monto' => 'El monto no puede ser mayor al monto pendiente de la cuota (Bs. ' . number_format($cuota->monto_pendiente, 2) . ')'
-            ]);
-        }
-
-        \DB::beginTransaction();
-        try {
-            // Método de pago QR (id fijo o buscar por nombre)
-            $metodoQR = \App\Models\MetodoPago::where('nombre', 'QR')->first();
-            if (!$metodoQR) {
-                throw new \Exception('Método de pago QR no disponible.');
-            }
-
-            $pago = \App\Models\Pago::create([
-                'cuota_id' => $cuota->id,
-                'metodo_pago_id' => $metodoQR->id,
-                'monto' => $request->monto,
-                'recargo_extra' => 0,
-                'interes_mora_cobrado' => 0,
-                'fecha' => $request->fecha,
-            ]);
-
-            // Actualizar la cuota
-            $cuota->monto_pagado += $request->monto;
-            $cuota->monto_pendiente -= $request->monto;
-            if ($cuota->monto_pendiente <= 0.01) {
-                $cuota->estado = 'pagada';
-                $cuota->monto_pendiente = 0;
-            }
-            $cuota->save();
-
-            // Actualizar el crédito
-            $credito = $cuota->credito;
-            $credito->monto_pagado += $request->monto;
-            $credito->monto_pendiente -= $request->monto;
-            if ($credito->monto_pendiente <= 0.01) {
-                $credito->estado = 'pagado';
-                $credito->monto_pendiente = 0;
-                $credito->dias_mora = 0;
-            }
-            $credito->save();
-
-            \DB::commit();
-            return redirect()->back()->with('success', 'Pago registrado exitosamente.');
-        } catch (\Exception $e) {
-            \DB::rollBack();
-            \Log::error('Error al registrar pago (cliente): ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Error al registrar el pago: ' . $e->getMessage()]);
+        if ($credito->venta?->cliente_id !== $request->user()->id) {
+            throw new NotFoundHttpException;
         }
     }
 }

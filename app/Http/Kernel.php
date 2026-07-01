@@ -68,5 +68,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'role' => \App\Http\Middleware\RoleMiddleware::class,
         'track.visits' => \App\Http\Middleware\TrackPageVisits::class,
+        'bitacora' => \App\Http\Middleware\BitacoraAcceso::class,
     ];
 }

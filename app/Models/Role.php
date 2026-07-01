@@ -2,60 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Role extends Model
 {
-    use HasFactory;
+    protected $table = 'roles';
 
-    /**
-     * Campos asignables
-     */
-    protected $fillable = [
-        'nombre',
-        'descripcion',
-    ];
+    protected $fillable = ['nombre', 'descripcion'];
 
-    /**
-     * Relación con usuarios (uno a muchos)
-     */
-    public function users()
+    public function usuarios()
     {
         return $this->hasMany(User::class);
     }
 
-    /**
-     * Relación con items de menú
-     */
     public function menuItems()
     {
         return $this->hasMany(MenuItem::class);
-    }
-
-    /**
-     * Helpers para validación de roles
-     */
-    public function esPropietario()
-    {
-        return strcasecmp($this->nombre, 'Propietario') === 0;
-    }
-
-    public function esVendedor()
-    {
-        return strcasecmp($this->nombre, 'Vendedor') === 0;
-    }
-
-    public function esCliente()
-    {
-        return strcasecmp($this->nombre, 'Cliente') === 0;
-    }
-
-    /**
-     * Scope para búsqueda rápida de rol por nombre (case-insensitive)
-     */
-    public function scopeNombre($query, $nombre)
-    {
-        return $query->whereRaw('LOWER(nombre) = ?', [strtolower($nombre)]);
     }
 }

@@ -3,85 +3,39 @@
 namespace App\Services;
 
 use App\Models\PageVisit;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * Contador de visitas por ruta (REQ7). El total se muestra en el footer.
+ */
 class PageVisitService
 {
-    /**
-     * Registra una visita a una ruta específica
-     */
-    public function registrarVisita($ruta)
+    /** Rutas que NO se contabilizan (assets, callbacks, etc.). */
+    private array $excluidas = ['webhook', 'pagofacil', 'notificaciones', 'livewire', 'build', 'storage'];
+
+    public function debeContabilizar(string $ruta): bool
     {
-        $pageVisit = PageVisit::where('ruta', $ruta)->first();
-        
-        if ($pageVisit) {
-            $pageVisit->increment('contador');
+        foreach ($this->excluidas as $pref) {
+            if (str_starts_with($ruta, $pref)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function registrarVisita(string $ruta): void
+    {
+        // upsert atómico: crea la fila o incrementa el contador.
+        $existe = PageVisit::where('ruta', $ruta)->exists();
+        if ($existe) {
+            PageVisit::where('ruta', $ruta)->increment('contador');
         } else {
-            PageVisit::create([
-                'ruta' => $ruta,
-                'contador' => 1
-            ]);
+            PageVisit::create(['ruta' => $ruta, 'contador' => 1]);
         }
     }
 
-    /**
-     * Determina si una ruta debe ser contabilizada
-     */
-    public function debeContabilizar($ruta)
+    public function total(): int
     {
-        // Rutas excluidas
-        $rutasExcluidas = [
-            'login',
-            'register',
-            'forgot-password',
-            'reset-password',
-            'verify-email',
-            'user/profile',
-            'user/profile-information',
-            'user/password',
-            'user/two-factor-authentication',
-            'teams',
-            'logout'
-        ];
-
-        // Excluir rutas que comienzan con ciertos prefijos
-        $prefijosExcluidos = ['api/', 'sanctum/', 'broadcasting/'];
-
-        foreach ($prefijosExcluidos as $prefijo) {
-            if (str_starts_with($ruta, $prefijo)) {
-                return false;
-            }
-        }
-
-        foreach ($rutasExcluidas as $excluida) {
-            if (str_contains($ruta, $excluida)) {
-                return false;
-            }
-        }
-
-        // Solo contabilizar rutas principales
-        $rutasValidas = [
-            'dashboard',
-            'catalogo',
-            'ventas',
-            'creditos',
-            'pagos',
-            'reportes',
-            'productos',
-            'categorias',
-            'promociones',
-            'pedidos',
-            'carrito',
-            'mis-creditos',
-            'usuarios'
-        ];
-
-        foreach ($rutasValidas as $valida) {
-            if (str_starts_with($ruta, $valida)) {
-                return true;
-            }
-        }
-
-        return false;
+        return (int) PageVisit::sum('contador');
     }
 }

@@ -2,216 +2,132 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
-use App\Models\Categoria;
 use App\Http\Requests\StoreProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
+use App\Models\Inventario;
+use App\Models\Producto;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
-/**
- * ProductoController - CRUD de Productos
- * 
- * Implementación MVC completa con:
- * - Policy para autorización dinámica desde BD
- * - Form Requests para validación
- * - Eager Loading para optimización
- * - Inertia.js para renderizar vistas Vue
- */
 class ProductoController extends Controller
 {
-    /**
-     * Constructor - Registrar Policy
-     */
-    public function __construct()
-    {
-        $this->authorizeResource(Producto::class, 'producto');
-    }
-
-    /**
-     * Display a listing of the resource.
-     * 
-     * Lista productos con paginación y búsqueda
-     * Incluye eager loading de categoría para evitar N+1
-     */
     public function index(Request $request)
     {
-        $search = $request->input('search', '');
-        
-        $productos = Producto::with(['categoria', 'imagenes'])
-            ->when($search, function ($query, $search) {
-                $query->where('nombre', 'ilike', "%{$search}%")
-                      ->orWhere('codigo', 'ilike', "%{$search}%");
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->withQueryString();
+        $q = $request->string('q')->toString();
 
-        $rol = 'propietario'; // default
-        if ($request->user() && $request->user()->role) {
-            $rol = $request->user()->role->nombre;
-        }
+        $productos = Producto::with('inventario')
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('nombre', 'ilike', "%{$q}%")
+                        ->orWhere('codigo', 'ilike', "%{$q}%")
+                        ->orWhere('marca', 'ilike', "%{$q}%")
+                        ->orWhere('modelo', 'ilike', "%{$q}%");
+                });
+            })
+            ->orderBy('nombre')
+            ->paginate(12)
+            ->withQueryString();
 
         return Inertia::render('Productos/Index', [
             'productos' => $productos,
-            'filters' => ['search' => $search],
-            'rol' => $rol,
+            'filtros' => ['q' => $q],
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     * 
-     * Muestra formulario de creación con lista de categorías
-     */
     public function create()
     {
-        $categorias = Categoria::select('id', 'nombre')
-            ->orderBy('nombre')
-            ->get();
-
-        return Inertia::render('Productos/Create', [
-            'categorias' => $categorias,
-        ]);
+        return Inertia::render('Productos/Create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     * 
-     * Validación via StoreProductoRequest
-     * Manejo de imagen (upload a storage)
-     */
     public function store(StoreProductoRequest $request)
     {
         $data = $request->validated();
 
-        // Crear producto sin imagen
-        $producto = Producto::create($data);
-
-        // Manejar upload de imágenes (puede ser 1 o múltiples)
-        if ($request->hasFile('imagen')) {
-            $imagenes = is_array($request->file('imagen')) 
-                ? $request->file('imagen') 
-                : [$request->file('imagen')];
-
-            foreach ($imagenes as $imagen) {
-                $path = $imagen->store('productos', 'public');
-                $producto->imagenes()->create(['url' => $path]);
+        DB::transaction(function () use ($data, $request) {
+            if ($request->hasFile('foto')) {
+                $data['foto_url'] = $request->file('foto')->store('productos', 'public');
             }
-        }
 
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto creado exitosamente.');
+            $producto = Producto::create([
+                'codigo' => $data['codigo'],
+                'nombre' => $data['nombre'],
+                'marca' => $data['marca'] ?? null,
+                'modelo' => $data['modelo'] ?? null,
+                'descripcion' => $data['descripcion'] ?? null,
+                'precio_venta_base' => $data['precio_venta_base'],
+                'precio_mayorista' => $data['precio_mayorista'],
+                'cantidad_minima_mayorista' => $data['cantidad_minima_mayorista'],
+                'foto_url' => $data['foto_url'] ?? null,
+                'activo' => $data['activo'] ?? true,
+            ]);
+
+            // Cada producto nace con su registro de inventario (stock inicial 0).
+            Inventario::create([
+                'producto_id' => $producto->id,
+                'stock_actual' => 0,
+                'stock_minimo' => $data['stock_minimo'] ?? 5,
+                'tecnica_inventario' => 'PERMANENTE',
+                'tecnica_costo' => 'PROMEDIO',
+                'fecha_actualizacion' => now(),
+            ]);
+        });
+
+        return redirect()->route('productos.index')->with('success', 'Producto creado correctamente.');
     }
 
-    /**
-     * Display the specified resource.
-     * 
-     * Vista detalle de un producto
-     */
     public function show(Producto $producto)
     {
-        $producto->load(['categoria', 'promociones', 'imagenes']);
+        $producto->load('inventario');
 
-        return Inertia::render('Productos/Show', [
-            'producto' => $producto,
-        ]);
+        return Inertia::render('Productos/Show', ['producto' => $producto]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     * 
-     * Formulario de edición con datos precargados
-     */
     public function edit(Producto $producto)
     {
-        $categorias = Categoria::select('id', 'nombre')
-            ->orderBy('nombre')
-            ->get();
+        $producto->load('inventario');
 
-        $producto->load('imagenes');
-
-        return Inertia::render('Productos/Edit', [
-            'producto' => $producto,
-            'categorias' => $categorias,
-        ]);
+        return Inertia::render('Productos/Edit', ['producto' => $producto]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     * 
-     * Validación via UpdateProductoRequest
-     * Manejo de imagen (reemplaza anterior si existe nueva)
-     */
     public function update(UpdateProductoRequest $request, Producto $producto)
     {
         $data = $request->validated();
 
-        // Actualizar datos del producto
-        $producto->update($data);
-
-        // Manejar upload de nuevas imágenes
-        if ($request->hasFile('imagen')) {
-            // Opcional: Eliminar imágenes anteriores si quieres reemplazarlas
-            // foreach ($producto->imagenes as $img) {
-            //     if (Storage::disk('public')->exists($img->url)) {
-            //         Storage::disk('public')->delete($img->url);
-            //     }
-            //     $img->delete();
-            // }
-
-            $imagenes = is_array($request->file('imagen')) 
-                ? $request->file('imagen') 
-                : [$request->file('imagen')];
-
-            foreach ($imagenes as $imagen) {
-                $path = $imagen->store('productos', 'public');
-                $producto->imagenes()->create(['url' => $path]);
+        DB::transaction(function () use ($data, $request, $producto) {
+            if ($request->hasFile('foto')) {
+                if ($producto->foto_url) {
+                    Storage::disk('public')->delete($producto->foto_url);
+                }
+                $producto->foto_url = $request->file('foto')->store('productos', 'public');
             }
-        }
 
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto actualizado exitosamente.');
+            $producto->fill([
+                'codigo' => $data['codigo'],
+                'nombre' => $data['nombre'],
+                'marca' => $data['marca'] ?? null,
+                'modelo' => $data['modelo'] ?? null,
+                'descripcion' => $data['descripcion'] ?? null,
+                'precio_venta_base' => $data['precio_venta_base'],
+                'precio_mayorista' => $data['precio_mayorista'],
+                'cantidad_minima_mayorista' => $data['cantidad_minima_mayorista'],
+                'activo' => $data['activo'] ?? $producto->activo,
+            ])->save();
+
+            if (isset($data['stock_minimo']) && $producto->inventario) {
+                $producto->inventario->update(['stock_minimo' => $data['stock_minimo']]);
+            }
+        });
+
+        return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * 
-     * Elimina producto si no tiene ventas asociadas (validado en Policy)
-     */
     public function destroy(Producto $producto)
     {
-        // Eliminar imágenes físicas y registros
-        foreach ($producto->imagenes as $imagen) {
-            if (Storage::disk('public')->exists($imagen->url)) {
-                Storage::disk('public')->delete($imagen->url);
-            }
-            $imagen->delete();
-        }
+        // Eliminación lógica: el producto puede estar referenciado por ventas/compras.
+        $producto->update(['activo' => false]);
 
-        $producto->delete();
-
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto eliminado exitosamente.');
-    }
-
-    /**
-     * Eliminar una imagen específica del producto
-     */
-    public function deleteImage(Producto $producto, $imagenId)
-    {
-        $imagen = $producto->imagenes()->findOrFail($imagenId);
-        
-        // Eliminar archivo físico
-        if (Storage::disk('public')->exists($imagen->url)) {
-            Storage::disk('public')->delete($imagen->url);
-        }
-        
-        // Eliminar registro de BD
-        $imagen->delete();
-
-        return back()->with('success', 'Imagen eliminada exitosamente.');
+        return redirect()->route('productos.index')->with('success', 'Producto desactivado.');
     }
 }
-

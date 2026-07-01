@@ -2,7 +2,10 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Cliente;
+use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -34,57 +37,66 @@ class CreateNewUser implements CreatesNewUsers
             'nombre.min' => 'El nombre debe tener al menos :min caracteres.',
             'nombre.max' => 'El nombre no puede exceder :max caracteres.',
             'nombre.regex' => 'El nombre solo puede contener letras y espacios.',
-            
+
             // Mensajes para apellidos
             'apellidos.required' => 'Los apellidos son obligatorios.',
             'apellidos.min' => 'Los apellidos deben tener al menos :min caracteres.',
             'apellidos.max' => 'Los apellidos no pueden exceder :max caracteres.',
             'apellidos.regex' => 'Los apellidos solo pueden contener letras y espacios.',
-            
+
             // Mensajes para CI
             'ci.required' => 'El CI es obligatorio.',
             'ci.min' => 'El CI debe tener al menos :min dígitos.',
             'ci.max' => 'El CI no puede exceder :max dígitos.',
             'ci.unique' => 'Este CI ya está registrado en el sistema.',
             'ci.regex' => 'El CI solo puede contener números.',
-            
+
             // Mensajes para teléfono
             'telefono.required' => 'El teléfono es obligatorio.',
             'telefono.min' => 'El teléfono debe tener al menos :min dígitos.',
             'telefono.max' => 'El teléfono no puede exceder :max dígitos.',
             'telefono.regex' => 'El teléfono solo puede contener números.',
-            
+
             // Mensajes para email
             'email.required' => 'El correo electrónico es obligatorio.',
             'email.email' => 'Debe ingresar un correo electrónico válido.',
             'email.max' => 'El correo electrónico no puede exceder :max caracteres.',
             'email.unique' => 'Este correo electrónico ya está registrado.',
-            
+
             // Mensajes para fecha de nacimiento
             'fecha_nacimiento.date' => 'La fecha de nacimiento debe ser una fecha válida.',
             'fecha_nacimiento.before' => 'La fecha de nacimiento debe ser anterior a hoy.',
             'fecha_nacimiento.after' => 'La fecha de nacimiento debe ser posterior a 1900.',
-            
+
             // Mensajes para password
             'password.required' => 'La contraseña es obligatoria.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
             'password.min' => 'La contraseña debe tener al menos :min caracteres.',
             'password.regex' => 'La contraseña debe contener al menos una letra mayúscula, una minúscula y un número.',
-            
+
             // Términos
             'terms.accepted' => 'Debe aceptar los términos y condiciones para continuar.',
         ])->validate();
 
-        return User::create([
-            'nombre' => $input['nombre'],
-            'apellidos' => $input['apellidos'],
-            'ci' => $input['ci'],
-            'telefono' => $input['telefono'],
-            'email' => $input['email'],
-            'fecha_nacimiento' => $input['fecha_nacimiento'] ?? null,
-            'password' => Hash::make($input['password']),
-            'role_id' => 3, // Cliente por defecto
-            'estado' => true,
-        ]);
+        // Registro público = cliente. Usuario + fila cliente de forma atómica (RN14).
+        $clienteRoleId = Role::where('nombre', 'cliente')->value('id');
+
+        return DB::transaction(function () use ($input, $clienteRoleId) {
+            $user = User::create([
+                'nombre' => $input['nombre'],
+                'apellidos' => $input['apellidos'],
+                'ci' => $input['ci'],
+                'telefono' => $input['telefono'],
+                'email' => $input['email'],
+                'fecha_nacimiento' => $input['fecha_nacimiento'] ?? null,
+                'password' => Hash::make($input['password']),
+                'role_id' => $clienteRoleId,
+                'estado' => true,
+            ]);
+
+            Cliente::create(['id' => $user->id, 'nit_ci' => $input['ci']]);
+
+            return $user;
+        });
     }
 }

@@ -17,8 +17,9 @@ return new class extends Migration
             // Datos personales
             $table->string('nombre');
             $table->string('apellidos');
-            $table->string('ci')->unique();
+            $table->string('ci')->unique();           // carnet de identidad personal
             $table->string('telefono', 15);
+            $table->string('direccion')->nullable();
 
             // Email (nullable solo para clientes)
             $table->string('email')->nullable()->unique();
@@ -37,6 +38,10 @@ return new class extends Migration
 
             // Fecha de nacimiento opcional
             $table->date('fecha_nacimiento')->nullable();
+
+            // Rol (un rol por usuario)
+            $table->unsignedBigInteger('role_id')->nullable();
+            $table->foreign('role_id')->references('id')->on('roles')->onDelete('restrict');
 
             $table->timestamps();
         });

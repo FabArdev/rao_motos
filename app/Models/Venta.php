@@ -2,49 +2,27 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Venta extends Model
 {
-    use HasFactory;
-
-    protected $table = 'ventas';
+    protected $table = 'venta';
 
     protected $fillable = [
-        'user_id',
-        'vendedor_id',
-        'metodo_pago_id',
-        'tipo_pago',
-        'total',
-        'estado',
-        'numero_venta',
-        'observaciones',
-        'origen',
-        'direccion_entrega',
-        'pago_facil_transaction_id',
-        'pago_facil_payment_number',
-        'pago_facil_qr_image',
-        'pago_facil_status',
-        'pago_facil_raw_response',
+        'numero_venta', 'cliente_id', 'vendedor_id', 'fecha', 'monto_total',
+        'tipo_venta', 'metodo_pago', 'estado',
+        'pago_facil_transaction_id', 'pago_facil_payment_number',
+        'pago_facil_qr_image', 'pago_facil_status', 'pago_facil_raw_response',
     ];
 
     protected $casts = [
-        'total' => 'decimal:2',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'fecha' => 'datetime',
+        'monto_total' => 'decimal:2',
     ];
 
-    // Relaciones
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
-    // Alias para compatibilidad
     public function cliente()
     {
-        return $this->user();
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function vendedor()
@@ -52,18 +30,18 @@ class Venta extends Model
         return $this->belongsTo(User::class, 'vendedor_id');
     }
 
-    public function metodoPago()
-    {
-        return $this->belongsTo(MetodoPago::class, 'metodo_pago_id');
-    }
-
     public function detalles()
     {
-        return $this->hasMany(VentaDetalle::class, 'venta_id');
+        return $this->hasMany(DetalleVenta::class, 'venta_id');
     }
 
     public function credito()
     {
         return $this->hasOne(Credito::class, 'venta_id');
+    }
+
+    public function esCredito(): bool
+    {
+        return $this->tipo_venta === 'CREDITO';
     }
 }

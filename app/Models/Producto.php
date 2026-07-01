@@ -2,63 +2,38 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
 {
-    use HasFactory;
-
-    protected $table = 'productos';
+    protected $table = 'producto';
 
     protected $fillable = [
-        'codigo',
-        'nombre',
-        'precio_compra',
-        'precio_venta',
-        'precio_venta_mayorista',
-        'stock_actual',
-        'stock_minimo',
-        'marca',
-        'categoria_id',
-        'estado',
+        'codigo', 'nombre', 'marca', 'modelo', 'descripcion',
+        'precio_venta_base', 'precio_mayorista', 'cantidad_minima_mayorista',
+        'foto_url', 'activo',
     ];
 
     protected $casts = [
-        'precio_compra' => 'decimal:2',
-        'precio_venta' => 'decimal:2',
-        'precio_venta_mayorista' => 'decimal:2',
-        'estado' => 'boolean',
+        'precio_venta_base' => 'decimal:2',
+        'precio_mayorista' => 'decimal:2',
+        'cantidad_minima_mayorista' => 'integer',
+        'activo' => 'boolean',
     ];
 
-    // Relaciones
-    public function categoria()
+    public function inventario()
     {
-        return $this->belongsTo(Categoria::class);
+        return $this->hasOne(Inventario::class, 'producto_id');
     }
 
-    public function imagenes()
+    /**
+     * Precio aplicable a una cantidad: mayorista si alcanza el umbral del producto,
+     * minorista si no. No depende de tipo de cliente (no existe).
+     */
+    public function precioPara(int $cantidad): float
     {
-        return $this->hasMany(ProductImage::class);
-    }
-
-    public function promociones()
-    {
-        return $this->belongsToMany(Promocion::class, 'promocion_productos', 'producto_id', 'promocion_id');
-    }
-
-    public function kardex()
-    {
-        return $this->hasMany(KardexInventario::class);
-    }
-
-    public function detallesVenta()
-    {
-        return $this->hasMany(VentaDetalle::class);
-    }
-
-    public function detallesCarrito()
-    {
-        return $this->hasMany(CarritoDetalle::class);
+        return $cantidad >= $this->cantidad_minima_mayorista
+            ? (float) $this->precio_mayorista
+            : (float) $this->precio_venta_base;
     }
 }

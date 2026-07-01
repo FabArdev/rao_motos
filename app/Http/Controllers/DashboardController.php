@@ -2,87 +2,60 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ReportService;
+use App\Models\Credito;
+use App\Models\DetalleVenta;
+use App\Models\Inventario;
+use App\Models\OrdenTrabajo;
+use App\Models\Venta;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __construct(
-        protected ReportService $reportService
-    ) {}
-
     public function index()
     {
-        $user = auth()->user();
-
-        // Dashboard para Cliente
-        if ($user->esCliente()) {
-            // Obtener productos activos con sus categorías y promociones
-            $productos = \App\Models\Producto::with(['categoria', 'imagenes', 'promociones' => function($q) {
-                $q->where('fecha_inicio', '<=', now())
-                  ->where('fecha_fin', '>=', now());
-            }])
-            ->where('stock_actual', '>', 0)
-            ->orderBy('nombre')
-            ->get()
-            ->groupBy('categoria.nombre');
-
-            // Obtener promociones activas
-            $promociones = \App\Models\Promocion::with(['productos' => function($q) {
-                $q->where('estado', true)->where('stock_actual', '>', 0);
-            }])
-            ->where('fecha_inicio', '<=', now())
-            ->where('fecha_fin', '>=', now())
-            ->get();
-
-            // Carrito actual del usuario
-            $carrito = \App\Models\Carrito::where('user_id', $user->id)->first();
-            $itemsCarrito = $carrito 
-                ? \App\Models\CarritoDetalle::where('carrito_id', $carrito->id)
-                    ->with('producto')
-                    ->get()
-                : collect();
-
-            $data = [
-                'rol' => 'cliente',
-                'productos' => $productos,
-                'promociones' => $promociones,
-                'carrito' => [
-                    'items' => $itemsCarrito,
-                    'total' => $itemsCarrito->sum(fn($item) => $item->subtotal),
-                    'cantidad_items' => $itemsCarrito->sum('cantidad'),
-                ],
-                'indicadores' => $this->reportService->indicadoresCliente($user->id),
-            ];
-
-            return Inertia::render('Dashboard', $data);
-        }
-
-        // Dashboard para Propietario y Vendedor
-        $data = [
-            'rol' => $user->esPropietario() ? 'propietario' : 'vendedor',
-            'kpis' => [
-                'ventas_dia' => $this->reportService->ventasDia(),
-                'ventas_semana' => $this->reportService->ventasSemana(),
-                'ventas_mes' => $this->reportService->ventasMes(),
-                'ingresos_dia' => $this->reportService->ingresosTotales('dia'),
-                'ingresos_semana' => $this->reportService->ingresosTotales('semana'),
-                'ingresos_mes' => $this->reportService->ingresosTotales('mes'),
-                'creditos_pendientes' => $this->reportService->creditosPendientes(),
-                'creditos_pagados' => $this->reportService->creditosPagados(),
-                'cuotas_vencidas' => $this->reportService->cuotasVencidas(),
-                'monto_creditos_activos' => $this->reportService->montoCreditos('activo'),
-                'total_visitas' => $this->reportService->totalVisitas(),
-            ],
-            'graficos' => [
-                'ventas_por_dia' => $this->reportService->ventasPorDia(7),
-                'ventas_por_categoria' => $this->reportService->ventasPorCategoria(5),
-                'productos_mas_vendidos' => $this->reportService->productosMasVendidos(10),
-                'visitas_por_dia' => $this->reportService->visitasPorDia(7),
-                'visitas_top' => $this->reportService->visitasTop(10),
-            ],
+        $stats = [
+            'ventas_total' => (float) Venta::where('estado', 'COMPLETADA')->sum('monto_total'),
+            'ventas_count' => Venta::count(),
+            'creditos_vigentes' => Credito::where('estado', 'VIGENTE')->count(),
+            'creditos_morosos' => Credito::where('estado', 'MOROSO')->count(),
+            'ordenes_abiertas' => OrdenTrabajo::whereNotIn('estado', ['ENTREGADA', 'CANCELADA'])->count(),
+            'inventario_critico' => Inventario::whereColumn('stock_actual', '<', 'stock_minimo')
+                ->whereHas('producto', fn ($p) => $p->where('activo', true))->count(),
         ];
 
-        return Inertia::render('Dashboard', $data);
+        // Ventas por mes (últimos 6 meses), separando contado vs crédito.
+        $ventasMes = Venta::where('estado', 'COMPLETADA')
+            ->where('fecha', '>=', now()->subMonths(6)->startOfMonth())
+            ->select(
+                DB::raw("to_char(fecha, 'YYYY-MM') as mes"),
+                'tipo_venta',
+                DB::raw('sum(monto_total) as total')
+            )
+            ->groupBy('mes', 'tipo_venta')
+            ->orderBy('mes')
+            ->get();
+
+        // Top 5 productos por cantidad vendida.
+        $topProductos = DetalleVenta::whereNotNull('producto_id')
+            ->select('producto_id', DB::raw('sum(cantidad) as total'))
+            ->with('producto:id,nombre')
+            ->groupBy('producto_id')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get()
+            ->map(fn ($d) => ['nombre' => $d->producto?->nombre ?? '—', 'total' => (int) $d->total]);
+
+        // Órdenes de taller por estado.
+        $ordenesEstado = OrdenTrabajo::select('estado', DB::raw('count(*) as total'))
+            ->groupBy('estado')->get()
+            ->map(fn ($o) => ['estado' => $o->estado, 'total' => (int) $o->total]);
+
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'ventasMes' => $ventasMes,
+            'topProductos' => $topProductos,
+            'ordenesEstado' => $ordenesEstado,
+        ]);
     }
 }

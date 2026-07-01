@@ -2,194 +2,87 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RegistrarPagoRequest;
-use App\Services\PaymentService;
-use App\Services\CreditService;
-use App\Services\PasarelaPagoService;
-use App\Models\Cuota;
 use App\Models\MetodoPago;
+use App\Models\PagoCuota;
+use App\Services\CreditoService;
+use App\Services\PagoFacilService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+/**
+ * Pagos electrónicos por QR (PagoFácil) — REQ10 / RN13.
+ * Genera el QR de una cuota, guarda la transacción en la BD y la confirma por callback.
+ */
 class PagoController extends Controller
 {
     public function __construct(
-        protected PaymentService $paymentService,
-        protected CreditService $creditService,
-        protected PasarelaPagoService $pasarelaService
+        private PagoFacilService $pagofacil,
+        private CreditoService $creditos,
     ) {}
 
-    /**
-     * Lista de pagos (Vendedor/Propietario)
-     */
-    public function index(Request $request)
+    /** El cliente genera el QR para pagar una cuota propia. */
+    public function generarQrCuota(Request $request, PagoCuota $cuota)
     {
-        $query = \App\Models\Pago::with([
-            'cuota.credito.venta.user',
-            'metodoPago'
-        ])
-        ->orderBy('fecha', 'desc');
-
-        // Filtros
-        if ($request->filled('fecha_desde')) {
-            $query->whereDate('fecha', '>=', $request->fecha_desde);
+        $cuota->load('credito.venta');
+        if ($cuota->credito?->venta?->cliente_id !== $request->user()->id) {
+            throw new NotFoundHttpException;
+        }
+        if ($cuota->estado === 'PAGADO') {
+            return redirect()->route('mis-creditos.show', $cuota->credito_id)->with('error', 'La cuota ya fue pagada.');
         }
 
-        if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha', '<=', $request->fecha_hasta);
-        }
+        $monto = (float) $cuota->monto_cuota + (float) $this->creditos->calcularMora($cuota);
 
-        if ($request->filled('buscar')) {
-            $buscar = $request->buscar;
-            $query->whereHas('cuota.credito.venta.user', function($q) use ($buscar) {
-                $q->where('nombre', 'like', "%{$buscar}%")
-                  ->orWhere('apellidos', 'like', "%{$buscar}%")
-                  ->orWhere('ci', 'like', "%{$buscar}%");
-            });
-        }
-
-        $pagos = $query->paginate(15)->withQueryString();
-
-        // Estadísticas
-        $totalPagos = \App\Models\Pago::count();
-        $totalMonto = \App\Models\Pago::sum('monto');
-        $pagosMes = \App\Models\Pago::whereMonth('fecha', now()->month)
-            ->whereYear('fecha', now()->year)
-            ->sum('monto');
-
-        return Inertia::render('Pagos/Index', [
-            'pagos' => $pagos,
-            'filters' => $request->only(['fecha_desde', 'fecha_hasta', 'buscar']),
-            'estadisticas' => [
-                'total_pagos' => $totalPagos,
-                'total_monto' => $totalMonto,
-                'pagos_mes' => $pagosMes,
-            ],
-        ]);
-    }
-
-    /**
-     * Ver detalle de un pago
-     */
-    public function show($id)
-    {
-        $pago = \App\Models\Pago::with([
-            'cuota.credito.venta.user',
-            'cuota.credito.venta.detalles.producto',
-            'metodoPago'
-        ])->findOrFail($id);
-
-        return Inertia::render('Pagos/Show', [
-            'pago' => $pago,
-        ]);
-    }
-
-    /**
-     * Formulario para registrar pago manual
-     */
-    public function create(Request $request)
-    {
-        $cuotaId = $request->input('cuota_id');
-        $cuota = null;
-        
-        if ($cuotaId) {
-            $cuota = Cuota::with(['credito.venta.cliente'])->find($cuotaId);
-        }
-
-        $metodosPago = MetodoPago::where('activo', true)->get();
-
-        return Inertia::render('Pagos/Registrar', [
-            'cuota' => $cuota,
-            'metodosPago' => $metodosPago,
-        ]);
-    }
-
-    /**
-     * Registrar pago manual
-     */
-    public function store(RegistrarPagoRequest $request)
-    {
         try {
-            $cuota = Cuota::with('credito')->findOrFail($request->cuota_id);
-            $mora = $this->paymentService->calculateLateFee($request->cuota_id);
-            $totalDeuda = $cuota->monto_pendiente + $mora;
+            $qr = $this->pagofacil->generarQRCuotaSimulado($cuota->id, $monto, "Pago cuota #{$cuota->numero_cuota}");
 
-            if ($request->monto > $totalDeuda) {
-                return back()->withErrors(['monto' => 'El monto no puede ser mayor a la deuda total (Bs. ' . number_format($totalDeuda, 2) . ')']);
-            }
+            $metodoQr = MetodoPago::where('nombre', 'QR')->value('id');
+            $cuota->update([
+                'metodo_pago_id' => $metodoQr,
+                'pago_facil_transaction_id' => $qr['transaction_id'] ?? null,
+                'pago_facil_payment_number' => $qr['payment_number'] ?? null,
+                'pago_facil_qr_image' => $qr['qr_image'] ?? null,
+                'pago_facil_status' => $qr['status'] ?? 'pending',
+            ]);
 
-            $pago = $this->paymentService->registerPayment(
-                $request->cuota_id,
-                $request->validated()
-            );
+            return Inertia::render('Pagos/Qr', [
+                'cuota' => $cuota->only(['id', 'numero_cuota', 'monto_cuota', 'credito_id']),
+                'monto' => $monto,
+                'qr' => $qr,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('PagoFácil QR cuota falló', ['cuota' => $cuota->id, 'error' => $e->getMessage()]);
 
-            return redirect()->route('pagos.index')
-                ->with('success', 'Pago registrado exitosamente');
-        } catch (\Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return redirect()->route('mis-creditos.show', $cuota->credito_id)
+                ->with('error', 'No se pudo generar el QR (verifique la conexión con PagoFácil). Intente el pago en caja.');
         }
     }
 
     /**
-     * Ver pagos del cliente autenticado
+     * Confirmación del pago (callback de PagoFácil o botón "ya pagué" de la demo).
+     * Sin auth: PagoFácil llama por servidor. Idempotente.
      */
-    public function misCreditos()
+    public function confirmarCuota(Request $request)
     {
-        $clienteId = auth()->id();
-        $creditos = $this->creditService->getCreditsByClient($clienteId);
+        $paymentNumber = $request->input('paymentNumber') ?? $request->input('payment_number');
+        $transactionId = $request->input('pagofacilTransactionId') ?? $request->input('transaction_id');
 
-        return Inertia::render('Pagos/Cliente', [
-            'creditos' => $creditos,
-        ]);
-    }
+        $cuota = PagoCuota::when($paymentNumber, fn ($q) => $q->where('pago_facil_payment_number', $paymentNumber))
+            ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_transaction_id', $transactionId))
+            ->first();
 
-    /**
-     * Generar QR simulado para pago
-     */
-    public function generarQR(Request $request)
-    {
-        $request->validate([
-            'cuota_id' => 'required|exists:cuotas,id',
-            'monto' => 'required|numeric|min:0.01',
-        ]);
+        if (! $cuota) {
+            return response()->json(['ok' => false, 'error' => 'Cuota no encontrada'], 404);
+        }
+        if ($cuota->estado === 'PAGADO') {
+            return response()->json(['ok' => true, 'message' => 'Ya estaba pagada']);
+        }
 
-        $qrData = $this->pasarelaService->generarQR(
-            $request->cuota_id,
-            $request->monto
-        );
+        $cuota->update(['pago_facil_status' => 'completed']);
+        $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
 
-        return response()->json($qrData);
-    }
-
-    /**
-     * Buscar cuota por crédito
-     */
-    public function buscarCuotas(Request $request)
-    {
-        $creditoId = $request->input('credito_id');
-        
-        $cuotas = Cuota::with(['credito.venta.cliente'])
-            ->where('credito_id', $creditoId)
-            ->whereIn('estado', ['pendiente', 'vencida'])
-            ->orderBy('numero_cuota', 'asc')
-            ->get()
-            ->map(function ($cuota) {
-                $mora = $this->paymentService->calculateLateFee($cuota->id);
-                $cuota->mora_calculada = $mora;
-                $cuota->total_pagar = $cuota->monto_pendiente + $mora;
-                return $cuota;
-            });
-
-        return response()->json($cuotas);
-    }
-
-    /**
-     * Historial de pagos de una cuota
-     */
-    public function historialCuota($cuotaId)
-    {
-        $cuota = Cuota::with(['pagos.metodoPago', 'credito.venta.cliente'])->findOrFail($cuotaId);
-
-        return response()->json($cuota);
+        return response()->json(['ok' => true]);
     }
 }
