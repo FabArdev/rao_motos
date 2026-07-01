@@ -26,6 +26,19 @@ const yaPague = async () => {
     redirigir();
 };
 
+const guardarQr = async () => {
+    const res = await fetch(props.qr.qr_image);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `qr-pago-cuota-${props.cuota.id}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
 const verificarEstado = async () => {
     try {
         const res = await fetch(route('pagofacil.estado-cuota', props.cuota.id));
@@ -78,16 +91,18 @@ onUnmounted(() => {
                     <strong>¡Pago confirmado!</strong> Redirigiendo...
                 </div>
 
-                <img v-if="qr.qr_image && !pagado" :src="qr.qr_image" alt="QR PagoFácil" class="img-fluid border rounded mb-3" style="max-width: 260px;" />
+                <img v-if="qr.qr_image && !pagado" :src="qr.qr_image" alt="QR PagoFácil" class="img-fluid border rounded mb-3" style="max-width: 260px;" id="qr-img" />
                 <div v-else-if="!qr.qr_image && !pagado" class="alert alert-warning">No se recibió la imagen del QR.</div>
 
                 <p v-if="!pagado" class="text-muted small mb-1">Escanea el QR con tu app bancaria.</p>
+
                 <div v-if="!pagado" class="d-flex align-items-center justify-content-center gap-2 text-muted small mb-2">
                     <span class="spinner-border spinner-border-sm" role="status"></span>
                     <span>Esperando confirmación de pago...</span>
                 </div>
 
                 <div v-if="!pagado" class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" @click="guardarQr"><i class="bi bi-download me-1"></i>Guardar QR</button>
                     <button v-if="esAdminOVendedor || esSimulado" class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
                     <a :href="route(redirectRoute, redirectParams)" class="btn btn-outline-secondary">Volver</a>
                 </div>
