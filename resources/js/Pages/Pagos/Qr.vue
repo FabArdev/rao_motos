@@ -1,10 +1,12 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({ cuota: Object, monto: Number, qr: Object, redirectRoute: { type: String, default: 'mis-creditos.show' }, redirectParams: { type: Object, default: () => ({}) } });
 
+const user = usePage().props.auth.user;
+const esAdminOVendedor = computed(() => user?.rol === 'admin' || user?.rol === 'vendedor');
 const esSimulado = props.qr?.simulado === true;
 const pagado = ref(false);
 let pollTimer = null;
@@ -74,7 +76,7 @@ onUnmounted(() => {
                 <p v-if="!pagado" class="text-muted small">Escanea el QR con tu app bancaria. El pago se confirma automáticamente por PagoFácil.</p>
 
                 <div v-if="!pagado" class="d-grid gap-2">
-                    <button class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
+                    <button v-if="esAdminOVendedor || esSimulado" class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
                     <Link :href="route(redirectRoute, redirectParams)" class="btn btn-outline-secondary">Volver</Link>
                 </div>
             </div>

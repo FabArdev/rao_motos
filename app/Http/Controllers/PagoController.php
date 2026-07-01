@@ -116,11 +116,38 @@ class PagoController extends Controller
 
     /**
      * Consulta el estado de una cuota (para polling desde la página QR).
+     * Consulta a PagoFácil API en tiempo real si la cuota tiene transaction_id.
      */
     public function estadoCuota(PagoCuota $cuota)
     {
+        if ($cuota->estado === 'PAGADO') {
+            return response()->json(['pagado' => true, 'estado' => 'PAGADO']);
+        }
+
+        $transactionId = $cuota->pago_facil_transaction_id;
+        $paymentNumber = $cuota->pago_facil_payment_number;
+
+        if ($transactionId) {
+            $resultado = $this->pagofacil->verificarEstadoPago($transactionId, $paymentNumber);
+
+            if (($resultado['status'] ?? 'pending') === 'completed') {
+                $cuota->update(['pago_facil_status' => 'completed']);
+                $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
+
+                Log::info('✅ [PagoFácil] Polling detectó pago completado', ['cuota' => $cuota->id]);
+
+                return response()->json(['pagado' => true, 'estado' => 'PAGADO']);
+            }
+
+            return response()->json([
+                'pagado' => false,
+                'estado' => $cuota->estado,
+                'pago_facil_status' => $resultado['status'] ?? $cuota->pago_facil_status,
+            ]);
+        }
+
         return response()->json([
-            'pagado' => $cuota->estado === 'PAGADO',
+            'pagado' => false,
             'estado' => $cuota->estado,
             'pago_facil_status' => $cuota->pago_facil_status,
         ]);
