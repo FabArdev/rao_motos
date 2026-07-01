@@ -29,21 +29,29 @@ const yaPague = async () => {
 const verificarEstado = async () => {
     try {
         const res = await fetch(route('pagofacil.estado-cuota', props.cuota.id));
+        if (!res.ok) return;
         const data = await res.json();
         if (data.pagado) {
             pagado.value = true;
             clearInterval(pollTimer);
-            setTimeout(redirigir, 2000);
+            setTimeout(() => {
+                window.location.href = route(props.redirectRoute, props.redirectParams);
+            }, 2000);
         }
     } catch {
         // ignore
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
+    const res = await fetch(route('pagofacil.estado-cuota', props.cuota.id));
+    const data = await res.json();
+    if (data.pagado) {
+        window.location.href = route(props.redirectRoute, props.redirectParams);
+        return;
+    }
     if (!esSimulado) {
         pollTimer = setInterval(verificarEstado, 5000);
-        verificarEstado();
     }
 });
 
