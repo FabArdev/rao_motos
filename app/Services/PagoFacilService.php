@@ -382,7 +382,6 @@ class PagoFacilService
 
             $body = [
                 'pagofacilTransactionId' => $transactionId,
-                'paymentNumber' => $paymentNumber ?? $transactionId,
                 'companyTransactionId' => $paymentNumber ?? $transactionId,
             ];
 

@@ -69,17 +69,27 @@ class PagoController extends Controller
     }
 
     /**
-     * Confirmación del pago (callback de PagoFácil o botón "ya pagué" de la demo).
+     * Callback de PagoFácil (notificación de pago) + confirmación manual (admin/vendedor).
+     *
+     * PagoFácil envía POST con:
+     *   { "PedidoID": "CUOTA-XX-...", "Fecha": "...", "Hora": "...",
+     *     "MetodoPago": "QR", "Estado": "Pagado" }
+     *
+     * El botón "Ya realicé el pago" envía:
+     *   { "payment_number": "...", "transaction_id": "..." }
+     *
      * Sin auth: PagoFácil llama por servidor. Idempotente.
-     * Formato de callback de PagoFácil:
-     *   { "error":0, "status":1, "message":"Pago realizado correctamente", "values":true }
-     * Identifica la transacción por paymentNumber, pagofacilTransactionId o similar.
      */
     public function confirmarCuota(Request $request)
     {
         Log::info('📩 [PagoFácil] Callback recibido', ['payload' => $request->all(), 'query' => $request->query()]);
 
-        $paymentNumber = $request->input('paymentNumber')
+        // Formato callback de PagoFácil → PedidoID
+        $pedidoId = $request->input('PedidoID') ?? $request->input('pedidoId') ?? $request->input('pedido_id');
+
+        // Formato del botón "Ya realicé el pago"
+        $paymentNumber = $pedidoId
+            ?? $request->input('paymentNumber')
             ?? $request->input('payment_number')
             ?? $request->input('paymentnumber')
             ?? $request->query('paymentNumber')
@@ -100,10 +110,10 @@ class PagoController extends Controller
                 'paymentNumber' => $paymentNumber, 'transactionId' => $transactionId,
             ]);
 
-            return response()->json(['ok' => false, 'error' => 'Cuota no encontrada'], 404);
+            return response()->json(['error' => 1, 'status' => 0, 'message' => 'Cuota no encontrada', 'values' => false], 404);
         }
         if ($cuota->estado === 'PAGADO') {
-            return response()->json(['ok' => true, 'message' => 'Ya estaba pagada']);
+            return response()->json(['error' => 0, 'status' => 1, 'message' => 'Ya estaba pagada', 'values' => true]);
         }
 
         $cuota->update(['pago_facil_status' => 'completed']);
@@ -111,7 +121,7 @@ class PagoController extends Controller
 
         Log::info('✅ [PagoFácil] Callback: cuota pagada', ['cuota' => $cuota->id]);
 
-        return response()->json(['ok' => true]);
+        return response()->json(['error' => 0, 'status' => 1, 'message' => 'Pago recibido correctamente', 'values' => true]);
     }
 
     /**
@@ -130,11 +140,18 @@ class PagoController extends Controller
         if ($transactionId) {
             $resultado = $this->pagofacil->verificarEstadoPago($transactionId, $paymentNumber);
 
-            if (($resultado['status'] ?? 'pending') === 'completed') {
+            $raw = $resultado['raw'] ?? [];
+
+            // PagoFácil deja paymentStatus=1 ("En Proceso") incluso después de pagar.
+            // Detectamos pago real cuando payerName aparece (la app bancaria lo envió).
+            $pagadoEnPagoFacil = ($resultado['status'] ?? 'pending') === 'completed'
+                || (! empty($raw['payerName']));
+
+            if ($pagadoEnPagoFacil) {
                 $cuota->update(['pago_facil_status' => 'completed']);
                 $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
 
-                Log::info('✅ [PagoFácil] Polling detectó pago completado', ['cuota' => $cuota->id]);
+                Log::info('✅ [PagoFácil] Polling detectó pago completado', ['cuota' => $cuota->id, 'payerName' => $raw['payerName'] ?? null]);
 
                 return response()->json(['pagado' => true, 'estado' => 'PAGADO']);
             }
