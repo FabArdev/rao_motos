@@ -12,7 +12,7 @@ class PagoCuota extends Model
         'credito_id', 'numero_cuota', 'monto_cuota', 'fecha_vencimiento', 'fecha_pago',
         'mora', 'estado', 'metodo_pago_id',
         'pago_facil_transaction_id', 'pago_facil_payment_number',
-        'pago_facil_qr_image', 'pago_facil_status', 'pago_facil_raw_response',
+        'pago_facil_qr_image', 'pago_facil_expires_at', 'pago_facil_status', 'pago_facil_raw_response',
     ];
 
     protected $casts = [
@@ -21,6 +21,7 @@ class PagoCuota extends Model
         'mora' => 'decimal:2',
         'fecha_vencimiento' => 'date',
         'fecha_pago' => 'date',
+        'pago_facil_expires_at' => 'datetime',
     ];
 
     public function credito()
