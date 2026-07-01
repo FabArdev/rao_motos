@@ -82,7 +82,10 @@ onUnmounted(() => {
                 <div v-else-if="!qr.qr_image && !pagado" class="alert alert-warning">No se recibió la imagen del QR.</div>
 
                 <p v-if="!pagado" class="text-muted small mb-1">Escanea el QR con tu app bancaria.</p>
-                <p v-if="!pagado" class="text-muted small"><i class="bi bi-arrow-repeat me-1"></i>Esperando confirmación de pago (consultando cada 5s)...</p>
+                <div v-if="!pagado" class="d-flex align-items-center justify-content-center gap-2 text-muted small mb-2">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    <span>Esperando confirmación de pago...</span>
+                </div>
 
                 <div v-if="!pagado" class="d-grid gap-2">
                     <button v-if="esAdminOVendedor || esSimulado" class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
