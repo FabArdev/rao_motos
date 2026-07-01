@@ -205,7 +205,7 @@ class PagoFacilService
             $montoQr = $this->resolverMontoQr($monto);
 
             $qrData = [
-                'paymentMethod' => 4, // QR Simple
+                'paymentMethod' => 2, // QR Dinámico
                 'clientName' => 'Cliente',
                 'documentType' => 1, // CI
                 'documentId' => '00000000',
@@ -300,7 +300,7 @@ class PagoFacilService
             $montoQr = $this->resolverMontoQr($monto);
 
             $qrData = [
-                'paymentMethod' => 4, // QR Simple
+                'paymentMethod' => 2, // QR Dinámico
                 'clientName' => 'Cliente',
                 'documentType' => 1, // CI
                 'documentId' => '00000000',
