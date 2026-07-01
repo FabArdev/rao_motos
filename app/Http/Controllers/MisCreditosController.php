@@ -35,7 +35,9 @@ class MisCreditosController extends Controller
 
         $this->verificarCuotasPendientes($credito);
 
-        $cuotas = $credito->refresh()->cuotas->map(function (PagoCuota $c) {
+        $credito->load(['cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
+
+        $cuotas = $credito->cuotas->map(function (PagoCuota $c) {
             $arr = $c->toArray();
             $arr['mora_actual'] = $c->estado === 'PAGADO' ? (float) $c->mora : $this->creditos->calcularMora($c);
 
