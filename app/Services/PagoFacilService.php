@@ -217,6 +217,7 @@ class PagoFacilService
                 'clientCode' => (string) $ventaId,
                 'companyTransactionId' => $companyTransactionId,
                 'callbackUrl' => $callbackUrl,
+                'tcUrlCallBack' => $callbackUrl,
                 'orderDetail' => [
                     [
                         'serial' => 1,
@@ -313,6 +314,7 @@ class PagoFacilService
                 'clientCode' => (string) $cuotaId,
                 'companyTransactionId' => $companyTransactionId,
                 'callbackUrl' => $callbackUrl,
+                'tcUrlCallBack' => $callbackUrl,
                 'orderDetail' => [
                     [
                         'serial' => 1,
