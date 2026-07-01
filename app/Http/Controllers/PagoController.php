@@ -113,4 +113,16 @@ class PagoController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    /**
+     * Consulta el estado de una cuota (para polling desde la página QR).
+     */
+    public function estadoCuota(PagoCuota $cuota)
+    {
+        return response()->json([
+            'pagado' => $cuota->estado === 'PAGADO',
+            'estado' => $cuota->estado,
+            'pago_facil_status' => $cuota->pago_facil_status,
+        ]);
+    }
 }

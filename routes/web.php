@@ -169,6 +169,7 @@ Route::middleware([
     // Pago de cuota por QR (PagoFácil) — accesible para todos los roles autenticados
     // El controlador verifica: admin/vendedor siempre permitido, cliente solo su propio crédito.
     Route::post('pago-qr/cuota/{cuota}', [PagoController::class, 'generarQrCuota'])->name('pagofacil.generar-qr-cuota');
+    Route::get('pagofacil/estado-cuota/{cuota}', [PagoController::class, 'estadoCuota'])->name('pagofacil.estado-cuota');
 });
 
 // Callback/webhook de PagoFácil (sin auth ni CSRF: lo invoca el servidor de PagoFácil). RN13.

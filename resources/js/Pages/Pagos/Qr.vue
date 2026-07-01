@@ -1,12 +1,19 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({ cuota: Object, monto: Number, qr: Object, redirectRoute: { type: String, default: 'mis-creditos.show' }, redirectParams: { type: Object, default: () => ({}) } });
 
 const esSimulado = props.qr?.simulado === true;
+const pagado = ref(false);
+let pollTimer = null;
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
+
+const redirigir = () => {
+    router.visit(route(props.redirectRoute, props.redirectParams));
+};
 
 const yaPague = async () => {
     await fetch(route('pagofacil.confirmar-cuota'), {
@@ -14,8 +21,33 @@ const yaPague = async () => {
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ payment_number: props.qr.payment_number, transaction_id: props.qr.transaction_id }),
     });
-    router.visit(route(props.redirectRoute, props.redirectParams));
+    redirigir();
 };
+
+const verificarEstado = async () => {
+    try {
+        const res = await fetch(route('pagofacil.estado-cuota', props.cuota.id));
+        const data = await res.json();
+        if (data.pagado) {
+            pagado.value = true;
+            clearInterval(pollTimer);
+            setTimeout(redirigir, 2000);
+        }
+    } catch {
+        // ignore
+    }
+};
+
+onMounted(() => {
+    if (!esSimulado) {
+        pollTimer = setInterval(verificarEstado, 5000);
+        verificarEstado();
+    }
+});
+
+onUnmounted(() => {
+    if (pollTimer) clearInterval(pollTimer);
+});
 </script>
 
 <template>
@@ -31,12 +63,17 @@ const yaPague = async () => {
                     <strong>QR no funcional:</strong> la API de PagoFácil no respondió. Este código QR <strong>no puede ser escaneado</strong> para pagar. Usa el botón "Ya realicé el pago" solo si el cliente pagó en caja.
                 </div>
 
-                <img v-if="qr.qr_image" :src="qr.qr_image" alt="QR PagoFácil" class="img-fluid border rounded mb-3" style="max-width: 260px;" />
-                <div v-else class="alert alert-warning">No se recibió la imagen del QR.</div>
+                <div v-if="pagado" class="alert alert-success mb-3">
+                    <i class="bi bi-check-circle-fill me-1"></i>
+                    <strong>¡Pago confirmado!</strong> Redirigiendo...
+                </div>
 
-                <p class="text-muted small">Escanea el QR con tu app bancaria. El pago se confirma automáticamente por PagoFácil.</p>
+                <img v-if="qr.qr_image && !pagado" :src="qr.qr_image" alt="QR PagoFácil" class="img-fluid border rounded mb-3" style="max-width: 260px;" />
+                <div v-else-if="!qr.qr_image && !pagado" class="alert alert-warning">No se recibió la imagen del QR.</div>
 
-                <div class="d-grid gap-2">
+                <p v-if="!pagado" class="text-muted small">Escanea el QR con tu app bancaria. El pago se confirma automáticamente por PagoFácil.</p>
+
+                <div v-if="!pagado" class="d-grid gap-2">
                     <button class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
                     <Link :href="route(redirectRoute, redirectParams)" class="btn btn-outline-secondary">Volver</Link>
                 </div>
