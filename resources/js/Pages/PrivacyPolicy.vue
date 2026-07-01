@@ -8,7 +8,7 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Privacy Policy" />
+    <Head title="Política de Privacidad" />
 
     <div>
         <div class="pt-4 bg-light">

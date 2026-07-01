@@ -30,7 +30,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Log in" />
+    <Head title="Iniciar sesión" />
 
     <AuthenticationCard>
         <template #logo>
@@ -43,7 +43,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div class="mb-3">
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Correo Electrónico" />
                 <TextInput
                     id="email"
                     v-model="form.email"
@@ -57,7 +57,7 @@ const submit = () => {
             </div>
 
             <div class="mb-3">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" value="Contraseña" />
                 <TextInput
                     id="password"
                     v-model="form.password"
@@ -76,7 +76,7 @@ const submit = () => {
                     id="remember"
                 />
                 <label class="form-check-label" for="remember">
-                    Remember me
+                    Recordarme
                 </label>
             </div>
 
@@ -86,14 +86,14 @@ const submit = () => {
                     :href="route('password.request')"
                     class="text-decoration-none small"
                 >
-                    Forgot your password?
+                    ¿Olvidaste tu contraseña?
                 </Link>
 
                 <PrimaryButton
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Log in
+                    Iniciar sesión
                 </PrimaryButton>
             </div>
         </form>

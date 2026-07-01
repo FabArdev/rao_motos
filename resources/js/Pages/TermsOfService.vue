@@ -8,7 +8,7 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Terms of Service" />
+    <Head title="Términos del Servicio" />
 
     <div>
         <div class="pt-4 bg-light">

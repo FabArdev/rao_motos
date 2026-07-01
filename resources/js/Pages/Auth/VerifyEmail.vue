@@ -21,7 +21,7 @@ const verificationLinkSent = computed(
 </script>
 
 <template>
-    <Head title="Email Verification" />
+    <Head title="Verificación de Correo" />
 
     <AuthenticationCard>
         <template #logo>
@@ -29,17 +29,14 @@ const verificationLinkSent = computed(
         </template>
 
         <div class="mb-3 small text-muted">
-            Before continuing, could you verify your email address by clicking
-            on the link we just emailed to you? If you didn't receive the email,
-            we will gladly send you another.
+            Antes de continuar, verifica tu dirección de correo electrónico haciendo clic en el enlace que te acabamos de enviar. Si no recibiste el correo, con gusto te enviaremos otro.
         </div>
 
         <div
             v-if="verificationLinkSent"
             class="mb-3 fw-medium small text-success"
         >
-            A new verification link has been sent to the email address you
-            provided in your profile settings.
+            Se ha enviado un nuevo enlace de verificación a la dirección de correo electrónico que proporcionaste en tu perfil.
         </div>
 
         <form @submit.prevent="submit">
@@ -48,7 +45,7 @@ const verificationLinkSent = computed(
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Resend Verification Email
+                    Reenviar correo de verificación
                 </PrimaryButton>
 
                 <div>
@@ -56,7 +53,7 @@ const verificationLinkSent = computed(
                         :href="route('profile.show')"
                         class="text-decoration-underline small text-muted"
                     >
-                        Edit Profile</Link
+                        Editar Perfil</Link
                     >
 
                     <Link
@@ -65,7 +62,7 @@ const verificationLinkSent = computed(
                         as="button"
                         class="text-decoration-underline small text-muted ms-2"
                     >
-                        Log Out
+                        Cerrar sesión
                     </Link>
                 </div>
             </div>

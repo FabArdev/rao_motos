@@ -28,7 +28,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Register" />
+    <Head title="Registro" />
 
     <AuthenticationCard>
         <template #logo>
@@ -157,19 +157,19 @@ const submit = () => {
                         required
                     />
                     <label class="form-check-label small" for="terms">
-                        I agree to the
+                        Acepto los
                         <a
                             target="_blank"
                             :href="route('terms.show')"
                             class="text-decoration-none"
-                            >Terms of Service</a
+                            >Términos del Servicio</a
                         >
-                        and
+                        y la
                         <a
                             target="_blank"
                             :href="route('policy.show')"
                             class="text-decoration-none"
-                            >Privacy Policy</a
+                            >Política de Privacidad</a
                         >
                     </label>
                 </div>

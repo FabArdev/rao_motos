@@ -174,7 +174,7 @@ const clearPhotoFileInput = () => {
                     "
                 >
                     <p class="text-sm mt-2">
-                        Your email address is unverified.
+                        Tu dirección de correo no está verificada.
 
                         <Link
                             :href="route('verification.send')"
@@ -183,7 +183,7 @@ const clearPhotoFileInput = () => {
                             class="text-decoration-underline small text-muted"
                             @click.prevent="sendEmailVerification"
                         >
-                            Click here to re-send the verification email.
+                            Haz clic aquí para reenviar el correo de verificación.
                         </Link>
                     </p>
 
@@ -191,8 +191,8 @@ const clearPhotoFileInput = () => {
                         v-show="verificationLinkSent"
                         class="mt-2 font-medium text-sm text-green-600"
                     >
-                        A new verification link has been sent to your email
-                        address.
+                        Se ha enviado un nuevo enlace de verificación a tu
+                        correo electrónico.
                     </div>
                 </div>
             </div>
@@ -200,14 +200,14 @@ const clearPhotoFileInput = () => {
 
         <template #actions>
             <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
+                Guardado.
             </ActionMessage>
 
             <PrimaryButton
                 :class="{ 'opacity-25': form.processing }"
                 :disabled="form.processing"
             >
-                Save
+                Guardar
             </PrimaryButton>
         </template>
     </FormSection>
