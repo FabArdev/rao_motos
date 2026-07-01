@@ -6,6 +6,7 @@ use App\Models\MetodoPago;
 use App\Models\PagoCuota;
 use App\Services\CreditoService;
 use App\Services\PagoFacilService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -37,15 +38,41 @@ class PagoController extends Controller
 
         $monto = (float) $cuota->monto_cuota + (float) $this->creditos->calcularMora($cuota);
 
+        $metodoQr = MetodoPago::where('nombre', 'QR')->value('id');
+
+        // Si ya hay un QR pendiente y no ha expirado, reusarlo
+        $qrExpirado = $cuota->pago_facil_expires_at && Carbon::parse($cuota->pago_facil_expires_at)->isPast();
+        if ($cuota->pago_facil_transaction_id && $cuota->pago_facil_qr_image && $cuota->pago_facil_status === 'pending' && !$qrExpirado) {
+            $qrExistente = [
+                'success' => true,
+                'transaction_id' => $cuota->pago_facil_transaction_id,
+                'payment_number' => $cuota->pago_facil_payment_number,
+                'qr_image' => $cuota->pago_facil_qr_image,
+                'status' => 'pending',
+                'monto' => $monto,
+                'glosa' => "Pago cuota #{$cuota->numero_cuota}",
+            ];
+
+            $redirectRoute = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
+
+            return Inertia::render('Pagos/Qr', [
+                'cuota' => $cuota->only(['id', 'numero_cuota', 'monto_cuota', 'credito_id']),
+                'monto' => $monto,
+                'qr' => $qrExistente,
+                'redirectRoute' => $redirectRoute,
+                'redirectParams' => ['credito' => $cuota->credito_id],
+            ]);
+        }
+
         try {
             $qr = $this->pagofacil->generarQRCuotaSimulado($cuota->id, $monto, "Pago cuota #{$cuota->numero_cuota}");
 
-            $metodoQr = MetodoPago::where('nombre', 'QR')->value('id');
             $cuota->update([
                 'metodo_pago_id' => $metodoQr,
                 'pago_facil_transaction_id' => $qr['transaction_id'] ?? null,
                 'pago_facil_payment_number' => $qr['payment_number'] ?? null,
                 'pago_facil_qr_image' => $qr['qr_image'] ?? null,
+                'pago_facil_expires_at' => isset($qr['expiration']) ? Carbon::parse($qr['expiration']) : null,
                 'pago_facil_status' => $qr['status'] ?? 'pending',
             ]);
 

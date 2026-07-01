@@ -6,12 +6,17 @@ use App\Models\Credito;
 use App\Models\MetodoPago;
 use App\Models\PagoCuota;
 use App\Services\CreditoService;
+use App\Services\PagoFacilService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class CreditoController extends Controller
 {
-    public function __construct(private CreditoService $creditos) {}
+    public function __construct(
+        private CreditoService $creditos,
+        private PagoFacilService $pagofacil,
+    ) {}
 
     public function index(Request $request)
     {
@@ -40,6 +45,9 @@ class CreditoController extends Controller
     {
         $credito->load(['venta.cliente.user', 'cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
 
+        $this->verificarCuotasPendientes($credito);
+        $credito->load(['cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
+
         // Mora calculada al momento para las cuotas aún pendientes/vencidas.
         $cuotas = $credito->cuotas->map(function (PagoCuota $c) {
             $arr = $c->toArray();
@@ -53,6 +61,38 @@ class CreditoController extends Controller
             'cuotas' => $cuotas,
             'metodosPago' => MetodoPago::where('activo', true)->get(['id', 'nombre']),
         ]);
+    }
+
+    /**
+     * Revisa cuotas con QR pendiente contra PagoFácil y las marca pagadas si corresponde.
+     */
+    private function verificarCuotasPendientes(Credito $credito): void
+    {
+        foreach ($credito->cuotas as $cuota) {
+            if ($cuota->estado === 'PAGADO' || !$cuota->pago_facil_transaction_id) {
+                continue;
+            }
+
+            $resultado = $this->pagofacil->verificarEstadoPago(
+                $cuota->pago_facil_transaction_id,
+                $cuota->pago_facil_payment_number
+            );
+
+            $raw = $resultado['raw'] ?? [];
+
+            $pagado = ($resultado['status'] ?? 'pending') === 'completed'
+                || !empty($raw['payerName']);
+
+            if ($pagado) {
+                $cuota->update(['pago_facil_status' => 'completed']);
+                $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
+
+                Log::info('✅ [PagoFácil] Verificación desde Creditos/Show detectó pago', [
+                    'cuota' => $cuota->id,
+                    'payerName' => $raw['payerName'] ?? null,
+                ]);
+            }
+        }
     }
 
     /** El vendedor registra el pago de una cuota (efectivo o QR ya confirmado). */

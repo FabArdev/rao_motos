@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Credito;
 use App\Models\PagoCuota;
 use App\Services\CreditoService;
+use App\Services\PagoFacilService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class MisCreditosController extends Controller
 {
-    public function __construct(private CreditoService $creditos) {}
+    public function __construct(
+        private CreditoService $creditos,
+        private PagoFacilService $pagofacil,
+    ) {}
 
     public function index(Request $request)
     {
@@ -28,7 +33,9 @@ class MisCreditosController extends Controller
         $credito->load(['venta', 'cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
         $this->autorizar($request, $credito);
 
-        $cuotas = $credito->cuotas->map(function (PagoCuota $c) {
+        $this->verificarCuotasPendientes($credito);
+
+        $cuotas = $credito->refresh()->cuotas->map(function (PagoCuota $c) {
             $arr = $c->toArray();
             $arr['mora_actual'] = $c->estado === 'PAGADO' ? (float) $c->mora : $this->creditos->calcularMora($c);
 
@@ -62,6 +69,38 @@ class MisCreditosController extends Controller
     {
         if ($credito->venta?->cliente_id !== $request->user()->id) {
             throw new NotFoundHttpException;
+        }
+    }
+
+    /**
+     * Revisa cuotas con QR pendiente contra PagoFácil y las marca pagadas si corresponde.
+     */
+    private function verificarCuotasPendientes(Credito $credito): void
+    {
+        foreach ($credito->cuotas as $cuota) {
+            if ($cuota->estado === 'PAGADO' || !$cuota->pago_facil_transaction_id) {
+                continue;
+            }
+
+            $resultado = $this->pagofacil->verificarEstadoPago(
+                $cuota->pago_facil_transaction_id,
+                $cuota->pago_facil_payment_number
+            );
+
+            $raw = $resultado['raw'] ?? [];
+
+            $pagado = ($resultado['status'] ?? 'pending') === 'completed'
+                || !empty($raw['payerName']);
+
+            if ($pagado) {
+                $cuota->update(['pago_facil_status' => 'completed']);
+                $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
+
+                Log::info('✅ [PagoFácil] Verificación desde MisCreditos detectó pago', [
+                    'cuota' => $cuota->id,
+                    'payerName' => $raw['payerName'] ?? null,
+                ]);
+            }
         }
     }
 }
