@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -81,11 +81,12 @@ onUnmounted(() => {
                 <img v-if="qr.qr_image && !pagado" :src="qr.qr_image" alt="QR PagoFácil" class="img-fluid border rounded mb-3" style="max-width: 260px;" />
                 <div v-else-if="!qr.qr_image && !pagado" class="alert alert-warning">No se recibió la imagen del QR.</div>
 
-                <p v-if="!pagado" class="text-muted small">Escanea el QR con tu app bancaria. El pago se confirma automáticamente por PagoFácil.</p>
+                <p v-if="!pagado" class="text-muted small mb-1">Escanea el QR con tu app bancaria.</p>
+                <p v-if="!pagado" class="text-muted small"><i class="bi bi-arrow-repeat me-1"></i>Esperando confirmación de pago (consultando cada 5s)...</p>
 
                 <div v-if="!pagado" class="d-grid gap-2">
                     <button v-if="esAdminOVendedor || esSimulado" class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
-                    <Link :href="route(redirectRoute, redirectParams)" class="btn btn-outline-secondary">Volver</Link>
+                    <a :href="route(redirectRoute, redirectParams)" class="btn btn-outline-secondary">Volver</a>
                 </div>
             </div>
         </div>
