@@ -71,7 +71,7 @@ class CatalogoController extends Controller
                     'usuario_id' => $usuarioId,
                     'tipo' => 'PEDIDO_POR_APROBAR',
                     'mensaje' => "Nuevo pedido #{$pedido->id} de {$request->user()->name} por aprobar.",
-                    'recurso' => route('pedidos.show', $pedido->id, false),
+                    'recurso' => route('pedidos.show', $pedido->id),
                     'leido' => false,
                     'fecha' => now(),
                 ]);

@@ -98,7 +98,7 @@ class PedidoController extends Controller
             'usuario_id' => $pedido->cliente_id,
             'tipo' => $tipo,
             'mensaje' => $mensaje,
-            'recurso' => route('mis-pedidos.show', $pedido->id, false),
+            'recurso' => route('mis-pedidos.show', $pedido->id),
             'leido' => false,
             'fecha' => now(),
         ]);

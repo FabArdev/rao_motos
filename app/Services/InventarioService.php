@@ -80,7 +80,7 @@ class InventarioService
                 'usuario_id' => $usuarioId,
                 'tipo' => 'STOCK_BAJO',
                 'mensaje' => "Stock bajo: {$nombre} ({$inv->stock_actual}/{$inv->stock_minimo}).",
-                'recurso' => route('inventario.show', $inv->id, false),
+                'recurso' => route('inventario.show', $inv->id),
                 'leido' => false,
                 'fecha' => now(),
             ]);

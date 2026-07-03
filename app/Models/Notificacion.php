@@ -17,17 +17,19 @@ class Notificacion extends Model
         'fecha' => 'datetime',
     ];
 
-    /** Convierte el recurso siempre a ruta relativa, para que funcione en cualquier entorno (local/producción). */
+    /** Garantiza que recurso sea URL absoluta, necesaria para Inertia en subdirectorio. */
     public function getRecursoAttribute(?string $value): ?string
     {
         if (!$value) {
             return null;
         }
-        if (!str_starts_with($value, 'http')) {
+        // Si ya es absoluta, se devuelve tal cual.
+        if (str_starts_with($value, 'http')) {
             return $value;
         }
-        $components = parse_url($value);
-        return ($components['path'] ?? '') . (isset($components['query']) ? '?' . $components['query'] : '');
+        // Si es relativa (notificaciones viejas o generadas con route(…,false)),
+        // se completa con la URL base del servidor.
+        return url($value);
     }
 
     public function usuario()
