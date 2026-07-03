@@ -98,7 +98,7 @@ const enviar = () => {
                         <label class="form-label">Reemplazar portada</label>
                         <input type="file" accept="image/*" class="form-control" :class="{ 'is-invalid': form.errors.foto }" @change="onFile" />
                         <div class="invalid-feedback">{{ form.errors.foto }}</div>
-                        <img v-if="preview" :src="preview" class="rounded mt-2" style="height:90px;object-fit:cover;" />
+                        <img v-if="preview" :src="preview" class="rounded mt-2" style="height:120px;object-fit:cover;" />
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">Imágenes adicionales <small class="text-muted">(hasta 6, para el carrusel)</small></label>
@@ -109,7 +109,7 @@ const enviar = () => {
                             <div class="small text-muted mb-1">Galería actual (marca las que quieras eliminar):</div>
                             <div class="d-flex flex-wrap gap-2">
                                 <div v-for="img in producto.imagenes" :key="img.id" class="position-relative" style="cursor:pointer" @click="toggleEliminar(img.id)">
-                                    <img :src="img.url" class="rounded border" :class="{ 'opacity-25': marcada(img.id) }" style="height:70px;width:70px;object-fit:cover;" />
+                                    <img :src="img.url" class="rounded border" :class="{ 'opacity-25': marcada(img.id) }" style="height:100px;width:100px;object-fit:cover;" />
                                     <span v-if="marcada(img.id)" class="position-absolute top-50 start-50 translate-middle badge bg-danger"><i class="bi bi-trash"></i></span>
                                 </div>
                             </div>
@@ -118,7 +118,7 @@ const enviar = () => {
                         <div v-if="previewsGaleria.length" class="mt-2">
                             <div class="small text-muted mb-1">Nuevas a subir:</div>
                             <div class="d-flex flex-wrap gap-2">
-                                <img v-for="(src, i) in previewsGaleria" :key="i" :src="src" class="rounded border" style="height:70px;width:70px;object-fit:cover;" />
+                                <img v-for="(src, i) in previewsGaleria" :key="i" :src="src" class="rounded border" style="height:100px;width:100px;object-fit:cover;" />
                             </div>
                         </div>
                     </div>

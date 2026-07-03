@@ -191,7 +191,6 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                             </ul>
                         </div>
                     </nav>
-                    <div class="mt-auto p-2 small text-white-50 d-none d-lg-block">INF-513 · grupo02sa</div>
                 </div>
             </div>
 

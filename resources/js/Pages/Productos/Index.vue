@@ -48,8 +48,8 @@ const foto = (p) => p.foto_completa ?? null;
                     <tbody>
                         <tr v-for="p in productos.data" :key="p.id" :class="{ 'opacity-50': !p.activo }">
                             <td>
-                                <img v-if="foto(p)" :src="foto(p)" loading="lazy" class="rounded bg-light" style="width:42px;height:42px;object-fit:contain;" />
-                                <span v-else class="d-inline-flex align-items-center justify-content-center bg-light rounded text-muted" style="width:42px;height:42px;"><i class="bi bi-image"></i></span>
+                                <img v-if="foto(p)" :src="foto(p)" loading="lazy" class="rounded bg-light" style="width:64px;height:64px;object-fit:contain;" />
+                                <span v-else class="d-inline-flex align-items-center justify-content-center bg-light rounded text-muted" style="width:64px;height:64px;"><i class="bi bi-image fs-5"></i></span>
                             </td>
                             <td><code>{{ p.codigo }}</code></td>
                             <td>

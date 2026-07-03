@@ -78,14 +78,14 @@ const enviar = () => form.post(route('productos.store'));
                         <label class="form-label">Foto principal (portada)</label>
                         <input type="file" accept="image/*" class="form-control" :class="{ 'is-invalid': form.errors.foto }" @change="onFile" />
                         <div class="invalid-feedback">{{ form.errors.foto }}</div>
-                        <img v-if="preview" :src="preview" class="rounded mt-2" style="height:90px;object-fit:cover;" />
+                        <img v-if="preview" :src="preview" class="rounded mt-2" style="height:120px;object-fit:cover;" />
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">Imágenes adicionales <small class="text-muted">(hasta 6, para el carrusel)</small></label>
                         <input type="file" accept="image/*" multiple class="form-control" :class="{ 'is-invalid': form.errors.imagenes || form.errors['imagenes.0'] }" @change="onImagenes" />
                         <div class="invalid-feedback">{{ form.errors.imagenes || form.errors['imagenes.0'] }}</div>
                         <div class="d-flex flex-wrap gap-2 mt-2">
-                            <img v-for="(src, i) in previewsGaleria" :key="i" :src="src" class="rounded border" style="height:70px;width:70px;object-fit:cover;" />
+                            <img v-for="(src, i) in previewsGaleria" :key="i" :src="src" class="rounded border" style="height:100px;width:100px;object-fit:cover;" />
                         </div>
                     </div>
                     <div class="col-12 form-check ms-2">

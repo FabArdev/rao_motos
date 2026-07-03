@@ -65,6 +65,9 @@ class HandleInertiaRequests extends Middleware
             // Contador de visitas por página (REQ7) — cada ruta tiene su propio contador.
             'visitas' => fn () => (int) PageVisit::where('ruta', $request->path())->value('contador') ?? 0,
 
+            // URL base para assets estáticos (logo, etc.)
+            'asset_url' => asset('img/logo.png'),
+
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

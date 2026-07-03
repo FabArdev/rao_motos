@@ -1,17 +1,16 @@
 <script setup>
-/**
- * Logo de RAO MOTOS. La imagen vive en public/img/logo.png y se sirve como /img/logo.png
- * (Herd/Laravel sirven la carpeta public/ como raíz, por eso NO se pone "public" ni backslashes).
- * El emblema ya incluye el texto "RAO MOTOS", por eso no se agrega wordmark aparte.
- */
+import { usePage } from '@inertiajs/vue3';
+
 defineProps({
     height: { type: Number, default: 40 },
 });
+
+const page = usePage();
 </script>
 
 <template>
     <img
-        src="/img/logo.png"
+        :src="page.props.asset_url ?? '/img/logo.png'"
         alt="RAO MOTOS"
         :height="height"
         class="d-block rounded"
