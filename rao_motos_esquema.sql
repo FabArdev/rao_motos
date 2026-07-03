@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict aRu54lssgalL6vxFBwg81ocESn4RmvXl5P2ze2cHKvf2k9vdV3cLcu9Kv1bzNOt
+\restrict OR7L37jQUMYRTyehBltBaiF9gV3LdRFeeiaF4dBq9QWYtVCrkHyj27Qe8NRyyxZ
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -18,6 +18,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION unaccent; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
+
 
 SET default_tablespace = '';
 
@@ -210,42 +224,6 @@ ALTER SEQUENCE public.detalle_compra_id_seq OWNED BY public.detalle_compra.id;
 
 
 --
--- Name: detalle_orden; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.detalle_orden (
-    id bigint NOT NULL,
-    orden_trabajo_id bigint NOT NULL,
-    producto_id bigint NOT NULL,
-    cantidad integer NOT NULL,
-    estado character varying(255) DEFAULT 'SOLICITADO'::character varying NOT NULL,
-    motivo character varying(255),
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone,
-    CONSTRAINT detalle_orden_estado_check CHECK (((estado)::text = ANY ((ARRAY['SOLICITADO'::character varying, 'APROBADO'::character varying, 'RECHAZADO'::character varying, 'ENTREGADO'::character varying])::text[])))
-);
-
-
---
--- Name: detalle_orden_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.detalle_orden_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: detalle_orden_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.detalle_orden_id_seq OWNED BY public.detalle_orden.id;
-
-
---
 -- Name: detalle_pedido; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -314,6 +292,21 @@ ALTER SEQUENCE public.detalle_venta_id_seq OWNED BY public.detalle_venta.id;
 
 
 --
+-- Name: failed_jobs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.failed_jobs (
+    id bigint NOT NULL,
+    uuid character varying(255) NOT NULL,
+    connection text NOT NULL,
+    queue text NOT NULL,
+    payload text NOT NULL,
+    exception text NOT NULL,
+    failed_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: failed_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -323,6 +316,13 @@ CREATE SEQUENCE public.failed_jobs_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
+
+
+--
+-- Name: failed_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.failed_jobs_id_seq OWNED BY public.failed_jobs.id;
 
 
 --
@@ -433,6 +433,17 @@ ALTER SEQUENCE public.metodos_pago_id_seq OWNED BY public.metodos_pago.id;
 
 
 --
+-- Name: migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.migrations (
+    id integer NOT NULL,
+    migration character varying(255) NOT NULL,
+    batch integer NOT NULL
+);
+
+
+--
 -- Name: migrations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -446,38 +457,10 @@ CREATE SEQUENCE public.migrations_id_seq
 
 
 --
--- Name: moto; Type: TABLE; Schema: public; Owner: -
+-- Name: migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-CREATE TABLE public.moto (
-    id bigint NOT NULL,
-    cliente_id bigint NOT NULL,
-    placa character varying(20),
-    marca character varying(100),
-    modelo character varying(100),
-    anio integer,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: moto_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.moto_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: moto_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.moto_id_seq OWNED BY public.moto.id;
+ALTER SEQUENCE public.migrations_id_seq OWNED BY public.migrations.id;
 
 
 --
@@ -551,49 +534,6 @@ ALTER SEQUENCE public.notificacion_id_seq OWNED BY public.notificacion.id;
 
 
 --
--- Name: orden_trabajo; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.orden_trabajo (
-    id bigint NOT NULL,
-    cliente_id bigint NOT NULL,
-    moto_id bigint NOT NULL,
-    fecha_ingreso timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    descripcion_problema text NOT NULL,
-    diagnostico text,
-    fecha_diagnostico timestamp(0) without time zone,
-    costo_estimado_mano_obra numeric(10,2),
-    costo_estimado_repuestos numeric(10,2),
-    presupuesto_aprobado boolean DEFAULT false NOT NULL,
-    costo_mano_obra numeric(10,2),
-    venta_id bigint,
-    estado character varying(255) DEFAULT 'RECIBIDA'::character varying NOT NULL,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone,
-    CONSTRAINT orden_trabajo_estado_check CHECK (((estado)::text = ANY ((ARRAY['RECIBIDA'::character varying, 'DIAGNOSTICADA'::character varying, 'EN_REPARACION'::character varying, 'TERMINADA'::character varying, 'ENTREGADA'::character varying, 'CANCELADA'::character varying])::text[])))
-);
-
-
---
--- Name: orden_trabajo_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.orden_trabajo_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: orden_trabajo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.orden_trabajo_id_seq OWNED BY public.orden_trabajo.id;
-
-
---
 -- Name: page_visits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -646,6 +586,7 @@ CREATE TABLE public.pago_cuota (
     pago_facil_raw_response text,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
+    pago_facil_expires_at timestamp(0) without time zone,
     CONSTRAINT pago_cuota_estado_check CHECK (((estado)::text = ANY ((ARRAY['PENDIENTE'::character varying, 'PAGADO'::character varying, 'VENCIDO'::character varying])::text[])))
 );
 
@@ -667,6 +608,17 @@ CREATE SEQUENCE public.pago_cuota_id_seq
 --
 
 ALTER SEQUENCE public.pago_cuota_id_seq OWNED BY public.pago_cuota.id;
+
+
+--
+-- Name: password_reset_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.password_reset_tokens (
+    email character varying(255) NOT NULL,
+    token character varying(255) NOT NULL,
+    created_at timestamp(0) without time zone
+);
 
 
 --
@@ -706,6 +658,24 @@ ALTER SEQUENCE public.pedido_id_seq OWNED BY public.pedido.id;
 
 
 --
+-- Name: personal_access_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.personal_access_tokens (
+    id bigint NOT NULL,
+    tokenable_type character varying(255) NOT NULL,
+    tokenable_id bigint NOT NULL,
+    name character varying(255) NOT NULL,
+    token character varying(64) NOT NULL,
+    abilities text,
+    last_used_at timestamp(0) without time zone,
+    expires_at timestamp(0) without time zone,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
 -- Name: personal_access_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -715,6 +685,13 @@ CREATE SEQUENCE public.personal_access_tokens_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
+
+
+--
+-- Name: personal_access_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.personal_access_tokens_id_seq OWNED BY public.personal_access_tokens.id;
 
 
 --
@@ -755,6 +732,39 @@ CREATE SEQUENCE public.producto_id_seq
 --
 
 ALTER SEQUENCE public.producto_id_seq OWNED BY public.producto.id;
+
+
+--
+-- Name: producto_imagen; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.producto_imagen (
+    id bigint NOT NULL,
+    producto_id bigint NOT NULL,
+    ruta character varying(255) NOT NULL,
+    orden integer DEFAULT 0 NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: producto_imagen_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.producto_imagen_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: producto_imagen_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.producto_imagen_id_seq OWNED BY public.producto_imagen.id;
 
 
 --
@@ -825,6 +835,20 @@ ALTER SEQUENCE public.roles_id_seq OWNED BY public.roles.id;
 
 
 --
+-- Name: sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sessions (
+    id character varying(255) NOT NULL,
+    user_id bigint,
+    ip_address character varying(45),
+    user_agent text,
+    payload text NOT NULL,
+    last_activity integer NOT NULL
+);
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -892,7 +916,7 @@ CREATE TABLE public.venta (
     pago_facil_raw_response text,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    CONSTRAINT venta_estado_check CHECK (((estado)::text = ANY ((ARRAY['COMPLETADA'::character varying, 'PENDIENTE'::character varying, 'ANULADA'::character varying])::text[]))),
+    CONSTRAINT venta_estado_check CHECK (((estado)::text = ANY (ARRAY['COMPLETADA'::text, 'PENDIENTE'::text, 'PAGADA'::text, 'ANULADA'::text]))),
     CONSTRAINT venta_metodo_pago_check CHECK (((metodo_pago)::text = ANY ((ARRAY['EFECTIVO'::character varying, 'QR'::character varying])::text[]))),
     CONSTRAINT venta_tipo_venta_check CHECK (((tipo_venta)::text = ANY ((ARRAY['CONTADO'::character varying, 'CREDITO'::character varying])::text[])))
 );
@@ -953,13 +977,6 @@ ALTER TABLE ONLY public.detalle_compra ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- Name: detalle_orden id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.detalle_orden ALTER COLUMN id SET DEFAULT nextval('public.detalle_orden_id_seq'::regclass);
-
-
---
 -- Name: detalle_pedido id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -971,6 +988,13 @@ ALTER TABLE ONLY public.detalle_pedido ALTER COLUMN id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.detalle_venta ALTER COLUMN id SET DEFAULT nextval('public.detalle_venta_id_seq'::regclass);
+
+
+--
+-- Name: failed_jobs id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.failed_jobs ALTER COLUMN id SET DEFAULT nextval('public.failed_jobs_id_seq'::regclass);
 
 
 --
@@ -995,10 +1019,10 @@ ALTER TABLE ONLY public.metodos_pago ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- Name: moto id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: migrations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.moto ALTER COLUMN id SET DEFAULT nextval('public.moto_id_seq'::regclass);
+ALTER TABLE ONLY public.migrations ALTER COLUMN id SET DEFAULT nextval('public.migrations_id_seq'::regclass);
 
 
 --
@@ -1013,13 +1037,6 @@ ALTER TABLE ONLY public.movimiento_inventario ALTER COLUMN id SET DEFAULT nextva
 --
 
 ALTER TABLE ONLY public.notificacion ALTER COLUMN id SET DEFAULT nextval('public.notificacion_id_seq'::regclass);
-
-
---
--- Name: orden_trabajo id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orden_trabajo ALTER COLUMN id SET DEFAULT nextval('public.orden_trabajo_id_seq'::regclass);
 
 
 --
@@ -1044,10 +1061,24 @@ ALTER TABLE ONLY public.pedido ALTER COLUMN id SET DEFAULT nextval('public.pedid
 
 
 --
+-- Name: personal_access_tokens id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextval('public.personal_access_tokens_id_seq'::regclass);
+
+
+--
 -- Name: producto id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.producto ALTER COLUMN id SET DEFAULT nextval('public.producto_id_seq'::regclass);
+
+
+--
+-- Name: producto_imagen id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_imagen ALTER COLUMN id SET DEFAULT nextval('public.producto_imagen_id_seq'::regclass);
 
 
 --
@@ -1143,14 +1174,6 @@ ALTER TABLE ONLY public.detalle_compra
 
 
 --
--- Name: detalle_orden detalle_orden_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.detalle_orden
-    ADD CONSTRAINT detalle_orden_pkey PRIMARY KEY (id);
-
-
---
 -- Name: detalle_pedido detalle_pedido_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1164,6 +1187,22 @@ ALTER TABLE ONLY public.detalle_pedido
 
 ALTER TABLE ONLY public.detalle_venta
     ADD CONSTRAINT detalle_venta_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: failed_jobs failed_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.failed_jobs
+    ADD CONSTRAINT failed_jobs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: failed_jobs failed_jobs_uuid_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.failed_jobs
+    ADD CONSTRAINT failed_jobs_uuid_unique UNIQUE (uuid);
 
 
 --
@@ -1199,11 +1238,11 @@ ALTER TABLE ONLY public.metodos_pago
 
 
 --
--- Name: moto moto_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: migrations migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.moto
-    ADD CONSTRAINT moto_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.migrations
+    ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
 
 
 --
@@ -1220,14 +1259,6 @@ ALTER TABLE ONLY public.movimiento_inventario
 
 ALTER TABLE ONLY public.notificacion
     ADD CONSTRAINT notificacion_pkey PRIMARY KEY (id);
-
-
---
--- Name: orden_trabajo orden_trabajo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orden_trabajo
-    ADD CONSTRAINT orden_trabajo_pkey PRIMARY KEY (id);
 
 
 --
@@ -1255,6 +1286,14 @@ ALTER TABLE ONLY public.pago_cuota
 
 
 --
+-- Name: password_reset_tokens password_reset_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.password_reset_tokens
+    ADD CONSTRAINT password_reset_tokens_pkey PRIMARY KEY (email);
+
+
+--
 -- Name: pedido pedido_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1263,11 +1302,35 @@ ALTER TABLE ONLY public.pedido
 
 
 --
+-- Name: personal_access_tokens personal_access_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.personal_access_tokens
+    ADD CONSTRAINT personal_access_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: personal_access_tokens personal_access_tokens_token_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.personal_access_tokens
+    ADD CONSTRAINT personal_access_tokens_token_unique UNIQUE (token);
+
+
+--
 -- Name: producto producto_codigo_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.producto
     ADD CONSTRAINT producto_codigo_unique UNIQUE (codigo);
+
+
+--
+-- Name: producto_imagen producto_imagen_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_imagen
+    ADD CONSTRAINT producto_imagen_pkey PRIMARY KEY (id);
 
 
 --
@@ -1292,6 +1355,14 @@ ALTER TABLE ONLY public.proveedor
 
 ALTER TABLE ONLY public.roles
     ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1332,6 +1403,27 @@ ALTER TABLE ONLY public.venta
 
 ALTER TABLE ONLY public.venta
     ADD CONSTRAINT venta_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: personal_access_tokens_tokenable_type_tokenable_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX personal_access_tokens_tokenable_type_tokenable_id_index ON public.personal_access_tokens USING btree (tokenable_type, tokenable_id);
+
+
+--
+-- Name: sessions_last_activity_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sessions_last_activity_index ON public.sessions USING btree (last_activity);
+
+
+--
+-- Name: sessions_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sessions_user_id_index ON public.sessions USING btree (user_id);
 
 
 --
@@ -1380,22 +1472,6 @@ ALTER TABLE ONLY public.detalle_compra
 
 ALTER TABLE ONLY public.detalle_compra
     ADD CONSTRAINT detalle_compra_producto_id_foreign FOREIGN KEY (producto_id) REFERENCES public.producto(id) ON DELETE RESTRICT;
-
-
---
--- Name: detalle_orden detalle_orden_orden_trabajo_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.detalle_orden
-    ADD CONSTRAINT detalle_orden_orden_trabajo_id_foreign FOREIGN KEY (orden_trabajo_id) REFERENCES public.orden_trabajo(id) ON DELETE CASCADE;
-
-
---
--- Name: detalle_orden detalle_orden_producto_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.detalle_orden
-    ADD CONSTRAINT detalle_orden_producto_id_foreign FOREIGN KEY (producto_id) REFERENCES public.producto(id) ON DELETE RESTRICT;
 
 
 --
@@ -1455,14 +1531,6 @@ ALTER TABLE ONLY public.menu_items
 
 
 --
--- Name: moto moto_cliente_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.moto
-    ADD CONSTRAINT moto_cliente_id_foreign FOREIGN KEY (cliente_id) REFERENCES public.cliente(id) ON DELETE CASCADE;
-
-
---
 -- Name: movimiento_inventario movimiento_inventario_inventario_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1476,30 +1544,6 @@ ALTER TABLE ONLY public.movimiento_inventario
 
 ALTER TABLE ONLY public.notificacion
     ADD CONSTRAINT notificacion_usuario_id_foreign FOREIGN KEY (usuario_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: orden_trabajo orden_trabajo_cliente_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orden_trabajo
-    ADD CONSTRAINT orden_trabajo_cliente_id_foreign FOREIGN KEY (cliente_id) REFERENCES public.cliente(id) ON DELETE RESTRICT;
-
-
---
--- Name: orden_trabajo orden_trabajo_moto_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orden_trabajo
-    ADD CONSTRAINT orden_trabajo_moto_id_foreign FOREIGN KEY (moto_id) REFERENCES public.moto(id) ON DELETE RESTRICT;
-
-
---
--- Name: orden_trabajo orden_trabajo_venta_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orden_trabajo
-    ADD CONSTRAINT orden_trabajo_venta_id_foreign FOREIGN KEY (venta_id) REFERENCES public.venta(id) ON DELETE SET NULL;
 
 
 --
@@ -1535,6 +1579,14 @@ ALTER TABLE ONLY public.pedido
 
 
 --
+-- Name: producto_imagen producto_imagen_producto_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_imagen
+    ADD CONSTRAINT producto_imagen_producto_id_foreign FOREIGN KEY (producto_id) REFERENCES public.producto(id) ON DELETE CASCADE;
+
+
+--
 -- Name: users users_role_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1562,5 +1614,5 @@ ALTER TABLE ONLY public.venta
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aRu54lssgalL6vxFBwg81ocESn4RmvXl5P2ze2cHKvf2k9vdV3cLcu9Kv1bzNOt
+\unrestrict OR7L37jQUMYRTyehBltBaiF9gV3LdRFeeiaF4dBq9QWYtVCrkHyj27Qe8NRyyxZ
 
