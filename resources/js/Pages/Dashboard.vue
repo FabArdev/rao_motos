@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Bar } from 'vue-chartjs';
@@ -38,8 +38,37 @@ const topChartData = computed(() => ({
     datasets: [{ label: 'Unidades', backgroundColor: '#198754', data: props.topProductos.map((p) => p.total) }],
 }));
 
-const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
-const barStacked = { ...chartOpts, scales: { x: { stacked: true }, y: { stacked: true } } };
+// Colores de las gráficas según el modo (día/noche): las grillas/ejes se pierden en oscuro.
+const esNoche = ref(false);
+let modoObserver;
+const leerModo = () => { esNoche.value = document.documentElement.getAttribute('data-mode') === 'noche'; };
+onMounted(() => {
+    leerModo();
+    modoObserver = new MutationObserver(leerModo);
+    modoObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
+});
+onUnmounted(() => modoObserver?.disconnect());
+
+const gridColor = computed(() => (esNoche.value ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.08)'));
+const tickColor = computed(() => (esNoche.value ? '#e0e0e0' : '#555'));
+const ejes = () => ({
+    x: { grid: { color: gridColor.value }, ticks: { color: tickColor.value } },
+    y: { grid: { color: gridColor.value }, ticks: { color: tickColor.value } },
+});
+
+const chartOpts = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { color: tickColor.value } } },
+    scales: ejes(),
+}));
+const barStacked = computed(() => ({
+    ...chartOpts.value,
+    scales: {
+        x: { stacked: true, grid: { color: gridColor.value }, ticks: { color: tickColor.value } },
+        y: { stacked: true, grid: { color: gridColor.value }, ticks: { color: tickColor.value } },
+    },
+}));
 </script>
 
 <template>

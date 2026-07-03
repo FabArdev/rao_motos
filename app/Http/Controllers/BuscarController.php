@@ -27,11 +27,15 @@ class BuscarController extends Controller
         if (strlen($q) >= 2) {
             $like = "%{$q}%";
 
+            // Coincidencia sin importar tildes ni mayúsculas: unaccent + ILIKE.
+            // (los nombres de columna son fijos; el término va como parámetro ligado)
+            $un = fn ($col) => "unaccent($col) ILIKE unaccent(?)";
+
             // Funcionalidades/módulos que el rol del usuario puede abrir (menú del rol).
             // Es role-safe: solo se listan las páginas a las que ese rol tiene acceso.
             $resultados['funcionalidades'] = MenuItem::where('role_id', $user->role_id)
                 ->where('activo', true)
-                ->where('etiqueta', 'ilike', $like)
+                ->whereRaw($un('etiqueta'), [$like])
                 ->orderBy('orden')
                 ->get(['etiqueta', 'ruta_laravel', 'icono'])
                 ->map(fn ($m) => ['etiqueta' => $m->etiqueta, 'ruta' => $m->ruta_laravel, 'icono' => $m->icono])
@@ -39,15 +43,15 @@ class BuscarController extends Controller
 
             // Productos: para todos (el cliente los ve como catálogo).
             $resultados['productos'] = Producto::where('activo', true)
-                ->where(fn ($s) => $s->where('nombre', 'ilike', $like)->orWhere('codigo', 'ilike', $like)
-                    ->orWhere('marca', 'ilike', $like)->orWhere('modelo', 'ilike', $like))
+                ->where(fn ($s) => $s->whereRaw($un('nombre'), [$like])->orWhereRaw($un('codigo'), [$like])
+                    ->orWhereRaw($un('marca'), [$like])->orWhereRaw($un('modelo'), [$like]))
                 ->limit(10)->get(['id', 'codigo', 'nombre', 'marca']);
 
             if (! $esCliente) {
-                // Clientes, pedidos y órdenes: solo staff.
+                // Clientes y pedidos: solo staff.
                 $resultados['clientes'] = Cliente::with('user:id,nombre,apellidos,ci')
-                    ->whereHas('user', fn ($u) => $u->where('nombre', 'ilike', $like)
-                        ->orWhere('apellidos', 'ilike', $like)->orWhere('ci', 'ilike', $like))
+                    ->whereHas('user', fn ($u) => $u->whereRaw($un('nombre'), [$like])
+                        ->orWhereRaw($un('apellidos'), [$like])->orWhereRaw($un('ci'), [$like]))
                     ->limit(10)->get()
                     ->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->user?->name, 'ci' => $c->user?->ci]);
 

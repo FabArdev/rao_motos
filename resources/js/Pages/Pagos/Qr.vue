@@ -1,7 +1,7 @@
 <script setup>
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 /**
  * Pantalla de pago por QR (PagoFácil), genérica para cuota o venta.
@@ -12,27 +12,15 @@ const props = defineProps({
     monto: Number,
     qr: Object,            // { qr_image, payment_number, transaction_id, simulado }
     estadoUrl: String,     // GET → { pagado: bool }
-    confirmarUrl: String,  // POST "ya realicé el pago"
     volverUrl: String,     // a dónde volver al terminar
     descarga: { type: String, default: 'qr-pago.png' },
 });
 
-const user = usePage().props.auth.user;
-const esStaff = computed(() => user?.rol === 'admin' || user?.rol === 'vendedor');
 const esSimulado = props.qr?.simulado === true;
 const pagado = ref(false);
 let pollTimer = null;
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
-
-const yaPague = async () => {
-    await fetch(props.confirmarUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ payment_number: props.qr.payment_number, transaction_id: props.qr.transaction_id }),
-    });
-    router.visit(props.volverUrl);
-};
 
 const guardarQr = () => {
     const image = new Image();
@@ -117,7 +105,6 @@ onUnmounted(() => {
 
                 <div v-if="!pagado" class="d-grid gap-2">
                     <button class="btn btn-outline-primary" @click="guardarQr"><i class="bi bi-download me-1"></i>Guardar QR</button>
-                    <button v-if="esStaff || esSimulado" class="btn btn-success" @click="yaPague"><i class="bi bi-check-circle me-1"></i>Ya realicé el pago</button>
                     <a :href="volverUrl" class="btn btn-outline-secondary">Volver</a>
                 </div>
             </div>

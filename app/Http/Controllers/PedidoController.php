@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Notificacion;
 use App\Models\Pedido;
 use App\Models\Venta;
 use App\Services\InventarioService;
@@ -67,6 +68,8 @@ class PedidoController extends Controller
             $pedido->update(['estado' => 'APROBADO', 'venta_id' => $venta->id]);
         });
 
+        $this->notificarCliente($pedido, 'PEDIDO_APROBADO', "Tu pedido #{$pedido->id} fue aprobado. Pronto será despachado.");
+
         return back()->with('success', 'Pedido aprobado y venta generada (pendiente de despacho).');
     }
 
@@ -81,6 +84,8 @@ class PedidoController extends Controller
         }
 
         $pedido->update(['estado' => 'RECHAZADO', 'motivo_rechazo' => $data['motivo_rechazo']]);
+
+        $this->notificarCliente($pedido, 'PEDIDO_RECHAZADO', "Tu pedido #{$pedido->id} fue rechazado. Motivo: {$data['motivo_rechazo']}");
 
         return back()->with('success', 'Pedido rechazado.');
     }
@@ -108,6 +113,21 @@ class PedidoController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
+        $this->notificarCliente($pedido, 'PEDIDO_DESPACHADO', "Tu pedido #{$pedido->id} fue despachado.");
+
         return back()->with('success', 'Pedido despachado: stock descontado y venta completada.');
+    }
+
+    /** Aviso in-app al cliente dueño del pedido (usuario = cliente_id). */
+    private function notificarCliente(Pedido $pedido, string $tipo, string $mensaje): void
+    {
+        Notificacion::create([
+            'usuario_id' => $pedido->cliente_id,
+            'tipo' => $tipo,
+            'mensaje' => $mensaje,
+            'recurso' => route('mis-pedidos.show', $pedido->id, false),
+            'leido' => false,
+            'fecha' => now(),
+        ]);
     }
 }

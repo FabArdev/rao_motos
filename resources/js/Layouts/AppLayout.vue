@@ -69,13 +69,13 @@ const notificaciones = computed(() => {
         recientes: Array.isArray(n?.recientes) ? n.recientes : [],
     };
 });
-const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APROBAR: 'bag', MORA: 'cash-coin' }[t] ?? 'bell');
+const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APROBAR: 'bag', PEDIDO_APROBADO: 'check-circle', PEDIDO_RECHAZADO: 'x-circle', PEDIDO_DESPACHADO: 'truck', MORA: 'cash-coin' }[t] ?? 'bell');
 </script>
 
 <template>
-    <div class="d-flex flex-column min-vh-100 bg-light">
-        <!-- ===== Topbar ===== -->
-        <header class="navbar bg-white border-bottom px-3 px-lg-4 py-2 shadow-sm" style="position: sticky; top: 0; z-index: 1030;">
+    <div class="d-flex flex-column vh-100 bg-light">
+        <!-- ===== Topbar (fija arriba) ===== -->
+        <header class="navbar bg-white border-bottom px-3 px-lg-4 py-2 shadow-sm flex-shrink-0" style="z-index: 1030;">
             <div class="d-flex align-items-center gap-2">
                 <!-- Hamburguesa (móvil) -->
                 <button class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Menú">
@@ -89,8 +89,8 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
             <div class="d-flex align-items-center gap-2 ms-auto">
                 <form class="d-none d-md-flex" style="max-width: 260px;" @submit.prevent="buscarGlobal">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
                         <input v-model="busqueda" class="form-control" placeholder="Buscar..." />
+                        <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button>
                     </div>
                 </form>
 
@@ -144,7 +144,7 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
         </header>
 
         <!-- ===== Cuerpo: sidebar + contenido ===== -->
-        <div class="d-flex flex-grow-1">
+        <div class="d-flex flex-grow-1" style="min-height: 0;">
             <!-- Sidebar (estático en lg+, offcanvas en móvil) -->
             <div class="offcanvas-lg offcanvas-start text-bg-dark sidebar-3c" tabindex="-1" id="sidebar" style="--bs-offcanvas-width: 240px;">
                 <div class="offcanvas-header border-bottom border-secondary d-lg-none">
@@ -191,19 +191,18 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                             </ul>
                         </div>
                     </nav>
-                    <div class="mt-auto p-2 small text-white-50 d-none d-lg-block">INF-513 · grupo02sa</div>
                 </div>
             </div>
 
-            <!-- Contenido -->
-            <main class="flex-grow-1 p-3 p-lg-4" style="min-width: 0;">
+            <!-- Contenido (única zona con scroll) -->
+            <main class="flex-grow-1 overflow-auto p-3 p-lg-4" style="min-width: 0;">
                 <h1 v-if="title" class="h4 mb-3">{{ title }}</h1>
                 <slot />
             </main>
         </div>
 
-        <!-- ===== Footer (contador de visitas por página, sticky) ===== -->
-        <footer class="fixed-bottom border-top bg-white px-4 py-2 d-flex flex-wrap justify-content-between align-items-center small text-muted gap-2">
+        <!-- ===== Footer fijo abajo (contador de visitas en cada página) ===== -->
+        <footer class="border-top bg-white px-4 py-2 d-flex flex-wrap justify-content-between align-items-center small text-muted gap-2 flex-shrink-0">
             <span>© {{ new Date().getFullYear() }} RAO MOTOS · INF-513 grupo02sa</span>
             <span><i class="bi bi-eye me-1"></i>Visitas en esta página: <strong>{{ page.props.visitas ?? 0 }}</strong></span>
         </footer>

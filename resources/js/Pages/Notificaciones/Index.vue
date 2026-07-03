@@ -8,7 +8,7 @@ const page = usePage();
 const marcar = (n) => router.post(route('notificaciones.leida', n.id), {}, { preserveScroll: true });
 const marcarTodas = () => router.post(route('notificaciones.todas'), {}, { preserveScroll: true });
 
-const icono = (t) => ({ STOCK_BAJO: 'exclamation-triangle text-warning', SOLICITUD_REPUESTO: 'wrench text-info', PEDIDO_POR_APROBAR: 'bag text-primary', PRESUPUESTO: 'clipboard-check text-success', MORA: 'cash-coin text-danger' }[t] ?? 'bell');
+const icono = (t) => ({ STOCK_BAJO: 'exclamation-triangle text-warning', PEDIDO_POR_APROBAR: 'bag text-primary', PEDIDO_APROBADO: 'check-circle text-success', PEDIDO_RECHAZADO: 'x-circle text-danger', PEDIDO_DESPACHADO: 'truck text-primary', MORA: 'cash-coin text-danger' }[t] ?? 'bell');
 </script>
 
 <template>

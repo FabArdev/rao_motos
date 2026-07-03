@@ -198,6 +198,38 @@ h1, h2, h3, h4, h5, h6 {
     opacity: 0.7;
 }
 
+/* Ítems de menús desplegables legibles en noche (antes: texto oscuro sobre fondo oscuro) */
+[data-mode="noche"] .dropdown-item {
+    color: var(--text-primary, #e0e0e0);
+}
+[data-mode="noche"] .dropdown-item:hover,
+[data-mode="noche"] .dropdown-item:focus {
+    background-color: var(--bg-secondary, #2c2c2c);
+    color: #fff;
+}
+[data-mode="noche"] .dropdown-item.active,
+[data-mode="noche"] .dropdown-item:active {
+    background-color: var(--bs-primary, #0d6efd);
+    color: #fff;
+}
+[data-mode="noche"] .dropdown-header {
+    color: var(--text-secondary, #bdbdbd);
+}
+[data-mode="noche"] .dropdown-divider {
+    border-color: var(--border-color, #424242);
+}
+
+/* Botones "claros" de la barra superior: adaptarlos al fondo oscuro */
+[data-mode="noche"] .navbar .btn-light {
+    background-color: var(--bg-secondary, #2c2c2c);
+    border-color: var(--border-color, #424242);
+    color: var(--text-primary, #e0e0e0);
+}
+[data-mode="noche"] .navbar .btn-light:hover {
+    background-color: var(--border-color, #424242);
+    color: #fff;
+}
+
 /* ========================================
    TAMAÑOS DE FUENTE
    ======================================== */
