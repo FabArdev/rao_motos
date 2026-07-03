@@ -34,7 +34,7 @@ const verRepuestos = () => {
                         Ir al panel
                     </Link>
                     <template v-else-if="canLogin">
-                        <Link :href="route('login')" class="btn btn-outline-light btn-sm fw-semibold">Iniciar sesión</Link>
+                        <Link :href="route('login')" class="btn btn-light btn-sm fw-semibold border">Iniciar sesión</Link>
                         <Link v-if="canRegister" :href="route('register')" class="btn btn-warning btn-sm fw-bold text-dark">
                             <i class="bi bi-person-plus me-1"></i>Crear cuenta
                         </Link>
@@ -107,7 +107,7 @@ const verRepuestos = () => {
                     <div v-for="p in productos" :key="p.id" class="col-6 col-md-4 col-lg-3">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="ratio ratio-4x3 bg-light d-flex align-items-center justify-content-center">
-                                <img v-if="img(p)" :src="img(p)" class="object-fit-cover" alt="" />
+                                <img v-if="img(p)" :src="img(p)" class="object-fit-contain" alt="" />
                                 <i v-else class="bi bi-box-seam fs-1 text-muted"></i>
                             </div>
                             <div class="card-body">

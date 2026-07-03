@@ -190,8 +190,8 @@ const submit = () => {
             </div>
 
             <div class="d-flex justify-content-between align-items-center">
-                <Link :href="route('login')" class="btn btn-outline-primary btn-sm">
-                    Iniciar sesión
+                <Link :href="route('login')" class="text-decoration-none small">
+                    ¿Ya tienes cuenta?
                 </Link>
 
                 <PrimaryButton

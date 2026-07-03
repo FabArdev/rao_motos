@@ -1,23 +1,20 @@
 <script setup>
 /**
- * Logo provisional de RAO MOTOS (marca de agua vectorial).
- * ── Para reemplazarlo por el logo real ──────────────────────────────
- *  Opción A: borra el <svg> de abajo y pon <img src="/img/logo.png" ...>
- *            (coloca el archivo en public/img/logo.png).
- *  Opción B: reemplaza el contenido del <svg> por el de tu logo.
- * El prop `light` pinta el texto en blanco (para fondos oscuros/rojos).
+ * Logo de RAO MOTOS. La imagen vive en public/img/logo.png y se sirve como /img/logo.png
+ * (Herd/Laravel sirven la carpeta public/ como raíz, por eso NO se pone "public" ni backslashes).
+ * El emblema ya incluye el texto "RAO MOTOS", por eso no se agrega wordmark aparte.
  */
 defineProps({
-    light: { type: Boolean, default: false },
-    height: { type: Number, default: 34 },
+    height: { type: Number, default: 40 },
 });
 </script>
 
 <template>
-    <span class="d-inline-flex align-items-center gap-2">
-        <img src="/img/logo.png" alt="RAO MOTOS" :height="height" style="object-fit:contain;" />
-        <span class="fw-bold lh-1" :class="light ? 'text-white' : 'text-danger'" style="letter-spacing:.5px;">
-            RAO<span :class="light ? 'text-white-50' : 'text-dark'"> MOTOS</span>
-        </span>
-    </span>
+    <img
+        src="/img/logo.png"
+        alt="RAO MOTOS"
+        :height="height"
+        class="d-block rounded"
+        style="width:auto; object-fit:contain;"
+    />
 </template>

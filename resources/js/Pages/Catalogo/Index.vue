@@ -50,13 +50,13 @@ const enviar = () => {
                                 <div v-if="galeria(p).length > 1" :id="`cat-carousel-${p.id}`" class="carousel slide h-100">
                                     <div class="carousel-inner h-100">
                                         <div v-for="(src, i) in galeria(p)" :key="i" class="carousel-item h-100" :class="{ active: i === 0 }">
-                                            <img :src="src" class="d-block w-100 h-100" style="object-fit:cover;" alt="" />
+                                            <img :src="src" class="d-block w-100 h-100" style="object-fit:contain;" alt="" />
                                         </div>
                                     </div>
                                     <button class="carousel-control-prev" type="button" :data-bs-target="`#cat-carousel-${p.id}`" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
                                     <button class="carousel-control-next" type="button" :data-bs-target="`#cat-carousel-${p.id}`" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
                                 </div>
-                                <img v-else-if="galeria(p).length === 1" :src="galeria(p)[0]" class="w-100 h-100" style="object-fit:cover;" alt="" />
+                                <img v-else-if="galeria(p).length === 1" :src="galeria(p)[0]" class="w-100 h-100" style="object-fit:contain;" alt="" />
                                 <div v-else class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-box-seam fs-1"></i></div>
                             </div>
                             <div class="card-body">
