@@ -1,15 +1,19 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({ ventas: Object, filtros: Object });
 const page = usePage();
+const rol = computed(() => page.props.auth.user?.rol);
+const puedeVender = computed(() => ['admin', 'vendedor'].includes(rol.value));
 const q = ref(props.filtros?.q ?? '');
 
-const buscar = () => router.get(route('ventas.index'), { q: q.value }, { preserveState: true, replace: true });
+const estados = ['', 'PENDIENTE', 'PAGADA', 'COMPLETADA', 'ANULADA'];
+const buscar = () => router.get(route('ventas.index'), { q: q.value, estado: props.filtros?.estado ?? '' }, { preserveState: true, replace: true });
+const filtrar = (e) => router.get(route('ventas.index'), { q: q.value, estado: e }, { preserveState: true, replace: true });
 
-const badge = (e) => ({ COMPLETADA: 'bg-success', PENDIENTE: 'bg-warning text-dark', ANULADA: 'bg-danger' }[e] ?? 'bg-secondary');
+const badge = (e) => ({ COMPLETADA: 'bg-success', PAGADA: 'bg-info text-dark', PENDIENTE: 'bg-warning text-dark', ANULADA: 'bg-danger' }[e] ?? 'bg-secondary');
 const creditoBadge = (e) => ({ VIGENTE: 'bg-info text-dark', MOROSO: 'bg-danger', PAGADO: 'bg-success' }[e] ?? 'bg-secondary');
 const creditoLabel = (e) => ({ VIGENTE: 'Crédito vigente', MOROSO: 'Moroso', PAGADO: 'Pagado' }[e] ?? e);
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
@@ -26,7 +30,13 @@ const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
                 <input v-model="q" type="text" class="form-control" placeholder="Buscar N° de venta..." />
                 <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
             </form>
-            <Link :href="route('ventas.create')" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nueva venta</Link>
+            <Link v-if="puedeVender" :href="route('ventas.create')" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nueva venta</Link>
+        </div>
+
+        <div class="btn-group btn-group-sm mb-3 flex-wrap">
+            <button v-for="e in estados" :key="e" class="btn" :class="(filtros?.estado ?? '') === e ? 'btn-primary' : 'btn-outline-secondary'" @click="filtrar(e)">
+                {{ e || 'TODAS' }}
+            </button>
         </div>
 
         <div class="card shadow-sm border-0">

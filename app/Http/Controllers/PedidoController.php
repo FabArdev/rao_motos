@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Notificacion;
 use App\Models\Pedido;
-use App\Models\Venta;
-use App\Services\InventarioService;
 use App\Services\VentaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,14 +13,13 @@ class PedidoController extends Controller
 {
     public function __construct(
         private VentaService $ventas,
-        private InventarioService $inventario,
     ) {}
 
     public function index(Request $request)
     {
         $estado = $request->string('estado')->toString();
 
-        $pedidos = Pedido::with(['cliente.user'])
+        $pedidos = Pedido::with(['cliente.user', 'venta:id,numero_venta,estado,metodo_pago'])
             ->withCount('detalles')
             ->when($estado, fn ($q) => $q->where('estado', $estado))
             ->latest('fecha')
@@ -42,21 +39,31 @@ class PedidoController extends Controller
         return Inertia::render('Pedidos/Show', ['pedido' => $pedido]);
     }
 
-    /** Aprobar: genera la venta (PENDIENTE) con precio mayorista por línea (RN4/D). Sin descontar stock aún. */
+    /**
+     * Aprobar (vendedor): genera la venta PENDIENTE con el método de pago elegido.
+     * No descuenta stock (eso pasa al despachar el almacenero). El pago ocurre ANTES del despacho.
+     */
     public function aprobar(Request $request, Pedido $pedido)
     {
+        $data = $request->validate([
+            'metodo_pago' => ['required', 'in:EFECTIVO,QR'],
+        ], [
+            'metodo_pago.required' => 'Seleccione el método de pago.',
+            'metodo_pago.in' => 'Método de pago inválido.',
+        ]);
+
         if ($pedido->estado !== 'SOLICITADO') {
             return back()->with('error', 'Solo un pedido SOLICITADO puede aprobarse.');
         }
 
-        DB::transaction(function () use ($pedido, $request) {
+        $venta = DB::transaction(function () use ($pedido, $request, $data) {
             $pedido->load('detalles');
 
             $venta = $this->ventas->crear([
                 'cliente_id' => $pedido->cliente_id,
                 'vendedor_id' => $request->user()->id,
                 'tipo_venta' => 'CONTADO',
-                'metodo_pago' => 'EFECTIVO',
+                'metodo_pago' => $data['metodo_pago'],
                 'estado' => 'PENDIENTE',
                 'descontar_stock' => false, // el stock sale al despachar
                 'items' => $pedido->detalles->map(fn ($d) => [
@@ -66,11 +73,18 @@ class PedidoController extends Controller
             ]);
 
             $pedido->update(['estado' => 'APROBADO', 'venta_id' => $venta->id]);
+
+            return $venta;
         });
 
-        $this->notificarCliente($pedido, 'PEDIDO_APROBADO', "Tu pedido #{$pedido->id} fue aprobado. Pronto será despachado.");
+        $this->notificarCliente($pedido, 'PEDIDO_APROBADO', "Tu pedido #{$pedido->id} fue aprobado. Realiza el pago para que sea despachado.");
 
-        return back()->with('success', 'Pedido aprobado y venta generada (pendiente de despacho).');
+        // Con QR se cobra al instante; con efectivo, el vendedor marca "Cobrado" cuando el cliente pague.
+        if ($data['metodo_pago'] === 'QR') {
+            return redirect()->route('pagofacil.generar-qr-venta', $venta->id);
+        }
+
+        return back()->with('success', 'Pedido aprobado. Venta pendiente de cobro (efectivo).');
     }
 
     public function rechazar(Request $request, Pedido $pedido)
@@ -88,34 +102,6 @@ class PedidoController extends Controller
         $this->notificarCliente($pedido, 'PEDIDO_RECHAZADO', "Tu pedido #{$pedido->id} fue rechazado. Motivo: {$data['motivo_rechazo']}");
 
         return back()->with('success', 'Pedido rechazado.');
-    }
-
-    /** Despachar: descuenta el stock una sola vez (RN18) y completa la venta. */
-    public function despachar(Pedido $pedido)
-    {
-        if ($pedido->estado !== 'APROBADO') {
-            return back()->with('error', 'Solo un pedido APROBADO puede despacharse.');
-        }
-
-        try {
-            DB::transaction(function () use ($pedido) {
-                $venta = $pedido->venta;
-                $venta->load('detalles');
-                foreach ($venta->detalles as $d) {
-                    if ($d->producto_id) {
-                        $this->inventario->egreso($d->producto_id, $d->cantidad, "Despacho pedido #{$pedido->id} ({$venta->numero_venta})");
-                    }
-                }
-                $venta->update(['estado' => 'COMPLETADA']);
-                $pedido->update(['estado' => 'DESPACHADO']);
-            });
-        } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        $this->notificarCliente($pedido, 'PEDIDO_DESPACHADO', "Tu pedido #{$pedido->id} fue despachado.");
-
-        return back()->with('success', 'Pedido despachado: stock descontado y venta completada.');
     }
 
     /** Aviso in-app al cliente dueño del pedido (usuario = cliente_id). */

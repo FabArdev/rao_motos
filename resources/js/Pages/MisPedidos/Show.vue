@@ -8,7 +8,7 @@ const props = defineProps({ pedido: Object });
 const badge = (e) => ({ SOLICITADO: 'bg-warning text-dark', APROBADO: 'bg-primary', RECHAZADO: 'bg-danger', EN_PROCESO: 'bg-info text-dark', DESPACHADO: 'bg-success', ANULADO: 'bg-secondary' }[e] ?? 'bg-secondary');
 const fmt = (n) => `Bs. ${Number(n ?? 0).toFixed(2)}`;
 
-const pagado = computed(() => props.pedido.venta?.estado === 'COMPLETADA');
+const pagado = computed(() => ['PAGADA', 'COMPLETADA'].includes(props.pedido.venta?.estado));
 const puedePagar = computed(() => props.pedido.estado === 'APROBADO' && props.pedido.venta && !pagado.value);
 </script>
 

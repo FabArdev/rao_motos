@@ -79,9 +79,10 @@ Route::middleware([
     // CU6 — Ventas (vendedor; admin superusuario)
     Route::middleware('role:admin,vendedor')->group(function () {
         Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
-        Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['index', 'create', 'store', 'show']);
+        Route::post('ventas/{venta}/marcar-pagada', [VentaController::class, 'marcarPagada'])->name('ventas.marcar-pagada');
+        Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['create', 'store']);
 
-        // Cobro por QR de una venta al contado (caja)
+        // Cobro por QR de una venta (vendedor/caja)
         Route::get('pago-qr/venta/{venta}', [PagoController::class, 'generarQrVenta'])->name('pagofacil.generar-qr-venta');
         Route::get('pagofacil/estado-venta/{venta}', [PagoController::class, 'estadoVenta'])->name('pagofacil.estado-venta');
 
@@ -90,12 +91,22 @@ Route::middleware([
         Route::get('creditos/{credito}', [CreditoController::class, 'show'])->name('creditos.show');
         Route::post('cuotas/{cuota}/pagar', [CreditoController::class, 'pagarCuota'])->name('creditos.pagar-cuota');
 
-        // CU4 — Pedidos (gestión por el vendedor)
+        // CU4 — Pedidos (aprobación/rechazo por el vendedor; el despacho lo hace el almacén)
         Route::get('pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
         Route::get('pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
         Route::post('pedidos/{pedido}/aprobar', [PedidoController::class, 'aprobar'])->name('pedidos.aprobar');
         Route::post('pedidos/{pedido}/rechazar', [PedidoController::class, 'rechazar'])->name('pedidos.rechazar');
-        Route::post('pedidos/{pedido}/despachar', [PedidoController::class, 'despachar'])->name('pedidos.despachar');
+    });
+
+    // Ventas — listar y ver también para el almacenero (necesita ver las PAGADA para despachar)
+    Route::middleware('role:admin,vendedor,almacenero')->group(function () {
+        Route::get('ventas', [VentaController::class, 'index'])->name('ventas.index');
+        Route::get('ventas/{venta}', [VentaController::class, 'show'])->name('ventas.show');
+    });
+
+    // Despacho de ventas (logística: almacenero; admin superusuario)
+    Route::middleware('role:admin,almacenero')->group(function () {
+        Route::post('ventas/{venta}/despachar', [VentaController::class, 'despachar'])->name('ventas.despachar');
     });
 
     // CU4 (cliente) — Catálogo y mis pedidos

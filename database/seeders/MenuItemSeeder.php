@@ -36,6 +36,7 @@ class MenuItemSeeder extends Seeder
                 ['Inventario', 'inventario.index', 'clipboard-data'],
                 ['Compras', 'compras.index', 'cart-plus'],
                 ['Proveedores', 'proveedores.index', 'truck'],
+                ['Ventas', 'ventas.index', 'receipt'],
             ],
             5 => [ // cliente
                 ['Catálogo', 'catalogo.index', 'shop'],

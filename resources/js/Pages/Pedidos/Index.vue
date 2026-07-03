@@ -10,6 +10,17 @@ const estado = ref(props.filtros?.estado ?? '');
 const filtrar = () => router.get(route('pedidos.index'), { estado: estado.value }, { preserveState: true, replace: true });
 
 const badge = (e) => ({ SOLICITADO: 'bg-warning text-dark', APROBADO: 'bg-primary', RECHAZADO: 'bg-danger', EN_PROCESO: 'bg-info text-dark', DESPACHADO: 'bg-success', ANULADO: 'bg-secondary' }[e] ?? 'bg-secondary');
+
+// Estado de pago/despacho derivado de la venta asociada.
+const pago = (p) => {
+    if (!p.venta) return { txt: '—', cls: 'bg-light text-muted border' };
+    return {
+        PENDIENTE: { txt: 'Por cobrar', cls: 'bg-warning text-dark' },
+        PAGADA: { txt: 'Pagado', cls: 'bg-info text-dark' },
+        COMPLETADA: { txt: 'Despachado', cls: 'bg-success' },
+        ANULADA: { txt: 'Anulada', cls: 'bg-danger' },
+    }[p.venta.estado] ?? { txt: p.venta.estado, cls: 'bg-secondary' };
+};
 </script>
 
 <template>
@@ -31,7 +42,7 @@ const badge = (e) => ({ SOLICITADO: 'bg-warning text-dark', APROBADO: 'bg-primar
         <div class="card shadow-sm border-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>#</th><th>Cliente</th><th>Fecha</th><th>Ítems</th><th>Venta</th><th>Estado</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th>#</th><th>Cliente</th><th>Fecha</th><th>Ítems</th><th>Venta</th><th>Estado</th><th>Pago / Despacho</th><th></th></tr></thead>
                     <tbody>
                         <tr v-for="p in pedidos.data" :key="p.id">
                             <td>{{ p.id }}</td>
@@ -40,9 +51,10 @@ const badge = (e) => ({ SOLICITADO: 'bg-warning text-dark', APROBADO: 'bg-primar
                             <td>{{ p.detalles_count }}</td>
                             <td>{{ p.venta?.numero_venta || '—' }}</td>
                             <td><span class="badge" :class="badge(p.estado)">{{ p.estado }}</span></td>
+                            <td><span class="badge" :class="pago(p).cls">{{ pago(p).txt }}</span></td>
                             <td class="text-end"><Link :href="route('pedidos.show', p.id)" class="btn btn-sm btn-light"><i class="bi bi-eye"></i></Link></td>
                         </tr>
-                        <tr v-if="!pedidos.data.length"><td colspan="7" class="text-center text-muted py-4">No hay pedidos.</td></tr>
+                        <tr v-if="!pedidos.data.length"><td colspan="8" class="text-center text-muted py-4">No hay pedidos.</td></tr>
                     </tbody>
                 </table>
             </div>

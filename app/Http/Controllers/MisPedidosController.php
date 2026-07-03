@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Notificacion;
 use App\Models\Pedido;
 use App\Services\PagoFacilService;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class MisPedidosController extends Controller
         if ($pedido->estado !== 'APROBADO' || ! $venta) {
             return redirect()->route('mis-pedidos.show', $pedido->id)->with('error', 'Este pedido aún no está disponible para pago.');
         }
-        if ($venta->estado === 'COMPLETADA') {
+        if (in_array($venta->estado, ['PAGADA', 'COMPLETADA'], true)) {
             return redirect()->route('mis-pedidos.show', $pedido->id)->with('error', 'Este pedido ya fue pagado.');
         }
 
@@ -100,7 +101,7 @@ class MisPedidosController extends Controller
         if (! $venta) {
             return response()->json(['pagado' => false]);
         }
-        if ($venta->estado === 'COMPLETADA') {
+        if (in_array($venta->estado, ['PAGADA', 'COMPLETADA'], true)) {
             return response()->json(['pagado' => true]);
         }
 
@@ -110,7 +111,14 @@ class MisPedidosController extends Controller
             $pagado = ($resultado['status'] ?? 'pending') === 'completed' || ! empty($raw['payerName']);
 
             if ($pagado) {
-                $venta->update(['estado' => 'COMPLETADA', 'pago_facil_status' => 'completed']);
+                // Pago recibido → PAGADA (falta que el almacén despache). Avisar al almacén.
+                $venta->update(['estado' => 'PAGADA', 'pago_facil_status' => 'completed']);
+                Notificacion::paraRol(
+                    'almacenero',
+                    'VENTA_PAGADA',
+                    "Venta {$venta->numero_venta} pagada, lista para despachar.",
+                    route('ventas.show', $venta->id, false)
+                );
 
                 return response()->json(['pagado' => true]);
             }

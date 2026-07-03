@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\MetodoPago;
+use App\Models\Notificacion;
 use App\Models\PagoCuota;
+use App\Models\Pedido;
 use App\Models\Venta;
 use App\Services\CreditoService;
 use App\Services\PagoFacilService;
@@ -262,8 +264,9 @@ class PagoController extends Controller
     /** Estado de la venta para el polling de la pantalla QR. */
     public function estadoVenta(Venta $venta)
     {
-        if ($venta->estado === 'COMPLETADA') {
-            return response()->json(['pagado' => true, 'estado' => 'COMPLETADA']);
+        // PAGADA o COMPLETADA = el pago ya entró (COMPLETADA además ya se despachó).
+        if (in_array($venta->estado, ['PAGADA', 'COMPLETADA'], true)) {
+            return response()->json(['pagado' => true, 'estado' => $venta->estado]);
         }
 
         if ($venta->pago_facil_transaction_id) {
@@ -274,7 +277,7 @@ class PagoController extends Controller
             if ($pagado) {
                 $this->completarVenta($venta);
 
-                return response()->json(['pagado' => true, 'estado' => 'COMPLETADA']);
+                return response()->json(['pagado' => true, 'estado' => $venta->fresh()->estado]);
             }
         }
 
@@ -304,7 +307,7 @@ class PagoController extends Controller
         if (! $venta) {
             return response()->json(['error' => 1, 'status' => 0, 'message' => 'Venta no encontrada', 'values' => false], 404);
         }
-        if ($venta->estado === 'COMPLETADA') {
+        if (in_array($venta->estado, ['PAGADA', 'COMPLETADA'], true)) {
             return response()->json(['error' => 0, 'status' => 1, 'message' => 'Ya estaba pagada', 'values' => true]);
         }
 
@@ -314,10 +317,26 @@ class PagoController extends Controller
         return response()->json(['error' => 0, 'status' => 1, 'message' => 'Pago recibido correctamente', 'values' => true]);
     }
 
-    /** Marca una venta como pagada por QR. El stock ya se descontó al crearla (RN18). */
+    /**
+     * Registra el pago QR de una venta. Si viene de un pedido, queda PAGADA (falta que el
+     * almacén despache); si es venta directa (mostrador) queda COMPLETADA. El stock lo maneja
+     * cada flujo por separado (RN18).
+     */
     private function completarVenta(Venta $venta): void
     {
-        $venta->update(['estado' => 'COMPLETADA', 'pago_facil_status' => 'completed']);
+        $esDePedido = Pedido::where('venta_id', $venta->id)->exists();
+
+        if ($esDePedido) {
+            $venta->update(['estado' => 'PAGADA', 'pago_facil_status' => 'completed']);
+            Notificacion::paraRol(
+                'almacenero',
+                'VENTA_PAGADA',
+                "Venta {$venta->numero_venta} pagada, lista para despachar.",
+                route('ventas.show', $venta->id, false)
+            );
+        } else {
+            $venta->update(['estado' => 'COMPLETADA', 'pago_facil_status' => 'completed']);
+        }
     }
 
     private function renderQrVenta(Venta $venta, float $monto, array $qr)

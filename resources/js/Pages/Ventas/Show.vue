@@ -6,9 +6,13 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 const props = defineProps({ venta: Object });
 const page = usePage();
 
-const badge = (e) => ({ COMPLETADA: 'bg-success', PENDIENTE: 'bg-warning text-dark', ANULADA: 'bg-danger', PAGADO: 'bg-success', VIGENTE: 'bg-info text-dark', MOROSO: 'bg-danger', VENCIDO: 'bg-danger' }[e] ?? 'bg-secondary');
+const badge = (e) => ({ COMPLETADA: 'bg-success', PAGADA: 'bg-info text-dark', PENDIENTE: 'bg-warning text-dark', ANULADA: 'bg-danger', PAGADO: 'bg-success', VIGENTE: 'bg-info text-dark', MOROSO: 'bg-danger', VENCIDO: 'bg-danger' }[e] ?? 'bg-secondary');
 const creditoLabel = (e) => ({ VIGENTE: 'Crédito vigente', MOROSO: 'Moroso', PAGADO: 'Pagado' }[e] ?? e);
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
+
+const rol = computed(() => page.props.auth.user?.rol);
+const puedeVender = computed(() => ['admin', 'vendedor'].includes(rol.value));
+const puedeDespachar = computed(() => ['admin', 'almacenero'].includes(rol.value));
 
 // En crédito, el estado que importa es el del crédito (cuotas), no el de la venta.
 const esCredito = computed(() => props.venta.tipo_venta === 'CREDITO' && props.venta.credito);
@@ -16,6 +20,8 @@ const cuotasPagadas = computed(() => (props.venta.credito?.cuotas ?? []).filter(
 const cuotasTotal = computed(() => props.venta.credito?.cuotas?.length ?? props.venta.credito?.numero_cuotas ?? 0);
 
 const anular = () => { if (confirm('¿Anular esta venta? Se revertirá el stock.')) router.post(route('ventas.anular', props.venta.id)); };
+const marcarPagada = () => { if (confirm('¿Confirmar el cobro en efectivo de esta venta?')) router.post(route('ventas.marcar-pagada', props.venta.id)); };
+const despachar = () => { if (confirm('¿Despachar esta venta? Se descontará el stock.')) router.post(route('ventas.despachar', props.venta.id)); };
 </script>
 
 <template>
@@ -36,11 +42,17 @@ const anular = () => { if (confirm('¿Anular esta venta? Se revertirá el stock.
                     <div class="text-muted">{{ venta.cliente?.user?.name }} · {{ new Date(venta.fecha).toLocaleString() }}</div>
                     <div class="small text-muted">{{ venta.tipo_venta }} · {{ venta.metodo_pago }} · Vendedor: {{ venta.vendedor?.name || '—' }}</div>
                 </div>
-                <div class="d-flex gap-2">
-                    <Link v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'QR'" :href="route('pagofacil.generar-qr-venta', venta.id)" class="btn btn-primary">
+                <div class="d-flex gap-2 flex-wrap">
+                    <button v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'EFECTIVO' && puedeVender" class="btn btn-success" @click="marcarPagada">
+                        <i class="bi bi-cash-coin me-1"></i>Cobrar (marcar pagada)
+                    </button>
+                    <Link v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'QR' && puedeVender" :href="route('pagofacil.generar-qr-venta', venta.id)" class="btn btn-primary">
                         <i class="bi bi-qr-code me-1"></i>Cobrar con QR
                     </Link>
-                    <button v-if="venta.estado !== 'ANULADA' && !venta.credito" class="btn btn-outline-danger" @click="anular">Anular</button>
+                    <button v-if="venta.estado === 'PAGADA' && puedeDespachar" class="btn btn-primary" @click="despachar">
+                        <i class="bi bi-box-seam me-1"></i>Despachar
+                    </button>
+                    <button v-if="venta.estado !== 'ANULADA' && !venta.credito && puedeVender" class="btn btn-outline-danger" @click="anular">Anular</button>
                     <Link :href="route('ventas.index')" class="btn btn-outline-secondary">Volver</Link>
                 </div>
             </div>
