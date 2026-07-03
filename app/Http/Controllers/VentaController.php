@@ -23,7 +23,12 @@ class VentaController extends Controller
     {
         $q = $request->string('q')->toString();
 
-        $ventas = Venta::with(['cliente.user', 'vendedor'])
+        $ventas = Venta::with(['cliente.user', 'vendedor', 'credito' => function ($c) {
+            $c->withCount([
+                'cuotas as cuotas_total',
+                'cuotas as cuotas_pagadas' => fn ($q) => $q->where('estado', 'PAGADO'),
+            ]);
+        }])
             ->when($q, fn ($query) => $query->where('numero_venta', 'ilike', "%{$q}%"))
             ->latest('fecha')
             ->paginate(12)

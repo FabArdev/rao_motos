@@ -104,6 +104,8 @@ Route::middleware([
         Route::post('catalogo/pedido', [CatalogoController::class, 'store'])->name('catalogo.pedido');
         Route::get('mis-pedidos', [MisPedidosController::class, 'index'])->name('mis-pedidos.index');
         Route::get('mis-pedidos/{pedido}', [MisPedidosController::class, 'show'])->name('mis-pedidos.show');
+        Route::get('mis-pedidos/{pedido}/pagar-qr', [MisPedidosController::class, 'pagarQr'])->name('mis-pedidos.pagar-qr');
+        Route::get('mis-pedidos/{pedido}/estado-pago', [MisPedidosController::class, 'estadoPago'])->name('mis-pedidos.estado-pago');
     });
 
     // Búsqueda global del negocio (REQ9)

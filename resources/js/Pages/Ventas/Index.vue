@@ -10,6 +10,8 @@ const q = ref(props.filtros?.q ?? '');
 const buscar = () => router.get(route('ventas.index'), { q: q.value }, { preserveState: true, replace: true });
 
 const badge = (e) => ({ COMPLETADA: 'bg-success', PENDIENTE: 'bg-warning text-dark', ANULADA: 'bg-danger' }[e] ?? 'bg-secondary');
+const creditoBadge = (e) => ({ VIGENTE: 'bg-info text-dark', MOROSO: 'bg-danger', PAGADO: 'bg-success' }[e] ?? 'bg-secondary');
+const creditoLabel = (e) => ({ VIGENTE: 'Crédito vigente', MOROSO: 'Moroso', PAGADO: 'Pagado' }[e] ?? e);
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
 </script>
 
@@ -42,7 +44,13 @@ const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
                             <td><span class="badge" :class="v.tipo_venta === 'CREDITO' ? 'bg-info text-dark' : 'bg-secondary'">{{ v.tipo_venta }}</span></td>
                             <td>{{ v.metodo_pago }}</td>
                             <td class="text-end">{{ fmt(v.monto_total) }}</td>
-                            <td><span class="badge" :class="badge(v.estado)">{{ v.estado }}</span></td>
+                            <td>
+                                <template v-if="v.tipo_venta === 'CREDITO' && v.credito">
+                                    <span class="badge" :class="creditoBadge(v.credito.estado)">{{ creditoLabel(v.credito.estado) }}</span>
+                                    <div class="small text-muted">{{ v.credito.cuotas_pagadas }}/{{ v.credito.cuotas_total }} cuotas</div>
+                                </template>
+                                <span v-else class="badge" :class="badge(v.estado)">{{ v.estado }}</span>
+                            </td>
                             <td class="text-end"><Link :href="route('ventas.show', v.id)" class="btn btn-sm btn-light"><i class="bi bi-eye"></i></Link></td>
                         </tr>
                         <tr v-if="!ventas.data.length"><td colspan="9" class="text-center text-muted py-4">No hay ventas registradas.</td></tr>

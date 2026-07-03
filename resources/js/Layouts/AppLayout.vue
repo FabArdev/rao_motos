@@ -115,7 +115,11 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                         </li>
                         <li v-if="!notificaciones.recientes.length" class="dropdown-item-text text-muted small">Sin notificaciones.</li>
                         <li v-for="n in notificaciones.recientes" :key="n.id">
-                            <span class="dropdown-item small d-flex gap-2 text-wrap" :class="{ 'fw-semibold': !n.leido }">
+                            <Link v-if="n.recurso" :href="n.recurso" class="dropdown-item small d-flex gap-2 text-wrap" :class="{ 'fw-semibold': !n.leido }">
+                                <i class="bi mt-1" :class="`bi-${iconoNotif(n.tipo)}`"></i>
+                                <span>{{ n.mensaje }}</span>
+                            </Link>
+                            <span v-else class="dropdown-item small d-flex gap-2 text-wrap" :class="{ 'fw-semibold': !n.leido }">
                                 <i class="bi mt-1" :class="`bi-${iconoNotif(n.tipo)}`"></i>
                                 <span>{{ n.mensaje }}</span>
                             </span>

@@ -23,9 +23,11 @@ const icono = (t) => ({ STOCK_BAJO: 'exclamation-triangle text-warning', PEDIDO_
                     <div class="d-flex gap-2">
                         <i class="bi mt-1" :class="`bi-${icono(n.tipo)}`"></i>
                         <div>
-                            <div :class="{ 'fw-semibold': !n.leido }">{{ n.mensaje }}</div>
+                            <Link v-if="n.recurso" :href="n.recurso" class="text-decoration-none d-block" :class="{ 'fw-semibold': !n.leido }">
+                                {{ n.mensaje }} <i class="bi bi-box-arrow-up-right small"></i>
+                            </Link>
+                            <div v-else :class="{ 'fw-semibold': !n.leido }">{{ n.mensaje }}</div>
                             <div class="small text-muted">{{ new Date(n.fecha).toLocaleString() }}</div>
-                            <Link v-if="n.recurso" :href="n.recurso" class="small">Ver</Link>
                         </div>
                     </div>
                     <button v-if="!n.leido" class="btn btn-sm btn-light" @click="marcar(n)"><i class="bi bi-check2"></i></button>

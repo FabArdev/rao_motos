@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
@@ -6,7 +7,13 @@ const props = defineProps({ venta: Object });
 const page = usePage();
 
 const badge = (e) => ({ COMPLETADA: 'bg-success', PENDIENTE: 'bg-warning text-dark', ANULADA: 'bg-danger', PAGADO: 'bg-success', VIGENTE: 'bg-info text-dark', MOROSO: 'bg-danger', VENCIDO: 'bg-danger' }[e] ?? 'bg-secondary');
+const creditoLabel = (e) => ({ VIGENTE: 'Crédito vigente', MOROSO: 'Moroso', PAGADO: 'Pagado' }[e] ?? e);
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
+
+// En crédito, el estado que importa es el del crédito (cuotas), no el de la venta.
+const esCredito = computed(() => props.venta.tipo_venta === 'CREDITO' && props.venta.credito);
+const cuotasPagadas = computed(() => (props.venta.credito?.cuotas ?? []).filter((c) => c.estado === 'PAGADO').length);
+const cuotasTotal = computed(() => props.venta.credito?.cuotas?.length ?? props.venta.credito?.numero_cuotas ?? 0);
 
 const anular = () => { if (confirm('¿Anular esta venta? Se revertirá el stock.')) router.post(route('ventas.anular', props.venta.id)); };
 </script>
@@ -20,7 +27,12 @@ const anular = () => { if (confirm('¿Anular esta venta? Se revertirá el stock.
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body d-flex justify-content-between align-items-start">
                 <div>
-                    <h5 class="fw-bold mb-1">{{ venta.numero_venta }} <span class="badge ms-2" :class="badge(venta.estado)">{{ venta.estado }}</span></h5>
+                    <h5 class="fw-bold mb-1">
+                        {{ venta.numero_venta }}
+                        <span v-if="esCredito" class="badge ms-2" :class="badge(venta.credito.estado)">{{ creditoLabel(venta.credito.estado) }}</span>
+                        <span v-else class="badge ms-2" :class="badge(venta.estado)">{{ venta.estado }}</span>
+                        <span v-if="esCredito" class="text-muted small ms-2">({{ cuotasPagadas }}/{{ cuotasTotal }} cuotas pagadas)</span>
+                    </h5>
                     <div class="text-muted">{{ venta.cliente?.user?.name }} · {{ new Date(venta.fecha).toLocaleString() }}</div>
                     <div class="small text-muted">{{ venta.tipo_venta }} · {{ venta.metodo_pago }} · Vendedor: {{ venta.vendedor?.name || '—' }}</div>
                 </div>
