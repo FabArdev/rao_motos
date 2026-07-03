@@ -16,7 +16,8 @@ class StoreVentaRequest extends FormRequest
         return [
             'cliente_id' => ['required', 'exists:cliente,id'],
             'tipo_venta' => ['required', 'in:CONTADO,CREDITO'],
-            'metodo_pago' => ['required', 'in:EFECTIVO,QR'],
+            // En crédito el método no lo elige el vendedor: lo decide el cliente por cuota.
+            'metodo_pago' => ['nullable', 'in:EFECTIVO,QR', 'required_if:tipo_venta,CONTADO'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', 'exists:producto,id'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
@@ -31,7 +32,7 @@ class StoreVentaRequest extends FormRequest
             'cliente_id.required' => 'Debe seleccionar un cliente.',
             'cliente_id.exists' => 'El cliente seleccionado no existe.',
             'tipo_venta.required' => 'Indique si la venta es al contado o a crédito.',
-            'metodo_pago.required' => 'Indique el método de pago.',
+            'metodo_pago.required_if' => 'Indique el método de pago para la venta al contado.',
             'items.required' => 'La venta debe tener al menos un producto.',
             'items.min' => 'La venta debe tener al menos un producto.',
             'items.*.producto_id.required' => 'Seleccione un producto en cada línea.',

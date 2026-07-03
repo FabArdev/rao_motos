@@ -76,7 +76,8 @@ class VentaController extends Controller
                     'cliente_id' => $data['cliente_id'],
                     'vendedor_id' => $request->user()->id,
                     'tipo_venta' => $data['tipo_venta'],
-                    'metodo_pago' => $data['metodo_pago'],
+                    // En crédito no se elige método (lo decide el cliente por cuota) → placeholder.
+                    'metodo_pago' => $data['metodo_pago'] ?? 'EFECTIVO',
                     'estado' => $estado,
                     'descontar_stock' => true,
                     'items' => $data['items'],

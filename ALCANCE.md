@@ -118,7 +118,8 @@ almacenero (refuerzo A). Tras aplicar un ajuste, se vuelve al listado de inventa
 Venta al contado o a crédito. Origen: **mostrador** (venta directa) o **pedido aprobado**. Calcula el
 precio **por línea** según la cantidad vs el umbral del producto (minorista vs mayorista), igual para
 cualquier cliente. Reduce stock **una sola vez** (RN18). Método de pago: **EFECTIVO** (físico) o **QR**
-(PagoFácil). *(Tarjeta queda fuera de alcance.)*
+(PagoFácil). *(Tarjeta queda fuera de alcance.)* En una venta a **crédito** el vendedor **NO elige el
+método de pago** — el cliente decide cómo paga **cada cuota** (QR o efectivo en caja).
 
 **Estados de la venta:** `PENDIENTE → PAGADA → COMPLETADA` (o `ANULADA`).
 - **Venta desde pedido:** `PENDIENTE` (sin stock) → cobro (efectivo/QR) → `PAGADA` (avisa al almacén) →

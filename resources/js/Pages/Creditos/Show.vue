@@ -1,19 +1,19 @@
 <script setup>
-import { ref } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({ credito: Object, cuotas: Array, metodosPago: Array });
 const page = usePage();
 
-const metodoSel = ref('');
-
 const badge = (e) => ({ VIGENTE: 'bg-info text-dark', PAGADO: 'bg-success', MOROSO: 'bg-danger', PENDIENTE: 'bg-warning text-dark', VENCIDO: 'bg-danger' }[e] ?? 'bg-secondary');
 const fmt = (n) => `Bs. ${Number(n ?? 0).toFixed(2)}`;
 
+// Registrar pago en caja = cobro en efectivo.
+const efectivoId = () => props.metodosPago?.find((m) => m.nombre === 'EFECTIVO')?.id ?? null;
+
 const pagar = (cuota) => {
-    if (confirm(`¿Registrar el pago de la cuota #${cuota.numero_cuota}?`)) {
-        router.post(route('creditos.pagar-cuota', cuota.id), { metodo_pago_id: metodoSel.value || null }, { preserveScroll: true });
+    if (confirm(`¿Registrar el pago en efectivo de la cuota #${cuota.numero_cuota}?`)) {
+        router.post(route('creditos.pagar-cuota', cuota.id), { metodo_pago_id: efectivoId() }, { preserveScroll: true });
     }
 };
 
@@ -34,13 +34,6 @@ const generarQR = (cuota) => {
                     <h5 class="fw-bold mb-1">Crédito #{{ credito.id }} <span class="badge ms-2" :class="badge(credito.estado)">{{ credito.estado }}</span></h5>
                     <div class="text-muted">{{ credito.venta?.cliente?.user?.name }} · Venta {{ credito.venta?.numero_venta }}</div>
                     <div class="small text-muted">{{ credito.numero_cuotas }} cuotas · Interés {{ credito.tasa_interes }}% · Saldo {{ fmt(credito.saldo_pendiente) }}</div>
-                </div>
-                <div style="min-width:220px">
-                    <label class="form-label small mb-0">Método de pago (cobranza)</label>
-                    <select v-model="metodoSel" class="form-select form-select-sm">
-                        <option value="">— sin especificar —</option>
-                        <option v-for="m in metodosPago" :key="m.id" :value="m.id">{{ m.nombre }}</option>
-                    </select>
                 </div>
             </div>
         </div>

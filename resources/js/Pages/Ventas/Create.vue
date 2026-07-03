@@ -53,17 +53,23 @@ const enviar = () => form.post(route('ventas.store'));
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Tipo</label>
-                        <select v-model="form.tipo_venta" class="form-select">
+                        <select v-model="form.tipo_venta" class="form-select" @change="form.metodo_pago = form.tipo_venta === 'CREDITO' ? null : 'EFECTIVO'">
                             <option value="CONTADO">Contado</option>
                             <option value="CREDITO">Crédito (cuotas)</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div v-if="form.tipo_venta === 'CONTADO'" class="col-md-4">
                         <label class="form-label">Método de pago</label>
                         <select v-model="form.metodo_pago" class="form-select">
                             <option value="EFECTIVO">Efectivo</option>
                             <option value="QR">QR (PagoFácil)</option>
                         </select>
+                    </div>
+                    <div v-else class="col-md-4">
+                        <label class="form-label">Método de pago</label>
+                        <div class="form-control-plaintext small text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Lo elige el cliente al pagar cada cuota (QR o efectivo).
+                        </div>
                     </div>
 
                     <template v-if="form.tipo_venta === 'CREDITO'">
