@@ -1,12 +1,11 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({ pedido: Object });
 const page = usePage();
 const motivo = ref('');
-const metodoPago = ref('EFECTIVO');
 
 const badge = (e) => ({ SOLICITADO: 'bg-warning text-dark', APROBADO: 'bg-primary', RECHAZADO: 'bg-danger', EN_PROCESO: 'bg-info text-dark', DESPACHADO: 'bg-success', ANULADO: 'bg-secondary' }[e] ?? 'bg-secondary');
 
@@ -19,14 +18,22 @@ const precioLinea = (d) => {
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
 const stockDe = (d) => d.producto?.inventario?.stock_actual ?? 0;
 
+const ventaPendiente = computed(() => props.pedido.venta && props.pedido.venta.estado === 'PENDIENTE');
+const ventaPagada = computed(() => ['PAGADA', 'COMPLETADA'].includes(props.pedido.venta?.estado));
+
 const aprobar = () => {
-    if (confirm(`¿Aprobar el pedido? Método de pago: ${metodoPago.value === 'QR' ? 'QR (cobrar ahora)' : 'Efectivo'}`)) {
-        router.post(route('pedidos.aprobar', props.pedido.id), { metodo_pago: metodoPago.value });
+    if (confirm('¿Aprobar el pedido? El cliente elegirá cómo pagar (QR o efectivo).')) {
+        router.post(route('pedidos.aprobar', props.pedido.id));
     }
 };
 const rechazar = () => {
     if (!motivo.value) { alert('Indique el motivo del rechazo.'); return; }
     router.post(route('pedidos.rechazar', props.pedido.id), { motivo_rechazo: motivo.value });
+};
+const marcarPagado = () => {
+    if (confirm('¿Confirmar que el cliente pagó en efectivo?')) {
+        router.post(route('ventas.marcar-pagada', props.pedido.venta.id));
+    }
 };
 </script>
 
@@ -46,20 +53,23 @@ const rechazar = () => {
                 </div>
                 <div class="d-flex flex-column gap-2" style="min-width:260px">
                     <template v-if="pedido.estado === 'SOLICITADO'">
-                        <label class="form-label small mb-0">Método de pago del cliente</label>
-                        <select v-model="metodoPago" class="form-select form-select-sm">
-                            <option value="EFECTIVO">Efectivo (cobra al recoger)</option>
-                            <option value="QR">QR (cobrar ahora)</option>
-                        </select>
                         <button class="btn btn-success" @click="aprobar"><i class="bi bi-check-lg me-1"></i>Aprobar</button>
                         <div class="input-group input-group-sm">
                             <input v-model="motivo" class="form-control" placeholder="Motivo de rechazo" />
                             <button class="btn btn-outline-danger" @click="rechazar">Rechazar</button>
                         </div>
                     </template>
-                    <div v-else-if="pedido.estado === 'APROBADO'" class="small text-muted">
-                        <i class="bi bi-info-circle me-1"></i>Cobro y despacho se gestionan desde la venta.
-                    </div>
+                    <template v-else-if="pedido.estado === 'APROBADO'">
+                        <div v-if="ventaPendiente" class="small text-muted">
+                            <i class="bi bi-hourglass-split me-1"></i>El cliente elige pagar por QR o efectivo.
+                        </div>
+                        <button v-if="ventaPendiente" class="btn btn-success" @click="marcarPagado">
+                            <i class="bi bi-cash-coin me-1"></i>Marcar pagado (efectivo)
+                        </button>
+                        <div v-else-if="ventaPagada" class="small text-success">
+                            <i class="bi bi-check-circle me-1"></i>Pagado · en cola de despacho del almacén.
+                        </div>
+                    </template>
                     <Link :href="route('pedidos.index')" class="btn btn-outline-secondary">Volver</Link>
                 </div>
             </div>

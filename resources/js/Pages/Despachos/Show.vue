@@ -26,8 +26,10 @@ const despachar = () => {
             <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <h5 class="fw-bold mb-1">{{ venta.numero_venta }} <span class="badge bg-info text-dark ms-2">PAGADA</span></h5>
-                    <div class="text-muted">{{ venta.cliente?.user?.name }} · {{ new Date(venta.fecha).toLocaleString() }}</div>
-                    <div class="small text-muted">Vendedor: {{ venta.vendedor?.name || '—' }} · Total {{ fmt(venta.monto_total) }}</div>
+                    <div class="fw-semibold">{{ venta.cliente?.user?.name }}</div>
+                    <div class="small"><i class="bi bi-geo-alt me-1"></i><strong>Dirección:</strong> {{ venta.cliente?.user?.direccion || 'No registrada' }}</div>
+                    <div class="small"><i class="bi bi-telephone me-1"></i>{{ venta.cliente?.user?.telefono || '—' }}</div>
+                    <div class="small text-muted mt-1">{{ new Date(venta.fecha).toLocaleString() }} · Vendedor: {{ venta.vendedor?.name || '—' }} · Total {{ fmt(venta.monto_total) }}</div>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-primary" :disabled="hayFaltante" @click="despachar">

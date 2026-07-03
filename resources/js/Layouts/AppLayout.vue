@@ -27,7 +27,7 @@ const visibleMenu = computed(() =>
 
 // Navegación estilo "Menú 3C": ítems sueltos + grupos, ahora en barra lateral.
 const GRUPOS = [
-    { etiqueta: 'Inventario', icono: 'box-seam', rutas: ['productos.index', 'inventario.index', 'compras.index', 'proveedores.index', 'despachos.index'] },
+    { etiqueta: 'Inventario', icono: 'box-seam', rutas: ['productos.index', 'inventario.index', 'compras.index', 'proveedores.index'] },
     { etiqueta: 'Ventas', icono: 'receipt', rutas: ['pedidos.index', 'ventas.index', 'creditos.index'] },
     { etiqueta: 'Gestión', icono: 'gear', rutas: ['usuarios.index', 'reportes.index', 'bitacora.index', 'configuracion.index'] },
     { etiqueta: 'Mi cuenta', icono: 'person-circle', rutas: ['mis-pedidos.index', 'mis-creditos.index', 'mi-cuenta.index'] },

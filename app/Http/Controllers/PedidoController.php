@@ -40,30 +40,24 @@ class PedidoController extends Controller
     }
 
     /**
-     * Aprobar (vendedor): genera la venta PENDIENTE con el método de pago elegido.
-     * No descuenta stock (eso pasa al despachar el almacenero). El pago ocurre ANTES del despacho.
+     * Aprobar (vendedor): SOLO aprueba/rechaza. Genera la venta PENDIENTE sin decidir el
+     * método de pago — eso lo elige el CLIENTE después (QR en la app o efectivo en tienda).
+     * No descuenta stock (eso pasa al despachar el almacenero).
      */
     public function aprobar(Request $request, Pedido $pedido)
     {
-        $data = $request->validate([
-            'metodo_pago' => ['required', 'in:EFECTIVO,QR'],
-        ], [
-            'metodo_pago.required' => 'Seleccione el método de pago.',
-            'metodo_pago.in' => 'Método de pago inválido.',
-        ]);
-
         if ($pedido->estado !== 'SOLICITADO') {
             return back()->with('error', 'Solo un pedido SOLICITADO puede aprobarse.');
         }
 
-        $venta = DB::transaction(function () use ($pedido, $request, $data) {
+        DB::transaction(function () use ($pedido, $request) {
             $pedido->load('detalles');
 
             $venta = $this->ventas->crear([
                 'cliente_id' => $pedido->cliente_id,
                 'vendedor_id' => $request->user()->id,
                 'tipo_venta' => 'CONTADO',
-                'metodo_pago' => $data['metodo_pago'],
+                'metodo_pago' => 'EFECTIVO', // provisional: lo define el pago (QR lo cambia; efectivo lo confirma el vendedor)
                 'estado' => 'PENDIENTE',
                 'descontar_stock' => false, // el stock sale al despachar
                 'items' => $pedido->detalles->map(fn ($d) => [
@@ -73,18 +67,11 @@ class PedidoController extends Controller
             ]);
 
             $pedido->update(['estado' => 'APROBADO', 'venta_id' => $venta->id]);
-
-            return $venta;
         });
 
-        $this->notificarCliente($pedido, 'PEDIDO_APROBADO', "Tu pedido #{$pedido->id} fue aprobado. Realiza el pago para que sea despachado.");
+        $this->notificarCliente($pedido, 'PEDIDO_APROBADO', "Tu pedido #{$pedido->id} fue aprobado. Elige cómo pagar: QR en la app o efectivo en la tienda.");
 
-        // Con QR se cobra al instante; con efectivo, el vendedor marca "Cobrado" cuando el cliente pague.
-        if ($data['metodo_pago'] === 'QR') {
-            return redirect()->route('pagofacil.generar-qr-venta', $venta->id);
-        }
-
-        return back()->with('success', 'Pedido aprobado. Venta pendiente de cobro (efectivo).');
+        return back()->with('success', 'Pedido aprobado. El cliente elige cómo pagar (QR o efectivo).');
     }
 
     public function rechazar(Request $request, Pedido $pedido)

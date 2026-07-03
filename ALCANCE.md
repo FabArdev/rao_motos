@@ -31,9 +31,9 @@ usuario autenticado.
 | Rol | ¿Entra al sistema? | Qué hace |
 |---|---|---|
 | **Admin** (propietario) | Sí | Superusuario: puede todo. Gestiona usuarios, ve reportes globales y bitácora, configura parámetros. Único que ve el **Dashboard** de estadísticas |
-| **Vendedor** | Sí | Ventas (contado/crédito), **aprueba/rechaza pedidos** eligiendo el método de pago, **cobra** (efectivo/QR), cobra cuotas y gestiona mora |
+| **Vendedor** | Sí | Ventas (contado/crédito), **aprueba/rechaza pedidos** (sin elegir método), **confirma el cobro en efectivo**, cobra cuotas y gestiona mora |
 | **Almacenero** | Sí | Compras a proveedores, gestión de proveedores, inventario y movimientos, alta de productos, **despacha las ventas pagadas** (logística) |
-| **Cliente** | Sí | Catálogo, hace pedidos, **paga su pedido aprobado por QR**, paga sus cuotas (QR), panel "Mi cuenta" |
+| **Cliente** | Sí | Catálogo, hace pedidos, **elige cómo pagar su pedido aprobado (QR o efectivo)**, paga sus cuotas (QR), panel "Mi cuenta" |
 
 > **Proveedor NO es un rol.** No entra al sistema. Es solo un dato (a quién se le compran repuestos),
 > referenciado por las compras.
@@ -96,11 +96,11 @@ El cliente arma un pedido. El **vendedor** lo revisa y **aprueba o rechaza**; el
 
 - El precio mayorista se aplica **por línea y para cualquier cliente**: si la cantidad alcanza la
   `cantidad_minima_mayorista` **de ese producto** → `precio_mayorista`; si no → `precio_venta_base`.
-- Al **aprobar**, el vendedor elige el **método de pago** (EFECTIVO o QR) y se **genera la venta en estado
-  `PENDIENTE`** (sin descontar stock todavía). El pago ocurre **antes** del despacho:
-  - **QR** → el cliente/vendedor cobra al instante (PagoFácil); el cliente también puede pagarlo desde
-    *Mis pedidos* → "Pagar con QR".
-  - **EFECTIVO** → queda pendiente hasta que el vendedor marque **"Cobrado"**.
+- Al **aprobar** se **genera la venta en estado `PENDIENTE`** (sin descontar stock). El **vendedor NO
+  elige el método de pago** — solo aprueba o rechaza.
+- **El cliente elige cómo pagar** (desde *Mis pedidos → detalle*). El pago ocurre **antes** del despacho:
+  - **QR** → paga al instante por PagoFácil → la venta pasa a `PAGADA`.
+  - **Efectivo** → paga en la tienda; el **vendedor** confirma el cobro ("Marcar pagado") → `PAGADA`.
 - Cuando la venta queda **`PAGADA`** se **notifica al almacén** ("lista para despachar").
 - El **almacenero**, desde su módulo **Despachos** (su cola de trabajo), despacha la venta pagada →
   descuenta stock (RN18), la venta pasa a `COMPLETADA` y el pedido a `DESPACHADO`; se **notifica al cliente**.
@@ -169,7 +169,7 @@ sus compras (contado/crédito) en "Mi cuenta".
 | RN1 | Admin es superusuario: salta todas las policies (`Gate::before`). |
 | RN2 | Cualquier usuario edita su propio perfil y contraseña, sin importar el rol. |
 | RN3 | Precio **por línea, para cualquier cliente**: si cantidad ≥ `producto.cantidad_minima_mayorista` → `precio_mayorista`; si no → `precio_venta_base`. **No hay tipo de cliente**; el mayoreo lo decide la cantidad. |
-| RN4 | El **vendedor** aprueba/rechaza el pedido eligiendo el método de pago; el precio mayorista se aplica línea por línea según el umbral de cada producto. |
+| RN4 | El **vendedor** solo aprueba/rechaza el pedido (no elige el método de pago); el precio mayorista se aplica línea por línea según el umbral de cada producto. **El cliente** elige pagar por QR o efectivo. |
 | RN5 | *(Eliminada — taller fuera de alcance.)* |
 | RN6 | *(Eliminada — taller fuera de alcance.)* |
 | RN7 | *(Eliminada — taller fuera de alcance.)* |

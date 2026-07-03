@@ -41,7 +41,7 @@ const marcarPagada = () => { if (confirm('¿Confirmar el cobro en efectivo de es
                     <div class="small text-muted">{{ venta.tipo_venta }} · {{ venta.metodo_pago }} · Vendedor: {{ venta.vendedor?.name || '—' }}</div>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    <button v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'EFECTIVO' && puedeVender" class="btn btn-success" @click="marcarPagada">
+                    <button v-if="venta.estado === 'PENDIENTE' && puedeVender" class="btn btn-success" @click="marcarPagada">
                         <i class="bi bi-cash-coin me-1"></i>Cobrar (marcar pagada)
                     </button>
                     <Link v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'QR' && puedeVender" :href="route('pagofacil.generar-qr-venta', venta.id)" class="btn btn-primary">

@@ -133,11 +133,12 @@ class VentaController extends Controller
     /** El vendedor confirma el cobro en efectivo de una venta pendiente → PAGADA (lista para despacho). */
     public function marcarPagada(Venta $venta)
     {
-        if ($venta->estado !== 'PENDIENTE' || $venta->metodo_pago !== 'EFECTIVO') {
-            return back()->with('error', 'Solo una venta PENDIENTE en efectivo puede marcarse como pagada.');
+        if ($venta->estado !== 'PENDIENTE') {
+            return back()->with('error', 'Solo una venta PENDIENTE puede marcarse como pagada.');
         }
 
-        $venta->update(['estado' => 'PAGADA']);
+        // El vendedor cobró en efectivo → registra el método y pasa a PAGADA.
+        $venta->update(['estado' => 'PAGADA', 'metodo_pago' => 'EFECTIVO']);
 
         Notificacion::paraRol(
             'almacenero',

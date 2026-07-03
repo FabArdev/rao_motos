@@ -27,9 +27,15 @@ const puedePagar = computed(() => props.pedido.estado === 'APROBADO' && props.pe
                     <div v-if="pedido.venta" class="fw-semibold mt-1">Total: {{ fmt(pedido.venta.monto_total) }}</div>
                     <div v-if="pedido.motivo_rechazo" class="alert alert-danger mt-2 mb-0 py-2">Motivo del rechazo: {{ pedido.motivo_rechazo }}</div>
                 </div>
-                <a v-if="puedePagar" :href="route('mis-pedidos.pagar-qr', pedido.id)" class="btn btn-success">
-                    <i class="bi bi-qr-code me-1"></i>Pagar con QR
-                </a>
+                <div v-if="puedePagar" class="text-end" style="max-width: 280px;">
+                    <div class="small fw-semibold mb-1">¿Cómo quieres pagar?</div>
+                    <a :href="route('mis-pedidos.pagar-qr', pedido.id)" class="btn btn-success w-100 mb-1">
+                        <i class="bi bi-qr-code me-1"></i>Pagar ahora con QR
+                    </a>
+                    <div class="small text-muted">
+                        <i class="bi bi-cash-coin me-1"></i>O paga en <strong>efectivo</strong> en la tienda; el vendedor confirmará tu pago.
+                    </div>
+                </div>
             </div>
         </div>
 
