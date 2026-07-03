@@ -17,8 +17,8 @@ const tamanos = [
 
 <template>
     <div class="dropdown">
-        <button class="btn btn-light" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Apariencia">
-            <i class="bi bi-palette fs-5"></i>
+        <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Apariencia">
+            <i class="bi bi-palette"></i>
         </button>
         <div class="dropdown-menu dropdown-menu-end p-3 shadow" style="min-width: 260px;">
             <div class="mb-2">
