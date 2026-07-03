@@ -17,6 +17,19 @@ class Notificacion extends Model
         'fecha' => 'datetime',
     ];
 
+    /** Convierte el recurso siempre a ruta relativa, para que funcione en cualquier entorno (local/producción). */
+    public function getRecursoAttribute(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+        if (!str_starts_with($value, 'http')) {
+            return $value;
+        }
+        $components = parse_url($value);
+        return ($components['path'] ?? '') . (isset($components['query']) ? '?' . $components['query'] : '');
+    }
+
     public function usuario()
     {
         return $this->belongsTo(User::class, 'usuario_id');
