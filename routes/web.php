@@ -9,6 +9,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\CreditoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\CatalogoController;
@@ -80,7 +81,7 @@ Route::middleware([
     Route::middleware('role:admin,vendedor')->group(function () {
         Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
         Route::post('ventas/{venta}/marcar-pagada', [VentaController::class, 'marcarPagada'])->name('ventas.marcar-pagada');
-        Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['create', 'store']);
+        Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['index', 'create', 'store', 'show']);
 
         // Cobro por QR de una venta (vendedor/caja)
         Route::get('pago-qr/venta/{venta}', [PagoController::class, 'generarQrVenta'])->name('pagofacil.generar-qr-venta');
@@ -98,15 +99,11 @@ Route::middleware([
         Route::post('pedidos/{pedido}/rechazar', [PedidoController::class, 'rechazar'])->name('pedidos.rechazar');
     });
 
-    // Ventas — listar y ver también para el almacenero (necesita ver las PAGADA para despachar)
-    Route::middleware('role:admin,vendedor,almacenero')->group(function () {
-        Route::get('ventas', [VentaController::class, 'index'])->name('ventas.index');
-        Route::get('ventas/{venta}', [VentaController::class, 'show'])->name('ventas.show');
-    });
-
-    // Despacho de ventas (logística: almacenero; admin superusuario)
+    // Despachos (logística del almacén: almacenero; admin superusuario)
     Route::middleware('role:admin,almacenero')->group(function () {
-        Route::post('ventas/{venta}/despachar', [VentaController::class, 'despachar'])->name('ventas.despachar');
+        Route::get('despachos', [DespachoController::class, 'index'])->name('despachos.index');
+        Route::get('despachos/{venta}', [DespachoController::class, 'show'])->name('despachos.show');
+        Route::post('despachos/{venta}/despachar', [DespachoController::class, 'despachar'])->name('despachos.despachar');
     });
 
     // CU4 (cliente) — Catálogo y mis pedidos

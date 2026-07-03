@@ -12,7 +12,6 @@ const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
 
 const rol = computed(() => page.props.auth.user?.rol);
 const puedeVender = computed(() => ['admin', 'vendedor'].includes(rol.value));
-const puedeDespachar = computed(() => ['admin', 'almacenero'].includes(rol.value));
 
 // En crédito, el estado que importa es el del crédito (cuotas), no el de la venta.
 const esCredito = computed(() => props.venta.tipo_venta === 'CREDITO' && props.venta.credito);
@@ -21,7 +20,6 @@ const cuotasTotal = computed(() => props.venta.credito?.cuotas?.length ?? props.
 
 const anular = () => { if (confirm('¿Anular esta venta? Se revertirá el stock.')) router.post(route('ventas.anular', props.venta.id)); };
 const marcarPagada = () => { if (confirm('¿Confirmar el cobro en efectivo de esta venta?')) router.post(route('ventas.marcar-pagada', props.venta.id)); };
-const despachar = () => { if (confirm('¿Despachar esta venta? Se descontará el stock.')) router.post(route('ventas.despachar', props.venta.id)); };
 </script>
 
 <template>
@@ -49,9 +47,7 @@ const despachar = () => { if (confirm('¿Despachar esta venta? Se descontará el
                     <Link v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'QR' && puedeVender" :href="route('pagofacil.generar-qr-venta', venta.id)" class="btn btn-primary">
                         <i class="bi bi-qr-code me-1"></i>Cobrar con QR
                     </Link>
-                    <button v-if="venta.estado === 'PAGADA' && puedeDespachar" class="btn btn-primary" @click="despachar">
-                        <i class="bi bi-box-seam me-1"></i>Despachar
-                    </button>
+                    <span v-if="venta.estado === 'PAGADA'" class="align-self-center small text-muted"><i class="bi bi-info-circle me-1"></i>En cola de despacho (almacén)</span>
                     <button v-if="venta.estado !== 'ANULADA' && !venta.credito && puedeVender" class="btn btn-outline-danger" @click="anular">Anular</button>
                     <Link :href="route('ventas.index')" class="btn btn-outline-secondary">Volver</Link>
                 </div>

@@ -117,7 +117,7 @@ class MisPedidosController extends Controller
                     'almacenero',
                     'VENTA_PAGADA',
                     "Venta {$venta->numero_venta} pagada, lista para despachar.",
-                    route('ventas.show', $venta->id, false)
+                    route('despachos.show', $venta->id, false)
                 );
 
                 return response()->json(['pagado' => true]);

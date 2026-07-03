@@ -58,7 +58,8 @@ usuario autenticado.
 | CU3 Compras / Proveedores | ver | — | **CRUD** | — |
 | CU4 Pedidos | ver | **aprobar/rechazar + cobrar** | — | crear + ver propios + **pagar por QR** |
 | CU5 Inventario | ver | — | **CRUD + movimientos** | — |
-| CU6 Ventas | ver todas | **crear + cobrar + ver** | **ver + despachar** | ver propias |
+| CU6 Ventas | ver todas | **crear + cobrar + ver** | — | ver propias |
+| Despachos (almacén) | ver | — | **preparar + despachar** | — |
 | CU7 Créditos / Cobranza | ver | **registrar pagos / mora** | — | pagar propias (QR) |
 | CU8 Reportes | todos | ventas | inventario / compras | — |
 | Dashboard (estadísticas) | **sí** | — | — | — |
@@ -101,8 +102,8 @@ El cliente arma un pedido. El **vendedor** lo revisa y **aprueba o rechaza**; el
     *Mis pedidos* → "Pagar con QR".
   - **EFECTIVO** → queda pendiente hasta que el vendedor marque **"Cobrado"**.
 - Cuando la venta queda **`PAGADA`** se **notifica al almacén** ("lista para despachar").
-- El **almacenero despacha** la venta pagada → descuenta stock (RN18), la venta pasa a `COMPLETADA` y el
-  pedido a `DESPACHADO`; se **notifica al cliente**.
+- El **almacenero**, desde su módulo **Despachos** (su cola de trabajo), despacha la venta pagada →
+  descuenta stock (RN18), la venta pasa a `COMPLETADA` y el pedido a `DESPACHADO`; se **notifica al cliente**.
 - El cliente recibe **notificaciones in-app** en cada transición (aprobado / rechazado / despachado) que
   **enlazan al detalle** del pedido.
 - Estados del pedido: `SOLICITADO → APROBADO/RECHAZADO → DESPACHADO`.
@@ -121,12 +122,17 @@ cualquier cliente. Reduce stock **una sola vez** (RN18). Método de pago: **EFEC
 
 **Estados de la venta:** `PENDIENTE → PAGADA → COMPLETADA` (o `ANULADA`).
 - **Venta desde pedido:** `PENDIENTE` (sin stock) → cobro (efectivo/QR) → `PAGADA` (avisa al almacén) →
-  el almacenero despacha → descuenta stock y pasa a `COMPLETADA`.
+  el almacenero la despacha desde **Despachos** → descuenta stock y pasa a `COMPLETADA`.
 - **Venta directa de mostrador:** descuenta stock al crearse. Contado en efectivo → `COMPLETADA` directo;
   contado con QR → cobra → `COMPLETADA`; a crédito → `COMPLETADA` y genera el crédito.
-- En la lista de ventas se puede **filtrar por estado** (TODAS/PENDIENTE/PAGADA/COMPLETADA/ANULADA); el
-  almacenero ve por defecto **PAGADA** (lo que le toca despachar). Para ventas a **crédito** se muestra el
-  **estado del crédito** con el avance de cuotas (p. ej. "Crédito vigente · 1/3"), no "COMPLETADA".
+- En la lista de ventas se puede **filtrar por estado** (TODAS/PENDIENTE/PAGADA/COMPLETADA/ANULADA). Para
+  ventas a **crédito** se muestra el **estado del crédito** con el avance de cuotas (p. ej. "Crédito
+  vigente · 1/3"), no "COMPLETADA".
+
+**Despachos (módulo del almacén):** el **almacenero** ve la **cola de ventas `PAGADA`** listas para
+preparar; abre el detalle (productos, cantidades, stock) y **despacha** → descuenta stock (RN18), venta
+`COMPLETADA`, pedido `DESPACHADO`, aviso al cliente. Es la contraparte logística del cobro del vendedor
+(RN21).
 
 ### CU7 — Créditos y pagos
 Una venta a crédito genera un `credito` con `numero_cuotas` (mínimo 2), tasa de interés y un calendario de
@@ -294,7 +300,8 @@ resources/js/Pages/
 ├── Compras/         # Index, Create, Show
 ├── Pedidos/         # Index (estado + pago/despacho), Show (aprobar/rechazar con método)
 ├── Inventario/      # Index, Show (ajustes)
-├── Ventas/          # Index (filtros por estado), Create (contado/crédito), Show (cobrar/despachar)
+├── Ventas/          # Index (filtros por estado), Create (contado/crédito), Show (cobrar)
+├── Despachos/       # Index (cola de PAGADA), Show (preparar + despachar) — almacén
 ├── Creditos/        # Index, Show
 ├── MisPedidos/      # Index, Show (pagar por QR el pedido aprobado)
 ├── MisCreditos/     # Index, Show (pagar cuotas)

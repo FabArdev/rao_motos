@@ -332,7 +332,7 @@ class PagoController extends Controller
                 'almacenero',
                 'VENTA_PAGADA',
                 "Venta {$venta->numero_venta} pagada, lista para despachar.",
-                route('ventas.show', $venta->id, false)
+                route('despachos.show', $venta->id, false)
             );
         } else {
             $venta->update(['estado' => 'COMPLETADA', 'pago_facil_status' => 'completed']);

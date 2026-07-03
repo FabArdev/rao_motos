@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreVentaRequest;
 use App\Models\Cliente;
 use App\Models\Notificacion;
-use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\Venta;
 use App\Services\CreditoService;
@@ -144,51 +143,9 @@ class VentaController extends Controller
             'almacenero',
             'VENTA_PAGADA',
             "Venta {$venta->numero_venta} pagada, lista para despachar.",
-            route('ventas.show', $venta->id, false)
+            route('despachos.show', $venta->id, false)
         );
 
         return back()->with('success', "Venta {$venta->numero_venta} marcada como pagada. Se notificó al almacén.");
-    }
-
-    /** El almacenero despacha una venta PAGADA: descuenta stock (si viene de pedido) y la completa. */
-    public function despachar(Venta $venta)
-    {
-        if ($venta->estado !== 'PAGADA') {
-            return back()->with('error', 'Solo una venta PAGADA puede despacharse.');
-        }
-
-        $pedido = Pedido::where('venta_id', $venta->id)->first();
-
-        try {
-            DB::transaction(function () use ($venta, $pedido) {
-                if ($pedido) {
-                    // Venta originada en pedido: el stock aún no se descontó (RN18) → sale ahora.
-                    $venta->load('detalles');
-                    foreach ($venta->detalles as $d) {
-                        if ($d->producto_id) {
-                            $this->inventario->egreso($d->producto_id, $d->cantidad, "Despacho pedido #{$pedido->id} ({$venta->numero_venta})");
-                        }
-                    }
-                    $pedido->update(['estado' => 'DESPACHADO']);
-                }
-                // Venta directa: el stock ya se descontó al crearla; solo completar.
-                $venta->update(['estado' => 'COMPLETADA']);
-            });
-        } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        if ($pedido) {
-            Notificacion::create([
-                'usuario_id' => $pedido->cliente_id,
-                'tipo' => 'PEDIDO_DESPACHADO',
-                'mensaje' => "Tu pedido #{$pedido->id} fue despachado.",
-                'recurso' => route('mis-pedidos.show', $pedido->id, false),
-                'leido' => false,
-                'fecha' => now(),
-            ]);
-        }
-
-        return back()->with('success', "Venta {$venta->numero_venta} despachada y completada.");
     }
 }
