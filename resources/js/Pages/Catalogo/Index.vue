@@ -21,7 +21,7 @@ const quitar = (i) => carrito.value.splice(i, 1);
 const totalItems = computed(() => carrito.value.reduce((s, i) => s + i.cantidad, 0));
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
-const img = (p) => p.foto_completa ?? null;
+const galeria = (p) => [p.foto_completa, ...(p.imagenes ?? []).map((i) => i.url)].filter(Boolean);
 
 const form = useForm({ items: [] });
 const enviar = () => {
@@ -45,10 +45,19 @@ const enviar = () => {
 
                 <div class="row g-3">
                     <div v-for="p in productos.data" :key="p.id" class="col-md-6 col-xl-4">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="ratio ratio-4x3 bg-light d-flex align-items-center justify-content-center">
-                                <img v-if="img(p)" :src="img(p)" class="object-fit-cover" alt="" />
-                                <i v-else class="bi bi-box-seam fs-1 text-muted"></i>
+                        <div class="card h-100 shadow-sm border-0 producto-card">
+                            <div class="prod-media bg-light">
+                                <div v-if="galeria(p).length > 1" :id="`cat-carousel-${p.id}`" class="carousel slide h-100">
+                                    <div class="carousel-inner h-100">
+                                        <div v-for="(src, i) in galeria(p)" :key="i" class="carousel-item h-100" :class="{ active: i === 0 }">
+                                            <img :src="src" class="d-block w-100 h-100" style="object-fit:cover;" alt="" />
+                                        </div>
+                                    </div>
+                                    <button class="carousel-control-prev" type="button" :data-bs-target="`#cat-carousel-${p.id}`" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+                                    <button class="carousel-control-next" type="button" :data-bs-target="`#cat-carousel-${p.id}`" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+                                </div>
+                                <img v-else-if="galeria(p).length === 1" :src="galeria(p)[0]" class="w-100 h-100" style="object-fit:cover;" alt="" />
+                                <div v-else class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-box-seam fs-1"></i></div>
                             </div>
                             <div class="card-body">
                                 <div class="small text-muted">{{ p.codigo }} · {{ p.marca || '—' }}</div>
@@ -102,3 +111,24 @@ const enviar = () => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.prod-media {
+    height: 180px;
+    overflow: hidden;
+}
+.prod-media img {
+    transition: transform .3s ease;
+}
+/* Efecto hover sutil (CSS transform) en las tarjetas del catálogo */
+.producto-card {
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.producto-card:hover {
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 .6rem 1.2rem rgba(0, 0, 0, .15) !important;
+}
+.producto-card:hover .prod-media img {
+    transform: scale(1.06);
+}
+</style>

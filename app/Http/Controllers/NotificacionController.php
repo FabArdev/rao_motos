@@ -14,7 +14,9 @@ class NotificacionController extends Controller
             ->latest('fecha')
             ->paginate(20);
 
-        return Inertia::render('Notificaciones/Index', ['notificaciones' => $notificaciones]);
+        // Prop 'lista' (no 'notificaciones') para no chocar con el prop compartido
+        // 'notificaciones' del navbar (HandleInertiaRequests), que trae {no_leidas, recientes}.
+        return Inertia::render('Notificaciones/Index', ['lista' => $notificaciones]);
     }
 
     public function marcarLeida(Request $request, Notificacion $notificacion)

@@ -71,7 +71,7 @@ class User extends Authenticatable
     }
 
     /* ---------------------------------------------------------------------
-     | Helpers de rol  (RAO MOTOS: admin | vendedor | almacenero | mecanico | cliente)
+     | Helpers de rol  (RAO MOTOS: admin | vendedor | almacenero | cliente)
      * ------------------------------------------------------------------- */
     public function tieneRol($rol): bool
     {
@@ -91,11 +91,6 @@ class User extends Authenticatable
     public function esAlmacenero(): bool
     {
         return $this->tieneRol('almacenero');
-    }
-
-    public function esMecanico(): bool
-    {
-        return $this->tieneRol('mecanico');
     }
 
     public function esCliente(): bool

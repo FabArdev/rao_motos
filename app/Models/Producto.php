@@ -34,6 +34,12 @@ class Producto extends Model
         return $this->hasOne(Inventario::class, 'producto_id');
     }
 
+    /** Galería de imágenes adicionales (además de la portada foto_url). */
+    public function imagenes()
+    {
+        return $this->hasMany(ProductoImagen::class, 'producto_id')->orderBy('orden');
+    }
+
     /**
      * Precio aplicable a una cantidad: mayorista si alcanza el umbral del producto,
      * minorista si no. No depende de tipo de cliente (no existe).

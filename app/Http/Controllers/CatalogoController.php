@@ -17,7 +17,7 @@ class CatalogoController extends Controller
     {
         $q = $request->string('q')->toString();
 
-        $productos = Producto::with('inventario:id,producto_id,stock_actual')
+        $productos = Producto::with(['inventario:id,producto_id,stock_actual', 'imagenes:id,producto_id,ruta,orden'])
             ->where('activo', true)
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {

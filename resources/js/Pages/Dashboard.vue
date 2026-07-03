@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Bar, Doughnut } from 'vue-chartjs';
+import { Bar } from 'vue-chartjs';
 import {
     Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement,
 } from 'chart.js';
@@ -13,7 +13,6 @@ const props = defineProps({
     stats: { type: Object, default: null },
     ventasMes: { type: Array, default: () => [] },
     topProductos: { type: Array, default: () => [] },
-    ordenesEstado: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -39,11 +38,6 @@ const topChartData = computed(() => ({
     datasets: [{ label: 'Unidades', backgroundColor: '#198754', data: props.topProductos.map((p) => p.total) }],
 }));
 
-const ordenesChartData = computed(() => ({
-    labels: props.ordenesEstado.map((o) => o.estado),
-    datasets: [{ backgroundColor: ['#6c757d', '#ffc107', '#0dcaf0', '#0d6efd', '#198754', '#dc3545'], data: props.ordenesEstado.map((o) => o.total) }],
-}));
-
 const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
 const barStacked = { ...chartOpts, scales: { x: { stacked: true }, y: { stacked: true } } };
 </script>
@@ -64,7 +58,6 @@ const barStacked = { ...chartOpts, scales: { x: { stacked: true }, y: { stacked:
             <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm"><div class="card-body p-2"><div class="small text-muted">N° ventas</div><div class="fw-bold fs-5">{{ stats.ventas_count }}</div></div></div></div>
             <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm text-bg-info"><div class="card-body p-2"><div class="small">Créditos vigentes</div><div class="fw-bold fs-5">{{ stats.creditos_vigentes }}</div></div></div></div>
             <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm text-bg-danger"><div class="card-body p-2"><div class="small">Créditos morosos</div><div class="fw-bold fs-5">{{ stats.creditos_morosos }}</div></div></div></div>
-            <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm text-bg-warning"><div class="card-body p-2"><div class="small">Órdenes abiertas</div><div class="fw-bold fs-5">{{ stats.ordenes_abiertas }}</div></div></div></div>
             <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm text-bg-dark"><div class="card-body p-2"><div class="small">Stock crítico</div><div class="fw-bold fs-5">{{ stats.inventario_critico }}</div></div></div></div>
         </div>
 
@@ -77,10 +70,6 @@ const barStacked = { ...chartOpts, scales: { x: { stacked: true }, y: { stacked:
             <div class="col-lg-6">
                 <div class="card border-0 shadow-sm h-100"><div class="card-header bg-white fw-semibold">Top productos vendidos</div>
                     <div class="card-body" style="height: 260px;"><Bar :data="topChartData" :options="chartOpts" /></div></div>
-            </div>
-            <div v-if="ordenesEstado.length" class="col-lg-4">
-                <div class="card border-0 shadow-sm h-100"><div class="card-header bg-white fw-semibold">Órdenes de taller por estado</div>
-                    <div class="card-body" style="height: 260px;"><Doughnut :data="ordenesChartData" :options="chartOpts" /></div></div>
             </div>
         </div>
 

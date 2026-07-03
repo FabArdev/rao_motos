@@ -43,12 +43,12 @@ const enviar = () => form.put(route('usuarios.update', props.usuario.id));
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">CI</label>
-                        <input v-model="form.ci" class="form-control" :class="{ 'is-invalid': form.errors.ci }" />
+                        <input v-model="form.ci" inputmode="numeric" maxlength="20" class="form-control" :class="{ 'is-invalid': form.errors.ci }" />
                         <div class="invalid-feedback">{{ form.errors.ci }}</div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Teléfono</label>
-                        <input v-model="form.telefono" class="form-control" :class="{ 'is-invalid': form.errors.telefono }" />
+                        <input v-model="form.telefono" inputmode="tel" maxlength="15" class="form-control" :class="{ 'is-invalid': form.errors.telefono }" />
                         <div class="invalid-feedback">{{ form.errors.telefono }}</div>
                     </div>
                     <div class="col-md-4">
@@ -60,7 +60,8 @@ const enviar = () => form.put(route('usuarios.update', props.usuario.id));
                     </div>
                     <div class="col-12">
                         <label class="form-label">Dirección</label>
-                        <input v-model="form.direccion" class="form-control" />
+                        <input v-model="form.direccion" maxlength="255" class="form-control" :class="{ 'is-invalid': form.errors.direccion }" />
+                        <div class="invalid-feedback">{{ form.errors.direccion }}</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Email</label>
@@ -69,7 +70,8 @@ const enviar = () => form.put(route('usuarios.update', props.usuario.id));
                     </div>
                     <div v-if="esCliente" class="col-md-6">
                         <label class="form-label">NIT / CI de facturación</label>
-                        <input v-model="form.nit_ci" class="form-control" />
+                        <input v-model="form.nit_ci" inputmode="numeric" maxlength="20" class="form-control" :class="{ 'is-invalid': form.errors.nit_ci }" />
+                        <div class="invalid-feedback">{{ form.errors.nit_ci }}</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Nueva contraseña <small class="text-muted">(dejar vacío para no cambiar)</small></label>

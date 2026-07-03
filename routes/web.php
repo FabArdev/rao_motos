@@ -13,8 +13,6 @@ use App\Http\Controllers\CreditoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\MisPedidosController;
-use App\Http\Controllers\TallerController;
-use App\Http\Controllers\MiTallerController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\NotificacionController;
@@ -30,7 +28,7 @@ use App\Http\Controllers\PagoController;
 | Web Routes — RAO MOTOS
 |--------------------------------------------------------------------------
 | Las rutas de autenticación las registra Jetstream/Fortify.
-| Las rutas de negocio se agregan por CU (usuarios, productos, ventas, taller, ...).
+| Las rutas de negocio se agregan por CU (usuarios, productos, ventas, ...).
 */
 
 Route::get('/', function () {
@@ -83,6 +81,10 @@ Route::middleware([
         Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
         Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['index', 'create', 'store', 'show']);
 
+        // Cobro por QR de una venta al contado (caja)
+        Route::get('pago-qr/venta/{venta}', [PagoController::class, 'generarQrVenta'])->name('pagofacil.generar-qr-venta');
+        Route::get('pagofacil/estado-venta/{venta}', [PagoController::class, 'estadoVenta'])->name('pagofacil.estado-venta');
+
         // CU7 — Créditos y cobranza
         Route::get('creditos', [CreditoController::class, 'index'])->name('creditos.index');
         Route::get('creditos/{credito}', [CreditoController::class, 'show'])->name('creditos.show');
@@ -102,35 +104,6 @@ Route::middleware([
         Route::post('catalogo/pedido', [CatalogoController::class, 'store'])->name('catalogo.pedido');
         Route::get('mis-pedidos', [MisPedidosController::class, 'index'])->name('mis-pedidos.index');
         Route::get('mis-pedidos/{pedido}', [MisPedidosController::class, 'show'])->name('mis-pedidos.show');
-    });
-
-    // CU9 — Taller
-    Route::middleware('role:admin,vendedor,almacenero,mecanico')->group(function () {
-        Route::get('taller', [TallerController::class, 'index'])->name('taller.index');
-        Route::get('taller/{orden}', [TallerController::class, 'show'])->name('taller.show');
-    });
-    Route::middleware('role:admin,mecanico')->group(function () {
-        Route::get('taller-nueva/create', [TallerController::class, 'create'])->name('taller.create');
-        Route::post('taller', [TallerController::class, 'store'])->name('taller.store');
-        Route::post('taller/{orden}/diagnosticar', [TallerController::class, 'diagnosticar'])->name('taller.diagnosticar');
-        Route::post('taller/{orden}/solicitar-repuestos', [TallerController::class, 'solicitarRepuestos'])->name('taller.solicitar-repuestos');
-        Route::post('taller/{orden}/terminar', [TallerController::class, 'terminar'])->name('taller.terminar');
-    });
-    Route::middleware('role:admin,almacenero')->group(function () {
-        Route::post('taller-repuesto/{detalle}/aprobar', [TallerController::class, 'aprobarRepuesto'])->name('taller.aprobar-repuesto');
-        Route::post('taller-repuesto/{detalle}/rechazar', [TallerController::class, 'rechazarRepuesto'])->name('taller.rechazar-repuesto');
-    });
-    Route::middleware('role:admin,vendedor')->group(function () {
-        Route::post('taller/{orden}/facturar', [TallerController::class, 'facturar'])->name('taller.facturar');
-        Route::post('taller/{orden}/entregar', [TallerController::class, 'entregar'])->name('taller.entregar');
-    });
-
-    // CU9 (cliente) — Mi taller
-    Route::middleware('role:cliente')->group(function () {
-        Route::get('mi-taller', [MiTallerController::class, 'index'])->name('mi-taller.index');
-        Route::get('mi-taller/{orden}', [MiTallerController::class, 'show'])->name('mi-taller.show');
-        Route::post('mi-taller/{orden}/aprobar-presupuesto', [MiTallerController::class, 'aprobarPresupuesto'])->name('mi-taller.aprobar-presupuesto');
-        Route::post('mi-taller/{orden}/rechazar-presupuesto', [MiTallerController::class, 'rechazarPresupuesto'])->name('mi-taller.rechazar-presupuesto');
     });
 
     // Búsqueda global del negocio (REQ9)
@@ -174,3 +147,4 @@ Route::middleware([
 
 // Callback/webhook de PagoFácil (sin auth ni CSRF: lo invoca el servidor de PagoFácil). RN13.
 Route::post('webhook/pagofacil-simulado/cuota', [PagoController::class, 'confirmarCuota'])->name('pagofacil.confirmar-cuota');
+Route::post('webhook/pagofacil-simulado/venta', [PagoController::class, 'confirmarVenta'])->name('pagofacil.confirmar-venta');

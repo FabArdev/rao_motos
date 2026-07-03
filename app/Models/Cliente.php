@@ -29,14 +29,4 @@ class Cliente extends Model
     {
         return $this->hasMany(Venta::class, 'cliente_id');
     }
-
-    public function motos()
-    {
-        return $this->hasMany(Moto::class, 'cliente_id');
-    }
-
-    public function ordenesTrabajo()
-    {
-        return $this->hasMany(OrdenTrabajo::class, 'cliente_id');
-    }
 }

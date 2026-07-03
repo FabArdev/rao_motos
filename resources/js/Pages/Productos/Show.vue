@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({ producto: Object });
 const bs = (n) => 'Bs. ' + Number(n).toFixed(2);
-const foto = props.producto.foto_completa ?? null;
+const galeria = [props.producto.foto_completa, ...(props.producto.imagenes ?? []).map((i) => i.url)].filter(Boolean);
 </script>
 
 <template>
@@ -14,13 +14,26 @@ const foto = props.producto.foto_completa ?? null;
         <div class="card shadow-sm border-0" style="max-width: 720px;">
             <div class="card-body">
                 <div class="row g-4">
-                    <div class="col-md-4 text-center">
-                        <img v-if="foto" :src="foto" class="img-fluid rounded" style="max-height:180px;object-fit:cover;" />
-                        <div v-else class="d-flex align-items-center justify-content-center bg-light rounded text-muted" style="height:180px;">
+                    <div class="col-md-5 text-center">
+                        <div v-if="galeria.length > 1" :id="`carousel-${producto.id}`" class="carousel slide" data-bs-ride="carousel">
+                            <div class="carousel-inner rounded">
+                                <div v-for="(src, i) in galeria" :key="i" class="carousel-item" :class="{ active: i === 0 }">
+                                    <img :src="src" class="d-block w-100 bg-light" style="height:220px;object-fit:contain;" />
+                                </div>
+                            </div>
+                            <button class="carousel-control-prev" type="button" :data-bs-target="`#carousel-${producto.id}`" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon"></span>
+                            </button>
+                            <button class="carousel-control-next" type="button" :data-bs-target="`#carousel-${producto.id}`" data-bs-slide="next">
+                                <span class="carousel-control-next-icon"></span>
+                            </button>
+                        </div>
+                        <img v-else-if="galeria.length === 1" :src="galeria[0]" class="img-fluid rounded bg-light" style="max-height:220px;object-fit:contain;" />
+                        <div v-else class="d-flex align-items-center justify-content-center bg-light rounded text-muted" style="height:220px;">
                             <i class="bi bi-image fs-1"></i>
                         </div>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-7">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <h2 class="h5 mb-0">{{ producto.nombre }}</h2>
                             <span class="badge" :class="producto.activo ? 'bg-success' : 'bg-secondary'">{{ producto.activo ? 'Activo' : 'Inactivo' }}</span>

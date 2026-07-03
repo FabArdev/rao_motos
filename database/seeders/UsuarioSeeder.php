@@ -11,7 +11,7 @@ class UsuarioSeeder extends Seeder
 {
     public function run(): void
     {
-        // role_id: 1=admin 2=vendedor 3=almacenero 4=mecanico 5=cliente
+        // role_id: 1=admin 2=vendedor 3=almacenero 5=cliente
 
         // --- 3 admins (equipo) ---
         $admins = [
@@ -27,7 +27,6 @@ class UsuarioSeeder extends Seeder
         $staff = [
             ['nombre' => 'Vendedor',   'apellidos' => 'Demo', 'email' => 'vendedor@raomotos.com',   'ci' => '8000001', 'telefono' => '70000001', 'role_id' => 2],
             ['nombre' => 'Almacenero', 'apellidos' => 'Demo', 'email' => 'almacenero@raomotos.com', 'ci' => '8000002', 'telefono' => '70000002', 'role_id' => 3],
-            ['nombre' => 'Mecanico',   'apellidos' => 'Demo', 'email' => 'mecanico@raomotos.com',   'ci' => '8000003', 'telefono' => '70000003', 'role_id' => 4],
         ];
         foreach ($staff as $s) {
             User::create($s + ['password' => Hash::make('demo123'), 'estado' => true]);

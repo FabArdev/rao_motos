@@ -6,6 +6,7 @@ use App\Http\Requests\StoreProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
 use App\Models\Inventario;
 use App\Models\Producto;
+use App\Models\ProductoImagen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -72,6 +73,17 @@ class ProductoController extends Controller
                 'tecnica_costo' => 'PROMEDIO',
                 'fecha_actualizacion' => now(),
             ]);
+
+            // Imágenes adicionales de la galería.
+            if ($request->hasFile('imagenes')) {
+                foreach ($request->file('imagenes') as $i => $file) {
+                    ProductoImagen::create([
+                        'producto_id' => $producto->id,
+                        'ruta' => $file->store('productos', 'public'),
+                        'orden' => $i,
+                    ]);
+                }
+            }
         });
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente.');
@@ -79,14 +91,14 @@ class ProductoController extends Controller
 
     public function show(Producto $producto)
     {
-        $producto->load('inventario');
+        $producto->load('inventario', 'imagenes');
 
         return Inertia::render('Productos/Show', ['producto' => $producto]);
     }
 
     public function edit(Producto $producto)
     {
-        $producto->load('inventario');
+        $producto->load('inventario', 'imagenes');
 
         return Inertia::render('Productos/Edit', ['producto' => $producto]);
     }
@@ -117,6 +129,28 @@ class ProductoController extends Controller
 
             if (isset($data['stock_minimo']) && $producto->inventario) {
                 $producto->inventario->update(['stock_minimo' => $data['stock_minimo']]);
+            }
+
+            // Eliminar imágenes de galería marcadas.
+            if (! empty($data['eliminar_imagenes'])) {
+                $aBorrar = ProductoImagen::where('producto_id', $producto->id)
+                    ->whereIn('id', $data['eliminar_imagenes'])->get();
+                foreach ($aBorrar as $img) {
+                    Storage::disk('public')->delete($img->ruta);
+                    $img->delete();
+                }
+            }
+
+            // Agregar nuevas imágenes de galería.
+            if ($request->hasFile('imagenes')) {
+                $orden = (int) ProductoImagen::where('producto_id', $producto->id)->max('orden');
+                foreach ($request->file('imagenes') as $file) {
+                    ProductoImagen::create([
+                        'producto_id' => $producto->id,
+                        'ruta' => $file->store('productos', 'public'),
+                        'orden' => ++$orden,
+                    ]);
+                }
             }
         });
 

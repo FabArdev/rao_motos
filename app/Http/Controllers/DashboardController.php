@@ -5,21 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\Credito;
 use App\Models\DetalleVenta;
 use App\Models\Inventario;
-use App\Models\OrdenTrabajo;
 use App\Models\Venta;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        // El dashboard de estadísticas es solo para el administrador.
+        // Cada otro rol entra directo a su módulo principal.
+        $user = $request->user();
+        if (! $user->esAdmin()) {
+            return redirect()->route(match ($user->role?->nombre) {
+                'vendedor' => 'ventas.index',
+                'almacenero' => 'inventario.index',
+                'cliente' => 'catalogo.index',
+                default => 'profile.show',
+            });
+        }
+
         $stats = [
             'ventas_total' => (float) Venta::where('estado', 'COMPLETADA')->sum('monto_total'),
             'ventas_count' => Venta::count(),
             'creditos_vigentes' => Credito::where('estado', 'VIGENTE')->count(),
             'creditos_morosos' => Credito::where('estado', 'MOROSO')->count(),
-            'ordenes_abiertas' => OrdenTrabajo::whereNotIn('estado', ['ENTREGADA', 'CANCELADA'])->count(),
             'inventario_critico' => Inventario::whereColumn('stock_actual', '<', 'stock_minimo')
                 ->whereHas('producto', fn ($p) => $p->where('activo', true))->count(),
         ];
@@ -46,16 +57,10 @@ class DashboardController extends Controller
             ->get()
             ->map(fn ($d) => ['nombre' => $d->producto?->nombre ?? '—', 'total' => (int) $d->total]);
 
-        // Órdenes de taller por estado.
-        $ordenesEstado = OrdenTrabajo::select('estado', DB::raw('count(*) as total'))
-            ->groupBy('estado')->get()
-            ->map(fn ($o) => ['estado' => $o->estado, 'total' => (int) $o->total]);
-
         return Inertia::render('Dashboard', [
             'stats' => $stats,
             'ventasMes' => $ventasMes,
             'topProductos' => $topProductos,
-            'ordenesEstado' => $ordenesEstado,
         ]);
     }
 }

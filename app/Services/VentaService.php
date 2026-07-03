@@ -8,10 +8,10 @@ use App\Models\Venta;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Crea ventas (mostrador, desde pedido o desde taller) con el mismo pipeline.
+ * Crea ventas (mostrador o desde pedido) con el mismo pipeline.
  * El total lo calcula el servidor por línea (RN11); el precio por línea sale del
  * umbral mayorista del producto (RN3). El stock se descuenta aquí una sola vez,
- * salvo que el origen ya lo haya descontado (pedido/taller → descontarStock=false, RN18).
+ * salvo que el origen ya lo haya descontado (pedido → descontarStock=false, RN18).
  */
 class VentaService
 {

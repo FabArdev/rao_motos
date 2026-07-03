@@ -73,6 +73,7 @@ class InventarioController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Stock ajustado correctamente.');
+        // Tras aplicar el ajuste, volver al listado de inventario (no quedarse en la ficha).
+        return redirect()->route('inventario.index')->with('success', 'Stock ajustado correctamente.');
     }
 }

@@ -9,7 +9,7 @@ use App\Models\User;
 
 /**
  * Centraliza el movimiento de stock. El stock se toca aquí y solo aquí,
- * de modo que compras (ingreso), ventas y taller (egreso) queden consistentes
+ * de modo que compras (ingreso) y ventas (egreso) queden consistentes
  * y cada movimiento quede registrado en movimiento_inventario (RN18).
  */
 class InventarioService
@@ -32,7 +32,7 @@ class InventarioService
     }
 
     /**
-     * Egreso de stock (venta directa, venta desde pedido, repuestos de taller).
+     * Egreso de stock (venta directa, venta desde pedido).
      * Valida que haya stock suficiente y dispara la alerta de stock bajo.
      */
     public function egreso(int $productoId, int $cantidad, string $motivo): void

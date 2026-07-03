@@ -2,7 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
-defineProps({ notificaciones: Object });
+defineProps({ lista: Object });
 const page = usePage();
 
 const marcar = (n) => router.post(route('notificaciones.leida', n.id), {}, { preserveScroll: true });
@@ -19,7 +19,7 @@ const icono = (t) => ({ STOCK_BAJO: 'exclamation-triangle text-warning', SOLICIT
 
         <div class="card shadow-sm border-0">
             <ul class="list-group list-group-flush">
-                <li v-for="n in notificaciones.data" :key="n.id" class="list-group-item d-flex justify-content-between align-items-start" :class="{ 'bg-light': !n.leido }">
+                <li v-for="n in lista.data" :key="n.id" class="list-group-item d-flex justify-content-between align-items-start" :class="{ 'bg-light': !n.leido }">
                     <div class="d-flex gap-2">
                         <i class="bi mt-1" :class="`bi-${icono(n.tipo)}`"></i>
                         <div>
@@ -30,7 +30,7 @@ const icono = (t) => ({ STOCK_BAJO: 'exclamation-triangle text-warning', SOLICIT
                     </div>
                     <button v-if="!n.leido" class="btn btn-sm btn-light" @click="marcar(n)"><i class="bi bi-check2"></i></button>
                 </li>
-                <li v-if="!notificaciones.data.length" class="list-group-item text-center text-muted py-4">Sin notificaciones.</li>
+                <li v-if="!lista.data.length" class="list-group-item text-center text-muted py-4">Sin notificaciones.</li>
             </ul>
         </div>
     </AppLayout>

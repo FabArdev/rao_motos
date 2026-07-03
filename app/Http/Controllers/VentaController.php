@@ -77,6 +77,11 @@ class VentaController extends Controller
             return back()->with('error', $e->getMessage())->withInput();
         }
 
+        // Venta al contado con QR: ir directo a la pantalla de cobro por QR (PagoFácil).
+        if ($venta->tipo_venta === 'CONTADO' && $venta->metodo_pago === 'QR' && $venta->estado === 'PENDIENTE') {
+            return redirect()->route('pagofacil.generar-qr-venta', $venta->id);
+        }
+
         return redirect()->route('ventas.show', $venta->id)->with('success', "Venta {$venta->numero_venta} registrada.");
     }
 
@@ -87,7 +92,7 @@ class VentaController extends Controller
         return Inertia::render('Ventas/Show', ['venta' => $venta]);
     }
 
-    /** Anular venta: revierte stock si estaba descontado y no proviene de taller. */
+    /** Anular venta: revierte stock si estaba descontado. */
     public function anular(Venta $venta)
     {
         if ($venta->estado === 'ANULADA') {

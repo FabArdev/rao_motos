@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MetodoPago;
 use App\Models\PagoCuota;
+use App\Models\Venta;
 use App\Services\CreditoService;
 use App\Services\PagoFacilService;
 use Carbon\Carbon;
@@ -52,17 +53,11 @@ class PagoController extends Controller
                 'status' => 'pending',
                 'monto' => $monto,
                 'glosa' => "Pago cuota #{$cuota->numero_cuota}",
+                // Un QR real es data-URI base64; el fallback simulado es una URL http externa.
+                'simulado' => ! str_starts_with((string) $cuota->pago_facil_qr_image, 'data:'),
             ];
 
-            $redirectRoute = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
-
-            return Inertia::render('Pagos/Qr', [
-                'cuota' => $cuota->only(['id', 'numero_cuota', 'monto_cuota', 'credito_id']),
-                'monto' => $monto,
-                'qr' => $qrExistente,
-                'redirectRoute' => $redirectRoute,
-                'redirectParams' => ['credito' => $cuota->credito_id],
-            ]);
+            return $this->renderQrCuota($cuota, $monto, $qrExistente, $esAdminOVendedor);
         }
 
         try {
@@ -77,15 +72,7 @@ class PagoController extends Controller
                 'pago_facil_status' => $qr['status'] ?? 'pending',
             ]);
 
-            $redirectRoute = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
-
-            return Inertia::render('Pagos/Qr', [
-                'cuota' => $cuota->only(['id', 'numero_cuota', 'monto_cuota', 'credito_id']),
-                'monto' => $monto,
-                'qr' => $qr,
-                'redirectRoute' => $redirectRoute,
-                'redirectParams' => ['credito' => $cuota->credito_id],
-            ]);
+            return $this->renderQrCuota($cuota, $monto, $qr, $esAdminOVendedor);
         } catch (\Throwable $e) {
             Log::error('PagoFácil QR cuota falló', ['cuota' => $cuota->id, 'error' => $e->getMessage()]);
 
@@ -128,6 +115,12 @@ class PagoController extends Controller
             ?? $request->input('transaction_id')
             ?? $request->input('transactionId')
             ?? $request->query('pagofacilTransactionId');
+
+        // Sin identificador no se debe consultar: un WHERE vacío devolvería la primera cuota
+        // y la marcaría pagada sin cobro real (el endpoint es público/CSRF-exento).
+        if (! $paymentNumber && ! $transactionId) {
+            return response()->json(['error' => 1, 'status' => 0, 'message' => 'Identificador de pago requerido', 'values' => false], 422);
+        }
 
         $cuota = PagoCuota::when($paymentNumber, fn ($q) => $q->where('pago_facil_payment_number', $paymentNumber))
             ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_transaction_id', $transactionId))
@@ -195,6 +188,148 @@ class PagoController extends Controller
             'pagado' => false,
             'estado' => $cuota->estado,
             'pago_facil_status' => $cuota->pago_facil_status,
+        ]);
+    }
+
+    /** Render de la pantalla QR para una cuota (props genéricos de Pagos/Qr). */
+    private function renderQrCuota(PagoCuota $cuota, float $monto, array $qr, bool $esAdminOVendedor)
+    {
+        $volver = $esAdminOVendedor
+            ? route('creditos.show', $cuota->credito_id)
+            : route('mis-creditos.show', $cuota->credito_id);
+
+        return Inertia::render('Pagos/Qr', [
+            'titulo' => "Cuota #{$cuota->numero_cuota}",
+            'monto' => $monto,
+            'qr' => $qr,
+            'estadoUrl' => route('pagofacil.estado-cuota', $cuota->id),
+            'confirmarUrl' => route('pagofacil.confirmar-cuota'),
+            'volverUrl' => $volver,
+            'descarga' => "qr-pago-cuota-{$cuota->id}.png",
+        ]);
+    }
+
+    /* =====================================================================
+     |  Pago por QR de una VENTA al contado (caja) — mismo flujo que cuota.
+     * ===================================================================== */
+
+    /** Genera (o reutiliza) el QR para cobrar una venta al contado. */
+    public function generarQrVenta(Venta $venta)
+    {
+        if ($venta->estado === 'COMPLETADA') {
+            return redirect()->route('ventas.show', $venta->id)->with('error', 'La venta ya fue pagada.');
+        }
+        if ($venta->estado === 'ANULADA') {
+            return redirect()->route('ventas.show', $venta->id)->with('error', 'La venta está anulada.');
+        }
+
+        $monto = (float) $venta->monto_total;
+
+        // Reutilizar un QR pendiente si ya existe (evita crear una transacción por recarga).
+        if ($venta->pago_facil_transaction_id && $venta->pago_facil_qr_image && $venta->pago_facil_status === 'pending') {
+            $qrExistente = [
+                'success' => true,
+                'transaction_id' => $venta->pago_facil_transaction_id,
+                'payment_number' => $venta->pago_facil_payment_number,
+                'qr_image' => $venta->pago_facil_qr_image,
+                'status' => 'pending',
+                // Un QR real es data-URI base64; el fallback simulado es una URL http externa.
+                'simulado' => ! str_starts_with((string) $venta->pago_facil_qr_image, 'data:'),
+            ];
+
+            return $this->renderQrVenta($venta, $monto, $qrExistente);
+        }
+
+        try {
+            $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, "Venta {$venta->numero_venta}");
+
+            $venta->update([
+                'pago_facil_transaction_id' => $qr['transaction_id'] ?? null,
+                'pago_facil_payment_number' => $qr['payment_number'] ?? null,
+                'pago_facil_qr_image' => $qr['qr_image'] ?? null,
+                'pago_facil_status' => $qr['status'] ?? 'pending',
+            ]);
+
+            return $this->renderQrVenta($venta, $monto, $qr);
+        } catch (\Throwable $e) {
+            Log::error('PagoFácil QR venta falló', ['venta' => $venta->id, 'error' => $e->getMessage()]);
+
+            return redirect()->route('ventas.show', $venta->id)
+                ->with('error', 'No se pudo generar el QR (verifique la conexión con PagoFácil). Cobre en efectivo.');
+        }
+    }
+
+    /** Estado de la venta para el polling de la pantalla QR. */
+    public function estadoVenta(Venta $venta)
+    {
+        if ($venta->estado === 'COMPLETADA') {
+            return response()->json(['pagado' => true, 'estado' => 'COMPLETADA']);
+        }
+
+        if ($venta->pago_facil_transaction_id) {
+            $resultado = $this->pagofacil->verificarEstadoPago($venta->pago_facil_transaction_id, $venta->pago_facil_payment_number);
+            $raw = $resultado['raw'] ?? [];
+            $pagado = ($resultado['status'] ?? 'pending') === 'completed' || ! empty($raw['payerName']);
+
+            if ($pagado) {
+                $this->completarVenta($venta);
+
+                return response()->json(['pagado' => true, 'estado' => 'COMPLETADA']);
+            }
+        }
+
+        return response()->json(['pagado' => false, 'estado' => $venta->estado]);
+    }
+
+    /** Callback de PagoFácil (o botón "Ya realicé el pago") para una venta. Idempotente. */
+    public function confirmarVenta(Request $request)
+    {
+        Log::info('📩 [PagoFácil] Callback venta recibido', ['payload' => $request->all(), 'query' => $request->query()]);
+
+        $pedidoId = $request->input('PedidoID') ?? $request->input('pedidoId') ?? $request->input('pedido_id');
+        $paymentNumber = $pedidoId
+            ?? $request->input('paymentNumber') ?? $request->input('payment_number') ?? $request->query('payment_number');
+        $transactionId = $request->input('pagofacilTransactionId')
+            ?? $request->input('transaction_id') ?? $request->input('transactionId') ?? $request->query('transaction_id');
+
+        // Sin identificador no se debe consultar (evita marcar una venta arbitraria como pagada).
+        if (! $paymentNumber && ! $transactionId) {
+            return response()->json(['error' => 1, 'status' => 0, 'message' => 'Identificador de pago requerido', 'values' => false], 422);
+        }
+
+        $venta = Venta::when($paymentNumber, fn ($q) => $q->where('pago_facil_payment_number', $paymentNumber))
+            ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_transaction_id', $transactionId))
+            ->first();
+
+        if (! $venta) {
+            return response()->json(['error' => 1, 'status' => 0, 'message' => 'Venta no encontrada', 'values' => false], 404);
+        }
+        if ($venta->estado === 'COMPLETADA') {
+            return response()->json(['error' => 0, 'status' => 1, 'message' => 'Ya estaba pagada', 'values' => true]);
+        }
+
+        $this->completarVenta($venta);
+        Log::info('✅ [PagoFácil] Callback: venta pagada', ['venta' => $venta->id]);
+
+        return response()->json(['error' => 0, 'status' => 1, 'message' => 'Pago recibido correctamente', 'values' => true]);
+    }
+
+    /** Marca una venta como pagada por QR. El stock ya se descontó al crearla (RN18). */
+    private function completarVenta(Venta $venta): void
+    {
+        $venta->update(['estado' => 'COMPLETADA', 'pago_facil_status' => 'completed']);
+    }
+
+    private function renderQrVenta(Venta $venta, float $monto, array $qr)
+    {
+        return Inertia::render('Pagos/Qr', [
+            'titulo' => "Venta {$venta->numero_venta}",
+            'monto' => $monto,
+            'qr' => $qr,
+            'estadoUrl' => route('pagofacil.estado-venta', $venta->id),
+            'confirmarUrl' => route('pagofacil.confirmar-venta'),
+            'volverUrl' => route('ventas.show', $venta->id),
+            'descarga' => "qr-venta-{$venta->id}.png",
         ]);
     }
 }

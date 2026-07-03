@@ -145,7 +145,7 @@ return [
 
     'features' => [
         Features::registration(),
-        Features::resetPasswords(),
+        // Features::resetPasswords(),   // "Olvidé mi contraseña" deshabilitado a pedido del negocio
         // Features::emailVerification(),
         Features::updateProfileInformation(),
         Features::updatePasswords(),

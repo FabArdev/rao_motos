@@ -25,6 +25,9 @@ const anular = () => { if (confirm('¿Anular esta venta? Se revertirá el stock.
                     <div class="small text-muted">{{ venta.tipo_venta }} · {{ venta.metodo_pago }} · Vendedor: {{ venta.vendedor?.name || '—' }}</div>
                 </div>
                 <div class="d-flex gap-2">
+                    <Link v-if="venta.estado === 'PENDIENTE' && venta.metodo_pago === 'QR'" :href="route('pagofacil.generar-qr-venta', venta.id)" class="btn btn-primary">
+                        <i class="bi bi-qr-code me-1"></i>Cobrar con QR
+                    </Link>
                     <button v-if="venta.estado !== 'ANULADA' && !venta.credito" class="btn btn-outline-danger" @click="anular">Anular</button>
                     <Link :href="route('ventas.index')" class="btn btn-outline-secondary">Volver</Link>
                 </div>

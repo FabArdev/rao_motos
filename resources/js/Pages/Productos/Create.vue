@@ -6,7 +6,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 const form = useForm({
     codigo: '', nombre: '', marca: '', modelo: '', descripcion: '',
     precio_venta_base: '', precio_mayorista: '', cantidad_minima_mayorista: 1,
-    stock_minimo: 5, foto: null, activo: true,
+    stock_minimo: 5, foto: null, imagenes: [], activo: true,
 });
 
 const preview = ref(null);
@@ -14,6 +14,12 @@ const onFile = (e) => {
     const file = e.target.files[0];
     form.foto = file ?? null;
     preview.value = file ? URL.createObjectURL(file) : null;
+};
+
+const previewsGaleria = ref([]);
+const onImagenes = (e) => {
+    form.imagenes = Array.from(e.target.files);
+    previewsGaleria.value = form.imagenes.map((f) => URL.createObjectURL(f));
 };
 
 const enviar = () => form.post(route('productos.store'));
@@ -68,11 +74,19 @@ const enviar = () => form.post(route('productos.store'));
                         <label class="form-label">Stock mínimo (alerta)</label>
                         <input v-model="form.stock_minimo" type="number" min="0" class="form-control" />
                     </div>
-                    <div class="col-md-8">
-                        <label class="form-label">Foto</label>
+                    <div class="col-md-4">
+                        <label class="form-label">Foto principal (portada)</label>
                         <input type="file" accept="image/*" class="form-control" :class="{ 'is-invalid': form.errors.foto }" @change="onFile" />
                         <div class="invalid-feedback">{{ form.errors.foto }}</div>
                         <img v-if="preview" :src="preview" class="rounded mt-2" style="height:90px;object-fit:cover;" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Imágenes adicionales <small class="text-muted">(hasta 6, para el carrusel)</small></label>
+                        <input type="file" accept="image/*" multiple class="form-control" :class="{ 'is-invalid': form.errors.imagenes || form.errors['imagenes.0'] }" @change="onImagenes" />
+                        <div class="invalid-feedback">{{ form.errors.imagenes || form.errors['imagenes.0'] }}</div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <img v-for="(src, i) in previewsGaleria" :key="i" :src="src" class="rounded border" style="height:70px;width:70px;object-fit:cover;" />
+                        </div>
                     </div>
                     <div class="col-12 form-check ms-2">
                         <input v-model="form.activo" type="checkbox" class="form-check-input" id="activo" />

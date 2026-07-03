@@ -27,6 +27,10 @@ class UpdateProductoRequest extends FormRequest
             'cantidad_minima_mayorista' => ['required', 'integer', 'min:1'],
             'stock_minimo' => ['nullable', 'integer', 'min:0'],
             'foto' => ['nullable', 'image', 'max:2048'],
+            'imagenes' => ['nullable', 'array', 'max:6'],
+            'imagenes.*' => ['image', 'max:2048'],
+            'eliminar_imagenes' => ['nullable', 'array'],
+            'eliminar_imagenes.*' => ['integer'],
             'activo' => ['boolean'],
         ];
     }
@@ -45,6 +49,9 @@ class UpdateProductoRequest extends FormRequest
             'cantidad_minima_mayorista.min' => 'La cantidad mínima para mayoreo debe ser al menos 1.',
             'foto.image' => 'El archivo debe ser una imagen.',
             'foto.max' => 'La imagen no debe superar los 2MB.',
+            'imagenes.max' => 'Máximo 6 imágenes adicionales.',
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen.',
+            'imagenes.*.max' => 'Cada imagen no debe superar los 2MB.',
         ];
     }
 }

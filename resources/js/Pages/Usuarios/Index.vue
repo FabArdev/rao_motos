@@ -21,7 +21,7 @@ const eliminar = (usuario) => {
 
 const colorRol = (rol) => ({
     admin: 'bg-dark', vendedor: 'bg-primary', almacenero: 'bg-success',
-    mecanico: 'bg-warning text-dark', cliente: 'bg-secondary',
+    cliente: 'bg-secondary',
 }[rol] ?? 'bg-secondary');
 </script>
 

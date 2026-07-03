@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import AppLogo from '@/Components/AppLogo.vue';
 
 defineProps({
     canLogin: Boolean,
@@ -10,24 +11,33 @@ defineProps({
 });
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
-const img = (p) => p.foto_completa ?? null;
+const img = (p) => p.foto_completa ?? p.foto_url ?? null;
+
+// Scroll suave al catálogo — funciona siempre (no depende del hash de la URL).
+const verRepuestos = () => {
+    document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' });
+};
 </script>
 
 <template>
-    <Head title="RAO MOTOS — Repuestos y Taller" />
+    <Head title="RAO MOTOS — Repuestos de moto" />
 
     <div class="min-vh-100 d-flex flex-column bg-light">
         <!-- Navbar -->
         <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: #b30000;">
             <div class="container">
-                <span class="navbar-brand fw-bold fs-4">🏍️ RAO MOTOS</span>
+                <span class="navbar-brand d-flex align-items-center bg-white rounded px-2 py-1">
+                    <AppLogo :height="30" />
+                </span>
                 <div class="d-flex gap-2">
                     <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="btn btn-light btn-sm fw-semibold">
                         Ir al panel
                     </Link>
                     <template v-else-if="canLogin">
-                        <Link :href="route('login')" class="btn btn-light btn-sm fw-semibold">Iniciar sesión</Link>
-                        <Link v-if="canRegister" :href="route('register')" class="btn btn-outline-light btn-sm fw-semibold">Crear cuenta</Link>
+                        <Link :href="route('login')" class="btn btn-outline-light btn-sm fw-semibold">Iniciar sesión</Link>
+                        <Link v-if="canRegister" :href="route('register')" class="btn btn-warning btn-sm fw-bold text-dark">
+                            <i class="bi bi-person-plus me-1"></i>Crear cuenta
+                        </Link>
                     </template>
                 </div>
             </div>
@@ -36,23 +46,23 @@ const img = (p) => p.foto_completa ?? null;
         <!-- Hero -->
         <header class="text-white py-5" style="background: linear-gradient(135deg, #b30000 0%, #7a0000 100%);">
             <div class="container py-4 text-center">
-                <h1 class="display-4 fw-bold mb-3">Repuestos de moto y taller de reparación</h1>
+                <h1 class="display-4 fw-bold mb-3">Repuestos de moto para todo tipo de motocicleta</h1>
                 <p class="lead mb-4 opacity-75">
-                    Venta al por menor y mayor · Reparación de motos · Compra al contado o en cuotas
+                    Venta al por menor y mayor · Compra al contado o en cuotas
                 </p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
                     <Link v-if="!$page.props.auth.user && canRegister" :href="route('register')" class="btn btn-light btn-lg fw-semibold">
                         <i class="bi bi-person-plus me-1"></i>Regístrate y haz tu pedido
                     </Link>
-                    <a href="#catalogo" class="btn btn-outline-light btn-lg fw-semibold"><i class="bi bi-box-seam me-1"></i>Ver repuestos</a>
+                    <a href="#catalogo" @click.prevent="verRepuestos" class="btn btn-outline-light btn-lg fw-semibold"><i class="bi bi-box-seam me-1"></i>Ver repuestos</a>
                 </div>
             </div>
         </header>
 
         <!-- Servicios -->
         <section class="container py-5">
-            <div class="row g-4 text-center">
-                <div class="col-md-6 col-lg-3">
+            <div class="row g-4 text-center justify-content-center">
+                <div class="col-md-6 col-lg-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
                             <i class="bi bi-box-seam fs-1" style="color: #b30000;"></i>
@@ -61,25 +71,16 @@ const img = (p) => p.foto_completa ?? null;
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <i class="bi bi-tools fs-1" style="color: #b30000;"></i>
-                            <h5 class="mt-2">Taller</h5>
-                            <p class="small text-muted mb-0">Diagnóstico, presupuesto y reparación de tu moto.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
                             <i class="bi bi-credit-card fs-1" style="color: #b30000;"></i>
                             <h5 class="mt-2">Crédito / cuotas</h5>
-                            <p class="small text-muted mb-0">Financia tu compra o reparación en cuotas.</p>
+                            <p class="small text-muted mb-0">Financia tu compra en cuotas.</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
                             <i class="bi bi-qr-code fs-1" style="color: #b30000;"></i>
