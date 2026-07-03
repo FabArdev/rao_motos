@@ -187,15 +187,15 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
         </div>
 
         <!-- ===== Contenido ===== -->
-        <main class="flex-grow-1 p-3 p-lg-4">
+        <main class="flex-grow-1 p-3 p-lg-4 pb-5">
             <h1 v-if="title" class="h4 mb-3">{{ title }}</h1>
             <slot />
         </main>
 
-        <!-- ===== Footer (contador de visitas en cada página) ===== -->
-        <footer class="border-top bg-white px-4 py-2 d-flex flex-wrap justify-content-between align-items-center small text-muted gap-2">
+        <!-- ===== Footer (contador de visitas por página, sticky) ===== -->
+        <footer class="fixed-bottom border-top bg-white px-4 py-2 d-flex flex-wrap justify-content-between align-items-center small text-muted gap-2">
             <span>© {{ new Date().getFullYear() }} RAO MOTOS · INF-513 grupo02sa</span>
-            <span><i class="bi bi-eye me-1"></i>Visitas: <strong>{{ page.props.visitas ?? 0 }}</strong></span>
+            <span><i class="bi bi-eye me-1"></i>Visitas en esta página: <strong>{{ page.props.visitas ?? 0 }}</strong></span>
         </footer>
     </div>
 </template>

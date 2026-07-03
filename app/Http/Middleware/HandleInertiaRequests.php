@@ -62,8 +62,8 @@ class HandleInertiaRequests extends Middleware
                 ];
             },
 
-            // Contador de visitas (REQ7) — total mostrado en el footer.
-            'visitas' => fn () => (int) PageVisit::sum('contador'),
+            // Contador de visitas por página (REQ7) — cada ruta tiene su propio contador.
+            'visitas' => fn () => (int) PageVisit::where('ruta', $request->path())->value('contador') ?? 0,
 
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
