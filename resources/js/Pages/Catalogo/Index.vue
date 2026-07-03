@@ -88,7 +88,7 @@ const enviar = () => {
             </div>
 
             <div class="col-lg-4">
-                <div class="card shadow-sm border-0 sticky-top" style="top: 1rem;">
+                <div class="card shadow-sm border-0 sticky-lg-top" style="top: 1rem;">
                     <div class="card-header bg-white fw-semibold"><i class="bi bi-cart me-1"></i>Mi pedido ({{ totalItems }})</div>
                     <ul class="list-group list-group-flush">
                         <li v-for="(i, idx) in carrito" :key="i.producto.id" class="list-group-item d-flex justify-content-between align-items-center">

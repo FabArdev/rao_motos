@@ -61,6 +61,10 @@ const cerrarSidebarMovil = () => {
         Offcanvas.getInstance(el)?.hide();
     }
 };
+const buscarDesdeMenu = () => {
+    cerrarSidebarMovil();
+    buscarGlobal();
+};
 
 const notificaciones = computed(() => {
     const n = page.props.notificaciones;
@@ -73,9 +77,9 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
 </script>
 
 <template>
-    <div class="d-flex flex-column vh-100 bg-light">
-        <!-- ===== Topbar (fija arriba) ===== -->
-        <header class="navbar bg-white border-bottom px-3 px-lg-4 py-2 shadow-sm flex-shrink-0" style="z-index: 1030;">
+    <div class="d-flex flex-column app-shell bg-light">
+        <!-- ===== Topbar (pegajosa en móvil, fija en escritorio) ===== -->
+        <header class="navbar bg-white border-bottom px-3 px-lg-4 py-2 shadow-sm flex-shrink-0" style="position: sticky; top: 0; z-index: 1030;">
             <div class="d-flex align-items-center gap-2">
                 <!-- Hamburguesa (móvil) -->
                 <button class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Menú">
@@ -144,7 +148,7 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
         </header>
 
         <!-- ===== Cuerpo: sidebar + contenido ===== -->
-        <div class="d-flex flex-grow-1" style="min-height: 0;">
+        <div class="d-flex flex-grow-1 app-body">
             <!-- Sidebar (estático en lg+, offcanvas en móvil) -->
             <div class="offcanvas-lg offcanvas-start text-bg-dark sidebar-3c" tabindex="-1" id="sidebar" style="--bs-offcanvas-width: 240px;">
                 <div class="offcanvas-header border-bottom border-secondary d-lg-none">
@@ -152,6 +156,13 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Cerrar"></button>
                 </div>
                 <div class="offcanvas-body flex-column p-2">
+                    <!-- Buscador en móvil (en escritorio está en la topbar) -->
+                    <form class="d-md-none mb-2" @submit.prevent="buscarDesdeMenu">
+                        <div class="input-group input-group-sm">
+                            <input v-model="busqueda" class="form-control" placeholder="Buscar..." />
+                            <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button>
+                        </div>
+                    </form>
                     <nav class="nav flex-column w-100">
                         <!-- Ítems sueltos (Dashboard / Catálogo) -->
                         <Link
@@ -194,8 +205,8 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                 </div>
             </div>
 
-            <!-- Contenido (única zona con scroll) -->
-            <main class="flex-grow-1 overflow-auto p-3 p-lg-4" style="min-width: 0;">
+            <!-- Contenido (scroll interno solo en escritorio; en móvil scrollea la página) -->
+            <main class="flex-grow-1 app-main p-3 p-lg-4" style="min-width: 0;">
                 <h1 v-if="title" class="h4 mb-3">{{ title }}</h1>
                 <slot />
             </main>
@@ -210,8 +221,21 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
 </template>
 
 <style scoped>
-/* Sidebar fijo de 240px en escritorio; en móvil Bootstrap lo vuelve offcanvas. */
+/* Móvil: la página crece y hace scroll normal (topbar pegajosa arriba). */
+.app-shell {
+    min-height: 100vh;
+}
+/* Escritorio: altura fija de pantalla; topbar/sidebar/footer fijos, solo el contenido scrollea. */
 @media (min-width: 992px) {
+    .app-shell {
+        height: 100vh;
+    }
+    .app-body {
+        min-height: 0;
+    }
+    .app-main {
+        overflow-y: auto;
+    }
     .sidebar-3c {
         width: 240px;
         flex-shrink: 0;
