@@ -10,7 +10,7 @@ use App\Models\PageVisit;
 class PageVisitService
 {
     /** Rutas que NO se contabilizan (assets, callbacks, etc.). */
-    private array $excluidas = ['webhook', 'pagofacil', 'notificaciones', 'livewire', 'build', 'storage'];
+    private array $excluidas = ['webhook', 'pagofacil', 'livewire', 'build', 'storage'];
 
     public function debeContabilizar(string $ruta): bool
     {
