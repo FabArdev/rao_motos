@@ -13,6 +13,7 @@ const form = useForm({
     apellidos: "",
     ci: "",
     telefono: "",
+    direccion: "",
     email: "",
     fecha_nacimiento: "",
     password: "",
@@ -86,6 +87,18 @@ const submit = () => {
                     autocomplete="tel"
                 />
                 <InputError :message="form.errors.telefono" />
+            </div>
+
+            <div class="mb-3">
+                <InputLabel for="direccion" value="Dirección" />
+                <TextInput
+                    id="direccion"
+                    v-model="form.direccion"
+                    type="text"
+                    class="w-100"
+                    autocomplete="street-address"
+                />
+                <InputError :message="form.errors.direccion" />
             </div>
 
             <div class="mb-3">
@@ -177,8 +190,8 @@ const submit = () => {
             </div>
 
             <div class="d-flex justify-content-between align-items-center">
-                <Link :href="route('login')" class="text-decoration-none small">
-                    ¿Ya tienes cuenta?
+                <Link :href="route('login')" class="btn btn-outline-primary btn-sm">
+                    Iniciar sesión
                 </Link>
 
                 <PrimaryButton
