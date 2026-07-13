@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCompraRequest;
 use App\Models\Compra;
+use App\Models\Configuracion;
 use App\Models\DetalleCompra;
 use App\Models\Producto;
 use App\Models\Proveedor;
@@ -88,13 +89,26 @@ class CompraController extends Controller
 
         DB::transaction(function () use ($compra) {
             $compra->load('detalles');
+
+            // Margenes de venta configurables por el admin (RN23). Con default sembrado (RN17).
+            $margenMinorista = (float) Configuracion::valor('margen_venta_minorista', 25);
+            $margenMayorista = (float) Configuracion::valor('margen_venta_mayorista', 15);
+
             foreach ($compra->detalles as $d) {
                 $this->inventario->ingreso($d->producto_id, $d->cantidad, "Compra #{$compra->id} recibida");
+
+                // Recalcula el precio de venta desde el costo de ESTA compra (último costo + margen).
+                $costo = (float) $d->precio_unitario;
+                Producto::whereKey($d->producto_id)->update([
+                    'precio_venta_base' => round($costo * (1 + $margenMinorista / 100), 2),
+                    'precio_mayorista' => round($costo * (1 + $margenMayorista / 100), 2),
+                ]);
             }
+
             $compra->update(['estado' => 'RECIBIDA']);
         });
 
-        return back()->with('success', 'Compra recibida: inventario actualizado.');
+        return back()->with('success', 'Compra recibida: inventario y precios de venta actualizados.');
     }
 
     /** Anular: si ya estaba RECIBIDA revierte el ingreso de inventario (RN15). */

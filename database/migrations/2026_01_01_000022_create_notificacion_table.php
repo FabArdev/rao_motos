@@ -7,15 +7,14 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Notificaciones in-app (alertas operativas internas). Los avisos importantes
-     * al cliente van por email/SMTP, no por aquí.
+     * Notificaciones in-app (badge en el navbar). Complementadas por email/SMTP (planificado).
      */
     public function up(): void
     {
         Schema::create('notificacion', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('usuario_id');
-            $table->string('tipo', 50);          // STOCK_BAJO, SOLICITUD_REPUESTO, PEDIDO_POR_APROBAR, ...
+            $table->string('tipo', 50);          // STOCK_BAJO, PEDIDO_POR_APROBAR, VENTA_PAGADA, PEDIDO_APROBADO, PEDIDO_RECHAZADO, PEDIDO_DESPACHADO, MORA
             $table->string('mensaje');
             $table->string('recurso')->nullable();
             $table->boolean('leido')->default(false);

@@ -28,6 +28,11 @@ class VentaService
     {
         $descontarStock = $data['descontar_stock'] ?? true;
 
+        // Si esta venta saca stock ahora, verifica disponibilidad antes de crear nada (mensaje claro).
+        if ($descontarStock) {
+            $this->inventario->verificarStock($data['items']);
+        }
+
         return DB::transaction(function () use ($data, $descontarStock) {
             $lineas = [];
             $total = 0;

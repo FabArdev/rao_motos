@@ -7,15 +7,15 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Una línea es un repuesto (producto_id) o un servicio/mano de obra (descripcion, producto_id NULL).
+     * Cada línea corresponde a un repuesto (producto_id); `descripcion` es un texto opcional de la línea.
      */
     public function up(): void
     {
         Schema::create('detalle_venta', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('venta_id');
-            $table->unsignedBigInteger('producto_id')->nullable();   // NULL para servicios / mano de obra
-            $table->string('descripcion')->nullable();               // usado cuando no es producto
+            $table->unsignedBigInteger('producto_id')->nullable();
+            $table->string('descripcion')->nullable();               // texto opcional de la línea
             $table->integer('cantidad');
             $table->decimal('precio_unitario', 10, 2);
             $table->timestamps();

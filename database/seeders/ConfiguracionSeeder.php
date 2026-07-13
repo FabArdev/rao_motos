@@ -14,7 +14,9 @@ class ConfiguracionSeeder extends Seeder
             ['clave' => 'tasa_mora_diaria',     'valor' => '0.50',  'descripcion' => 'Mora por día de retraso sobre la cuota vencida (%)'],
             ['clave' => 'tope_mora_pct',        'valor' => '20',    'descripcion' => 'Tope máximo de mora como % de la cuota'],
             ['clave' => 'dias_entre_cuotas',    'valor' => '30',    'descripcion' => 'Días entre vencimientos de cuotas consecutivas'],
-            ['clave' => 'dias_aviso_cuota',     'valor' => '3',     'descripcion' => 'Días antes del vencimiento para avisar al cliente por email'],
+            ['clave' => 'dias_aviso_cuota',     'valor' => '3',     'descripcion' => 'Días de anticipación para avisar al cliente de una cuota por vencer'],
+            ['clave' => 'margen_venta_minorista', 'valor' => '25', 'descripcion' => 'Margen (%) sobre el costo de compra para el precio de venta minorista'],
+            ['clave' => 'margen_venta_mayorista', 'valor' => '15', 'descripcion' => 'Margen (%) sobre el costo de compra para el precio de venta mayorista'],
         ];
 
         foreach ($params as $p) {

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Inventario;
 use App\Models\MovimientoInventario;
 use App\Models\Notificacion;
+use App\Models\Producto;
 use App\Models\User;
 
 /**
@@ -32,6 +33,36 @@ class InventarioService
     }
 
     /**
+     * Verifica que haya stock suficiente para un conjunto de líneas {producto_id, cantidad}
+     * ANTES de comprometer la operación (venta de mostrador, aprobación de pedido). Suma las
+     * cantidades del mismo producto y lanza RuntimeException con NOMBRES si algo no alcanza.
+     */
+    public function verificarStock(array $items): void
+    {
+        $requeridoPorProducto = [];
+        foreach ($items as $item) {
+            if (empty($item['producto_id'])) {
+                continue;
+            }
+            $id = (int) $item['producto_id'];
+            $requeridoPorProducto[$id] = ($requeridoPorProducto[$id] ?? 0) + (int) $item['cantidad'];
+        }
+
+        $faltantes = [];
+        foreach ($requeridoPorProducto as $productoId => $requerido) {
+            $disponible = (int) (Inventario::where('producto_id', $productoId)->value('stock_actual') ?? 0);
+            if ($disponible < $requerido) {
+                $nombre = Producto::whereKey($productoId)->value('nombre') ?? "producto #{$productoId}";
+                $faltantes[] = "{$nombre} (disponible {$disponible}, requiere {$requerido})";
+            }
+        }
+
+        if ($faltantes) {
+            throw new \RuntimeException('No hay stock suficiente para: '.implode('; ', $faltantes).'.');
+        }
+    }
+
+    /**
      * Egreso de stock (venta directa, venta desde pedido).
      * Valida que haya stock suficiente y dispara la alerta de stock bajo.
      */
@@ -40,8 +71,9 @@ class InventarioService
         $inv = $this->inventarioDe($productoId);
 
         if ($inv->stock_actual < $cantidad) {
+            $nombre = Producto::whereKey($productoId)->value('nombre') ?? "producto #{$productoId}";
             throw new \RuntimeException(
-                "Stock insuficiente para el producto #{$productoId}: disponible {$inv->stock_actual}, requerido {$cantidad}."
+                "No hay stock suficiente para {$nombre}: disponible {$inv->stock_actual}, requiere {$cantidad}."
             );
         }
 

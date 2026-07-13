@@ -50,9 +50,21 @@ class PedidoController extends Controller
             return back()->with('error', 'Solo un pedido SOLICITADO puede aprobarse.');
         }
 
-        DB::transaction(function () use ($pedido, $request) {
-            $pedido->load('detalles');
+        $pedido->load('detalles');
+        $items = $pedido->detalles->map(fn ($d) => [
+            'producto_id' => $d->producto_id,
+            'cantidad' => $d->cantidad,
+        ])->all();
 
+        // No aprobar un pedido que no se podrá despachar: el cliente paga ANTES del despacho (RN20),
+        // así que se valida el stock aquí para no cobrarle algo que no hay.
+        try {
+            $this->inventario->verificarStock($items);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        DB::transaction(function () use ($pedido, $request, $items) {
             $venta = $this->ventas->crear([
                 'cliente_id' => $pedido->cliente_id,
                 'vendedor_id' => $request->user()->id,
@@ -60,10 +72,7 @@ class PedidoController extends Controller
                 'metodo_pago' => 'EFECTIVO', // provisional: lo define el pago (QR lo cambia; efectivo lo confirma el vendedor)
                 'estado' => 'PENDIENTE',
                 'descontar_stock' => false, // el stock sale al despachar
-                'items' => $pedido->detalles->map(fn ($d) => [
-                    'producto_id' => $d->producto_id,
-                    'cantidad' => $d->cantidad,
-                ])->all(),
+                'items' => $items,
             ]);
 
             $pedido->update(['estado' => 'APROBADO', 'venta_id' => $venta->id]);

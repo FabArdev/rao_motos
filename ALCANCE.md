@@ -6,12 +6,6 @@
 > **Estado:** documento de alcance vigente. Cada sección está numerada para poder referenciarla.
 > Base técnica: Laravel 10 + Inertia + Vue 3 + Bootstrap 5 + Jetstream + PostgreSQL.
 
-> **⚠️ Cambio de alcance (2026-07-02): el módulo de TALLER fue ELIMINADO.** Ya no se aplican mecánico,
-> moto, órdenes de trabajo ni solicitud de repuestos. Se quitó el rol **mecánico** (quedan 4 roles) y el
-> negocio se enfoca 100% en la **venta de repuestos** (contado/crédito). Todo este documento ya refleja
-> esa decisión. Además se **separó el flujo pedido→venta→despacho** (el vendedor aprueba y cobra; el
-> almacenero despacha; el pago ocurre ANTES del despacho) con un nuevo estado de venta `PAGADA`.
-
 ---
 
 ## 1. El negocio
@@ -76,20 +70,23 @@ usuario autenticado.
 ### CU1 — Gestión de usuarios
 **Registro público:** cualquier persona puede crearse una cuenta, y por defecto queda como **cliente**
 (se crea su fila en `cliente` automáticamente). Admin hace CRUD de usuarios y asigna otros roles
-(vendedor, almacenero). Cualquier usuario edita su propio perfil y contraseña. *(Se eliminó "olvidé mi
-contraseña".)* Validación por tipo de campo en el formulario de usuario (CI/teléfono numéricos, nombres
-solo letras) + campo `direccion`.
+(vendedor, almacenero). Cualquier usuario cambia su propio perfil y contraseña desde su panel. El reseteo
+de contraseña lo hace el **admin**: desde la gestión de usuarios asigna una nueva contraseña a un usuario
+específico (no hay autoservicio de "olvidé mi contraseña"). Validación por tipo de campo en el formulario
+de usuario (CI/teléfono numéricos, nombres solo letras) + campo `direccion`.
 
 ### CU2 — Gestión de productos (repuestos)
 Almacenero hace CRUD. Cada producto define **dos precios** y su **umbral de mayoreo propio**:
 `precio_venta_base` (minorista), `precio_mayorista` (por volumen) y `cantidad_minima_mayorista` (a partir
 de cuántas unidades aplica el precio mayorista). **Múltiples imágenes por producto** (`foto_url` portada +
 tabla `producto_imagen` para la galería), que se muestran como **carrusel** en el catálogo y el detalle.
-Código único. Eliminación **lógica** (`activo=false`).
+Código único. Eliminación **lógica** (`activo=false`). Los dos precios se editan a mano y además se
+**recalculan automáticamente al recibir una compra**, a partir del costo y los márgenes configurables (RN23).
 
 ### CU3 — Compras y proveedores
 Almacenero registra proveedores y compras. Una compra tiene detalle (productos, cantidad, precio unitario)
-y estado `PENDIENTE → RECIBIDA → ANULADA`. Al recibir una compra se actualiza el inventario (ingreso).
+y estado `PENDIENTE → RECIBIDA → ANULADA`. Al recibir una compra se actualiza el inventario (ingreso) y
+se **recalcula el precio de venta** de cada producto desde su costo de compra (RN23).
 
 ### CU4 — Pedidos (con regla mayorista) y separación de roles
 El cliente arma un pedido. El **vendedor** lo revisa y **aprueba o rechaza**; el **almacenero** despacha.
@@ -106,7 +103,8 @@ El cliente arma un pedido. El **vendedor** lo revisa y **aprueba o rechaza**; el
   descuenta stock (RN18), la venta pasa a `COMPLETADA` y el pedido a `DESPACHADO`; se **notifica al cliente**.
 - El cliente recibe **notificaciones in-app** en cada transición (aprobado / rechazado / despachado) que
   **enlazan al detalle** del pedido.
-- Estados del pedido: `SOLICITADO → APROBADO/RECHAZADO → DESPACHADO`.
+- Estados del pedido (enum en BD): `SOLICITADO`, `APROBADO`, `RECHAZADO`, `EN_PROCESO`, `DESPACHADO`,
+  `ANULADO`. Flujo principal: `SOLICITADO → APROBADO/RECHAZADO → DESPACHADO`.
 
 ### CU5 — Inventario
 Cada producto tiene un registro de inventario con `stock_actual` y `stock_minimo`, técnica de inventario
@@ -117,7 +115,8 @@ almacenero (refuerzo A). Tras aplicar un ajuste, se vuelve al listado de inventa
 ### CU6 — Ventas
 Venta al contado o a crédito. Origen: **mostrador** (venta directa) o **pedido aprobado**. Calcula el
 precio **por línea** según la cantidad vs el umbral del producto (minorista vs mayorista), igual para
-cualquier cliente. Reduce stock **una sola vez** (RN18). Método de pago: **EFECTIVO** (físico) o **QR**
+cualquier cliente. Reduce stock **una sola vez** (RN18) y **no permite vender más que el stock disponible**
+(RN24). Método de pago: **EFECTIVO** (físico) o **QR**
 (PagoFácil). *(Tarjeta queda fuera de alcance.)* En una venta a **crédito** el vendedor **NO elige el
 método de pago** — el cliente decide cómo paga **cada cuota** (QR o efectivo en caja).
 
@@ -153,8 +152,8 @@ mora = monto_cuota × (tasa_mora_diaria / 100) × días_de_retraso
        (limitada a un tope: máx. tope_mora_pct % de la cuota)
 ```
 La **tarea programada diaria** (RN12) detecta cuotas vencidas, calcula la mora, marca la cuota `VENCIDO`,
-pone el crédito en `MOROSO` y (a futuro) dispara el aviso por email. Todas las tasas son **configurables
-por el admin** y tienen **valor por defecto** (sección 5.1).
+pone el crédito en `MOROSO` y genera la notificación in-app de mora al cliente. Todas las tasas son
+**configurables por el admin** y tienen **valor por defecto** (sección 5.1).
 
 ### CU8 — Reportes y estadísticas
 **Dashboard (solo admin)** con gráficas (Chart.js, adaptadas a modo día/noche) y reportes PDF. Ventas por
@@ -171,9 +170,6 @@ sus compras (contado/crédito) en "Mi cuenta".
 | RN2 | Cualquier usuario edita su propio perfil y contraseña, sin importar el rol. |
 | RN3 | Precio **por línea, para cualquier cliente**: si cantidad ≥ `producto.cantidad_minima_mayorista` → `precio_mayorista`; si no → `precio_venta_base`. **No hay tipo de cliente**; el mayoreo lo decide la cantidad. |
 | RN4 | El **vendedor** solo aprueba/rechaza el pedido (no elige el método de pago); el precio mayorista se aplica línea por línea según el umbral de cada producto. **El cliente** elige pagar por QR o efectivo. |
-| RN5 | *(Eliminada — taller fuera de alcance.)* |
-| RN6 | *(Eliminada — taller fuera de alcance.)* |
-| RN7 | *(Eliminada — taller fuera de alcance.)* |
 | RN8 | Venta a crédito → mínimo 2 cuotas; se calcula mora por atraso. |
 | RN9 | Stock por debajo del mínimo → alerta de compra al almacenero. |
 | RN10 | El **umbral mayorista se define por producto** (lo fija el almacenero), no como un valor global. |
@@ -189,6 +185,8 @@ sus compras (contado/crédito) en "Mi cuenta".
 | RN20 | **El pago ocurre ANTES del despacho.** Una venta de pedido no se despacha si no está `PAGADA`. |
 | RN21 | **Separación de funciones en el pedido:** el **vendedor** aprueba y cobra (comercial), el **almacenero** despacha (logística). Ningún rol hace ambos pasos. |
 | RN22 | Cambios de estado del pedido/venta **notifican in-app**: al almacén cuando una venta queda `PAGADA`; al cliente al aprobar/rechazar/despachar su pedido (con enlace al detalle). |
+| RN23 | Al **recibir una compra** (`RECIBIDA`), el precio de venta de cada producto de la compra se **recalcula desde su costo**: `precio = costo × (1 + margen/100)`, con margen minorista y mayorista configurables (5.1). |
+| RN24 | Una **venta directa** o la **aprobación de un pedido** no procede si no hay **stock suficiente**; se valida antes de comprometer la operación y se muestra el detalle de lo que falta. |
 
 ### 5.1 Parámetros configurables (tabla `configuracion`, editables por el admin)
 
@@ -198,7 +196,9 @@ sus compras (contado/crédito) en "Mi cuenta".
 | `tasa_mora_diaria` | Mora por día de retraso sobre la cuota vencida (%) | **0.50** |
 | `tope_mora_pct` | Tope máximo de mora como % de la cuota | **20** |
 | `dias_entre_cuotas` | Días entre vencimientos de cuotas consecutivas | **30** |
-| `dias_aviso_cuota` | Días antes del vencimiento para avisar al cliente por email | **3** |
+| `dias_aviso_cuota` | Días de anticipación para avisar al cliente de una cuota por vencer | **3** |
+| `margen_venta_minorista` | Margen (%) sobre el costo de compra para el precio de venta minorista | **25** |
+| `margen_venta_mayorista` | Margen (%) sobre el costo de compra para el precio de venta mayorista | **15** |
 
 ---
 
@@ -210,21 +210,14 @@ sus compras (contado/crédito) en "Mi cuenta".
 - **D. Aprobar pedido → genera venta** — Cliente → Vendedor → Venta, sin recapturar datos.
 - **E. Separación cobro/despacho** — Vendedor cobra → Almacenero despacha, con avisos in-app entre ellos.
 
-### 6.1 Notificaciones (dos canales)
+### 6.1 Notificaciones (in-app)
 
-**Canal EMAIL (SMTP) — hacia el cliente (pendiente de implementar):**
-- **Recordatorio de cuota por vencer** (puede incluir el QR de pago).
-- Aviso de **mora** (cuota vencida).
-- (Opcional) confirmación de venta/boleta.
-
-> SMTP reutiliza el servidor de tecnoweb: `mail.tecnoweb.org.bo:25`, remitente `grupo02sa@tecnoweb.org.bo`,
-> sin TLS/auth. En Laravel se hace con **Mailables nativos**.
-
-**Canal IN-APP (tabla `notificacion` + badge en el navbar, clic → enlace al recurso):**
+Las notificaciones son **únicamente in-app** (tabla `notificacion` + badge en el navbar, clic → enlace al recurso):
 - **Stock bajo** (al almacenero).
 - **Pedido por aprobar** (al vendedor).
 - **Venta pagada, lista para despachar** (al almacenero).
 - **Pedido aprobado / rechazado / despachado** (al cliente).
+- **Cuota vencida / mora** (al cliente): la genera la tarea programada diaria al marcar el crédito MOROSO.
 
 ---
 
@@ -254,7 +247,7 @@ detalle_compra : id, compra_id→compra(cascade), producto_id→producto, cantid
 
 ── CU4 Pedidos ──
 pedido : id, cliente_id→cliente, fecha,
-         estado[SOLICITADO|APROBADO|RECHAZADO|DESPACHADO],
+         estado[SOLICITADO|APROBADO|RECHAZADO|EN_PROCESO|DESPACHADO|ANULADO],
          motivo_rechazo(null), venta_id→venta(null)
 detalle_pedido : id, pedido_id→pedido(cascade), producto_id→producto, cantidad(>0)
 
@@ -263,7 +256,7 @@ venta : id, numero_venta(unique), cliente_id→cliente, vendedor_id→users, fec
         tipo_venta[CONTADO|CREDITO], metodo_pago[EFECTIVO|QR],
         estado[PENDIENTE|PAGADA|COMPLETADA|ANULADA] def PENDIENTE,
         + pagofacil(transaction_id, qr_image, status, payment_number, raw_response)
-detalle_venta : id, venta_id→venta(cascade), producto_id→producto(NULL para servicios), descripcion(null),
+detalle_venta : id, venta_id→venta(cascade), producto_id→producto(null), descripcion(null),
                 cantidad(>0), precio_unitario(>0)
 
 ── CU7 Créditos y Pagos ──
@@ -271,13 +264,14 @@ credito : id, venta_id→venta(unique), numero_cuotas(>=2), tasa_interes, saldo_
           estado[VIGENTE|PAGADO|MOROSO]
 pago_cuota : id, credito_id→credito, numero_cuota, monto_cuota(>0), fecha_vencimiento,
              fecha_pago(null), mora def 0, estado[PENDIENTE|PAGADO|VENCIDO],
+             metodo_pago_id→metodos_pago(null),
              + pagofacil(transaction_id, payment_number, qr_image, expires_at, status, raw_response)
-metodos_pago : id, nombre   (catálogo: EFECTIVO, QR)
+metodos_pago : id, nombre(unique), activo(bool)   (catálogo: EFECTIVO, QR)
 
 ── Soporte y requisitos del docente ──
 configuracion : id, clave, valor, descripcion     (admin edita: tasa_mora_diaria, tasa_interes_credito, ...)
 notificacion  : id, usuario_id→users, tipo, mensaje, recurso, leido(bool), fecha   (in-app, sección 6.1)
-menu_item     : id, etiqueta, ruta_laravel, icono, orden, parent_id, role_id→roles
+menu_items    : id, etiqueta, ruta_laravel, icono, orden, parent_id→menu_items(null), role_id→roles, activo(bool)
 bitacora      : id, usuario_id→users(null), email, accion[LOGIN_OK|LOGIN_FAIL|ACCESO_RECURSO],
                 recurso, ip, user_agent, fecha
 page_visits   : ruta(unique), contador
@@ -291,8 +285,8 @@ page_visits   : ruta(unique), contador
 
 ```
 resources/js/Pages/
-├── Auth/            # Login, Register (Jetstream; sin "olvidé contraseña")
-├── Profile/         # Perfil propio (Jetstream — todos los roles)
+├── Auth/            # Login, Register, verificación 2FA (Jetstream; el reseteo de contraseña lo hace el admin)
+├── Profile/         # Perfil propio: foto, datos, contraseña, 2FA, sesiones, eliminación de cuenta (Jetstream — todos los roles)
 ├── Dashboard.vue    # Estadísticas (solo admin)
 ├── Welcome.vue      # Landing público con catálogo
 ├── Usuarios/        # Index, Create, Edit, Show
@@ -323,7 +317,7 @@ resources/js/Pages/
 | REQ | Cómo se cumple |
 |---|---|
 | 1. Diseño y navegación | Topbar con logo + buscador + usuario + tema; **sidebar** con menús desplegables (mini-menú flotante); menú dinámico desde BD; footer con contador de visitas; responsive (offcanvas en móvil) |
-| 2. ≥2 roles de negocio + menú dinámico BD | **3 roles de negocio** (vendedor, almacenero, cliente) + admin; `menu_item` filtrado por rol |
+| 2. ≥2 roles de negocio + menú dinámico BD | **3 roles de negocio** (vendedor, almacenero, cliente) + admin; `menu_items` filtrado por rol |
 | 3. MVC-MVVM | Laravel + Inertia + Vue |
 | 4. Control de acceso + bitácora | Middleware `role` + `Gate::before` (admin superusuario); tabla `bitacora` (LOGIN_OK/FAIL/ACCESO_RECURSO) |
 | 5. 3 temas + accesibilidad | Temas Niños/Jóvenes/Adultos, día/noche, tamaño de letra, contraste (`useTheme`) |
@@ -337,10 +331,10 @@ resources/js/Pages/
 
 ## 10. Fuera de alcance
 
-- **Módulo de Taller** (mecánico, motos, órdenes de trabajo, solicitud de repuestos) — **eliminado del proyecto**.
+- **Taller mecánico** (mecánicos, órdenes de trabajo, solicitud de repuestos): no forma parte del sistema; el negocio es 100% venta de repuestos (contado/crédito).
 - **Pago con tarjeta** — solo EFECTIVO y QR (PagoFácil).
 - **Notificaciones en tiempo real** (websockets/push) — las in-app son por recarga/badge simple.
-- **Notificaciones por email** (recordatorio/mora) — pendientes de implementar (Mailables).
+- **Notificaciones por email/SMTP** — fuera de alcance; las notificaciones del sistema son únicamente in-app.
 - Colas de trabajo (queues) asíncronas.
 - Integración con pasarela real distinta de PagoFácil.
 
@@ -352,7 +346,9 @@ Todos los CU y transversales están implementados y verificados (build + smoke +
 productos (con galería/carrusel), proveedores/compras, inventario, ventas (con el flujo separado
 pedido→venta→despacho y estado PAGADA), créditos + scheduler de mora, pedidos + catálogo, dashboard,
 reportes, configuración, bitácora, notificaciones in-app, temas, búsqueda global, contador de visitas y
-PagoFácil QR (venta contado, pedido aprobado y cuotas). **Pendiente:** notificaciones por email/SMTP.
+PagoFácil QR (venta contado, pedido aprobado y cuotas). Incluye validación de stock en venta y aprobación
+de pedidos (RN24), recálculo automático del precio de venta al recibir compras (RN23) y foto de perfil de
+usuarios. Las notificaciones son únicamente in-app (el email queda fuera de alcance).
 
 ---
 
@@ -386,7 +382,6 @@ Ubicación: `D:\Universidad\tecno\mailgroup02sa\mailgroup02sa` (proyecto Java PO
 | **Datos semilla** | `seed_data.sql` | 15 productos reales, 2 proveedores, 5 clientes, el equipo → seeders Laravel |
 | **Lógica de cuotas/mora** | `PagoCuotaService.java` | Portada a `CreditoService` en PHP |
 | **PagoFácil QR** | `PagoFacilService.java` + credenciales | Reescrito en `PagoFacilService.php` con las credenciales válidas del grupo |
-| **SMTP** | `ClienteSMTP.java`, `.env` | Referencia: en Laravel usamos Mailables (`mail.tecnoweb.org.bo:25`) |
 
 > ✅ **Credenciales válidas = las del proyecto de email (`mailgroup02sa`).** Viven en `.env` (no se suben al
 > entregable público).

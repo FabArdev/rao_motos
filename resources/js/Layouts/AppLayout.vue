@@ -130,7 +130,8 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                 <!-- Usuario -->
                 <div class="dropdown">
                     <button class="btn btn-sm btn-light dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-circle fs-6"></i>
+                        <img v-if="user?.profile_photo_url" :src="user.profile_photo_url" :alt="user.name" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0;" />
+                        <i v-else class="bi bi-person-circle fs-6"></i>
                         <span v-if="user" class="d-none d-sm-inline">{{ user.name }}</span>
                         <span v-if="user" class="badge bg-secondary text-uppercase d-none d-md-inline">{{ user.rol }}</span>
                     </button>

@@ -4,25 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project — RAO MOTOS
 
-A **motorcycle-parts store + repair workshop (taller)** with cash and **credit/installment (cuotas)** sales. Built for INF-513 Tecnología Web, Proyecto 2, grupo02sa. The repo started as the previous-semester *Tienda Elena* (clothing e-commerce); its technical scaffolding (Laravel + Jetstream + Inertia + Vue) was kept and the **entire business domain was rebuilt** as RAO MOTOS.
+A **motorcycle-parts store** with cash and **credit/installment (cuotas)** sales, plus **electronic QR payment (PagoFácil)**. Built for INF-513 Tecnología Web, Proyecto 2, grupo02sa. The repo started as the previous-semester *Tienda Elena* (clothing e-commerce); its technical scaffolding (Laravel + Jetstream + Inertia + Vue) was kept and the **entire business domain was rebuilt** as RAO MOTOS.
 
-> **`ALCANCE.md` (repo root) is the FROZEN source of truth for scope** — 5 roles, 9 use cases (incl. Taller), the DB schema, 19 business rules (RN1–RN19), configurable params with defaults, and (§14) what was wrong in the prior project and how it's fixed. **Read it before any domain work.**
+> **`ALCANCE.md` (repo root) is the source of truth for scope** — 4 roles, the use cases (CU1–CU8 + despachos), the DB schema, business rules **RN1–RN24**, configurable params with defaults, and (§14) what was wrong in the prior project and how it's fixed. **Read it before any domain work.** `README.md` is the user-facing overview.
 
-The prior **Java email project** (`D:\Universidad\tecno\mailgroup02sa\mailgroup02sa`) is the *same* RAO MOTOS business, already validated — reference for cuota/mora logic (`PagoCuotaService.java`), seed data, and the real tecnoweb/PagoFácil credentials. `PagoFacilService.php` (kept in `app/Services/`) is the working PHP PagoFácil integration to adapt in the payments phase.
+There is **no taller (workshop) module** — the business is 100% parts sales (contado/crédito). Notifications are **in-app only** (no email/SMTP).
+
+The prior **Java email project** (`D:\Universidad\tecno\mailgroup02sa\mailgroup02sa`) is the *same* RAO MOTOS business, already validated — reference for cuota/mora logic and seed data. `PagoFacilService.php` (`app/Services/`) is the working PHP PagoFácil integration.
 
 Spanish is the domain language — model names, columns, UI strings, and validation messages are in Spanish.
 
 ## Current status (what's built)
 
-- **Data layer: done & verified.** 22 clean migrations (the RAO schema), 23 Eloquent models, 7 seeders. `migrate:fresh --seed` runs green and is verified against the DB (5 roles, 11 users, 15 real products + inventario, etc.).
-- **Project cleaned & rebranded to RAO MOTOS.** All old Tienda Elena controllers/services/requests/Vue-pages/views were deleted. `routes/web.php` is minimal, `HandleInertiaRequests` is clean, `AppLayout.vue` was rewritten. README/composer/package/`APP_NAME` rebranded.
-- **CU1 — Usuarios (done):** `UserController` resource CRUD under `role:admin`, `Store/UpdateUsuarioRequest`, `Usuarios/{Index,Create,Edit,Show}.vue`, role-aware `Dashboard.vue`.
-- **CU2 — Productos (done):** `ProductoController` resource CRUD under `role:admin,almacenero`, `Store/UpdateProductoRequest` (foto upload, 2 prices, `cantidad_minima_mayorista`, `stock_minimo`), auto-creates the `inventario` row on store, **logical delete** (`activo=false`), `Productos/{Index,Create,Edit,Show}.vue`.
-- **Next:** CU3 (proveedores + compras), then inventario (CU5), pedidos, ventas, créditos, taller, reportes, bitácora, configuración, plus transversales (themes REQ5, search REQ9, bitácora REQ4, visit counter REQ7) and PagoFácil.
+**Everything is implemented and verified** (backend + Vue, `migrate:fresh --seed` green, `npm run build` green, smoke-tested):
+
+- **Data layer:** 30 migrations (RAO schema), 22 Eloquent models, 8 seeders. Seeded demo: 4 roles, 10 users (3 admin, 1 vendedor, 1 almacenero, 5 clientes), 15 real products + inventario, 2 proveedores.
+- **All CUs:** usuarios (CU1), productos con galería/carrusel (CU2), proveedores + compras (CU3), inventario (CU5), ventas con flujo pedido→venta→despacho y estado `PAGADA` (CU6), créditos + scheduler de mora (CU7), pedidos + catálogo (CU4), despachos (almacén), dashboard + reportes PDF (CU8).
+- **Transversales:** bitácora (REQ4), contador de visitas (REQ7), 3 temas + día/noche + accesibilidad (REQ5), búsqueda global (REQ9), notificaciones in-app, menú dinámico por rol (REQ2), PagoFácil QR (venta contado, pedido aprobado, cuotas).
+- **Recent additions:** stock validation on sale/pedido-approval (RN24, `InventarioService::verificarStock`), auto price recalculation on purchase receipt (RN23, `CompraController::recibir`), user profile photos (Jetstream `profilePhotos` enabled).
+
+**Known pending:** PagoFácil live QR depends on the campus network + real credentials. (In-app notifications, profile photos and their links now work — an earlier "notifications" symptom was really the `APP_URL`/Herd-host mismatch, see the serving note.)
 
 ## Working style
 
-Scope is frozen (ALCANCE.md), and the user granted autonomy to **implement without per-step confirmation** — proceed, and only pause for genuine business decisions or ambiguities not settled in ALCANCE. **The user handles all git commits himself — do not commit.** Favor automation + DB transactions + scheduled jobs over manual steps (ALCANCE §14). Build each CU end-to-end (backend + Vue) and verify (`npm run build` + in-process smoke) before reporting.
+The user granted autonomy to **implement without per-step confirmation** — proceed, and only pause for genuine business decisions or ambiguities not settled in ALCANCE. **The user handles all git commits himself — do not commit.** Favor automation + DB transactions + scheduled jobs over manual steps (ALCANCE §14). Build each change end-to-end (backend + Vue) and verify (`npm run build` + in-process/tinker smoke) before reporting. When ALCANCE and the code diverge, report it rather than assuming; keep ALCANCE/README in sync with the code.
 
 ## Dev environment & commands (this machine)
 
@@ -33,19 +38,21 @@ Scope is frozen (ALCANCE.md), and the user granted autonomy to **implement witho
 
 Run artisan as `& "<php84>" artisan <cmd>` from the project dir (PowerShell). `npm`/`node` (v24) *are* on PATH.
 
-**DB:** PostgreSQL **18 on port 5432**, database **`rao_motos`**, user `postgres`, password in `.env` (`1234`). (PG14 is on 5433.) Production DB is created only from the campus labs (`db_grupo02sa` on tecnoweb); deploy target `https://www.tecnoweb.org.bo/inf513/grupo02sa/proyecto2`.
+**DB:** PostgreSQL **18 on port 5432**, database **`rao_motos`**, user `postgres`, password in `.env`. (PG14 is on 5433.) Production DB is created only from the campus labs (on tecnoweb); deploy target `https://www.tecnoweb.org.bo/inf513/grupo02sa/proyecto2`.
 
 ```
-# rebuild DB
+# rebuild DB (demo data)
 & "<php84>" artisan migrate:fresh --seed
-& "<php84>" artisan storage:link        # done; needed for product images at /storage/...
+& "<php84>" artisan storage:link        # needed for product images & profile photos at /storage/...
+# scheduled mora job (run manually)
+& "<php84>" artisan creditos:marcar-vencidas
 # frontend
 npm install ; npm run build             # or `npm run dev` for HMR
 # format / backup
 vendor\bin\pint  ;  & "<php84>" artisan backup:db
 ```
 
-**Serving the app:** `php artisan serve` **fails to bind a socket** on this machine (and inside the agent sandbox). Use **Herd**: `herd link rao-motos` → **http://rao-motos.test**. To verify HTTP from the agent (no socket), boot the app in-process: require `bootstrap/app.php`, then `$kernel->handle(Request::create('/path','GET'))` and read `->getStatusCode()`.
+**Serving the app:** `php artisan serve` **fails to bind a socket** on this machine (and inside the agent sandbox). Use **Herd**: this project is linked as **`rao_motos`** (underscore) → **http://rao_motos.test**, and `APP_URL` in `.env` must match it exactly. (Note: a stale Herd link `rao-motos` with a hyphen points to the old *tienda_elena* project — do not use `rao-motos.test`; the underscore/hyphen mismatch breaks absolute URLs like profile photos and notification links.) To verify from the agent without a socket, use `artisan tinker --execute="..."` or boot the app in-process.
 
 It is **Laravel 10** (`composer.json` pins `^10.10`, classic `app/Http/Kernel.php`) — don't use Laravel 11-only APIs.
 
@@ -53,31 +60,38 @@ It is **Laravel 10** (`composer.json` pins `^10.10`, classic `app/Http/Kernel.ph
 
 Three layers: **Route → Controller → (Service) → Eloquent Model**, with a **Form Request** (Spanish `messages()`) for validation. Controllers stay thin and render Inertia pages via `Inertia::render('<Resource>/Index')`.
 
-**Models** (`app/Models/`, 23): all set `protected $table` to the singular Spanish name (e.g. `Producto`→`producto`, `DetalleVenta`→`detalle_venta`). `Cliente` is a 1:1 subtable of `users` (`$incrementing=false`, PK = `users.id`). Relations + casts are defined; `Producto::precioPara($cant)`, `Inventario::bajoMinimo()`, `Configuracion::valor($clave,$default)` are helpers.
+**Models** (`app/Models/`, 22): all set `protected $table` to the singular Spanish name (e.g. `Producto`→`producto`, `DetalleVenta`→`detalle_venta`). `Cliente` is a 1:1 subtable of `users` (PK = `users.id`). Helpers: `Producto::precioPara($cant)`, `Inventario::bajoMinimo()`, `Configuracion::valor($clave,$default)`, `Notificacion::paraRol($rol,$tipo,$msg,$recurso)`.
 
-**Established CRUD pattern** (follow CU1 `UserController` / CU2 `ProductoController` for new resources):
+**Services** (`app/Services/`): `VentaService` (creates ventas from mostrador or pedido, one pipeline), `CreditoService` (cuota calendar + mora), `InventarioService` (all stock movement + `verificarStock`), `PagoFacilService` (QR), `PageVisitService`.
+
+**Established CRUD pattern** (follow `UserController` / `ProductoController`):
 - `Route::resource('<plural>', XController::class)->parameters(['<plural>' => '<singular>'])` inside a `role:...` middleware group in `routes/web.php`.
 - `index`: `->with(...)` eager load, `ilike` search on a `q` param, `paginate(12)->withQueryString()`.
 - `store`/`update`: `DB::transaction`, validate via `Store/Update<Recurso>Request`. File uploads use `$request->file('foto')->store('<dir>','public')` and store the relative path; on the **Vue side, updates with a file use `form.transform(d => ({...d, _method:'put'})).post(...)`** (PHP doesn't parse multipart on PUT).
-- `destroy`: prefer **logical delete** (`activo=false`) for entities referenced by FKs (productos, etc.); guard against self-deletion (usuarios).
-- Vue: 4 files `Pages/<Resource>/{Index,Create,Edit,Show}.vue`, each wrapped in `<AppLayout title="...">`, Bootstrap-styled, using `useForm` and `form.errors` for inline validation. Flash shown from `$page.props.flash`.
+- `destroy`: prefer **logical delete** (`activo=false`) for entities referenced by FKs; guard against self-deletion (usuarios).
+- Vue: `Pages/<Resource>/{Index,Create,Edit,Show}.vue`, each wrapped in `<AppLayout title="...">`, Bootstrap-styled, using `useForm` and `form.errors`. Flash shown from `$page.props.flash` (`success`/`error`) via `FlashNotification.vue`.
 
-## Authorization (current state + plan)
+## Authorization
 
-Single role per user (`users.role_id` → `roles`; **not** many-to-many). Roles: `admin`, `vendedor`, `almacenero`, `mecanico`, `cliente`.
-- **Enforcement today:** route-level `role` middleware (`app/Http/Middleware/RoleMiddleware.php`, alias in `app/Http/Kernel.php`, checks `User::tieneRol()`), plus **`admin` is a superuser** via `Gate::before` in `AuthServiceProvider`. No per-resource Policies exist yet.
-- **`HandleInertiaRequests`** shares `auth.user` (with `rol`), `menuItems` (role-filtered nav from `menu_items`), and `flash`. (Per-resource `auth.permissions` was removed during cleanup; reintroduce with Policies as CUs need finer UI gating.)
-- **Dynamic sidebar:** `AppLayout.vue` renders `menuItems` but **only items whose route already exists** (`route().has(...)`), so a module appears in the menu automatically once you add its route (its `menu_items` row is already seeded per role in `MenuItemSeeder`). Add a CU → its route + the seeded menu entry → it shows for the right roles.
+Single role per user (`users.role_id` → `roles`; **not** many-to-many). Roles: **`admin`, `vendedor`, `almacenero`, `cliente`**.
+- **Enforcement:** route-level `role` middleware (`app/Http/Middleware/RoleMiddleware.php`, alias in `app/Http/Kernel.php`, checks `User::tieneRol()`), plus **`admin` is a superuser** via `Gate::before` in `AuthServiceProvider`.
+- **`HandleInertiaRequests`** shares `auth.user` (with `rol`), `menuItems` (role-filtered from `menu_items`, `activo=true`), `notificaciones` (`{no_leidas, recientes}`), `visitas`, and `flash`.
+- **Dynamic navbar:** `AppLayout.vue` is a top navbar with grouped dropdowns (built in JS from the role's `menuItems`) + responsive offcanvas + footer visit counter. Items render only when their route exists (`route().has(...)`), so a module shows up once its route + seeded `menu_items` row (per role, in `MenuItemSeeder`) exist.
+- Login is **by email** (Fortify `username = email`). No self-service password reset (`resetPasswords` disabled) — the admin resets a specific user's password from user management. 2FA and account deletion are available in the profile.
 
-## Cross-cutting & docente requirements (mostly TODO)
+## Cross-cutting (all implemented)
 
-`menu_items` (dynamic menu, REQ2) and `bitacora`/`page_visits`/`notificacion`/`configuracion` tables exist (seeded where relevant). Still to build: **bitácora** logging (REQ4), **page-visit counter** in the footer (REQ7), **3 themes + day/night + font/contrast** (REQ5), **global business search** in the header (REQ9), stats/dashboard (REQ8), and **notifications** (email/SMTP for client events, in-app for operational alerts — ALCANCE §6.1). The old Tienda Elena transversales were deleted; build these fresh for RAO.
+`menu_items` (dynamic menu REQ2), `bitacora` (REQ4, LOGIN_OK/FAIL/ACCESO_RECURSO), `page_visits` (REQ7 footer counter via `TrackPageVisits`), `configuracion` (admin-editable params), `notificacion` (in-app, badge + dropdown). Themes (REQ5) via `useTheme.js` + `ThemeSwitcher.vue`. Global search (REQ9) at `GET /buscar` (business data + role functionalities, accent/case-insensitive via `unaccent`). Dashboard Chart.js + PDF reports (REQ8, dompdf).
 
-## Key business rules (see ALCANCE.md for all RN1–RN19)
+**Notifications are in-app only** (types: `STOCK_BAJO`, `PEDIDO_POR_APROBAR`, `VENTA_PAGADA`, `PEDIDO_APROBADO`, `PEDIDO_RECHAZADO`, `PEDIDO_DESPACHADO`, `MORA`). No email/SMTP.
+
+## Key business rules (see ALCANCE.md for all RN1–RN24)
 
 - Totals (venta/compra) are **computed server-side** from line items — never typed (RN11).
-- **Stock decremented exactly once**, where goods physically leave (direct sale, sale generated from a pedido, or taller parts-request approval); a taller-generated venta does **not** re-decrement (RN18).
+- **Stock decremented exactly once**, where goods physically leave: direct sale (at creation) or dispatch of a pedido-originated sale (at despacho by the almacenero) (RN18). Sales/pedido-approval **validate stock first** and fail with a clear message if short (RN24, `InventarioService::verificarStock`).
 - **Wholesale price is per line, per product threshold** (`producto.cantidad_minima_mayorista`), for any client — there is **no client tier** (RN3/RN19). Use `Producto::precioPara($cantidad)`.
-- **Mora** = daily-proportional on the overdue cuota, capped, run by a **daily scheduler** that marks overdue cuotas and sets credits MOROSO (RN12/RN16).
-- Every configurable parameter (interest, mora rate, cap, cuota interval) lives in `configuracion` with a seeded **default** (RN17).
+- **Prices recalc on purchase receipt:** when a compra is RECIBIDA, each product's `precio_venta_base`/`precio_mayorista` = `costo × (1 + margen/100)`, with `margen_venta_minorista`/`margen_venta_mayorista` config params (RN23).
+- **Payment happens before dispatch;** vendedor cobra, almacenero despacha (RN20/RN21). Venta states `PENDIENTE → PAGADA → COMPLETADA` (or `ANULADA`).
+- **Mora** = daily-proportional on the overdue cuota, capped, run by a **daily scheduler** (`creditos:marcar-vencidas`) that marks overdue cuotas, sets credits MOROSO, and posts an in-app MORA notification (RN12/RN16).
+- Every configurable parameter lives in `configuracion` with a seeded **default** (RN17).
 - Money is bolivianos (Bs.). Eager-load to avoid N+1.

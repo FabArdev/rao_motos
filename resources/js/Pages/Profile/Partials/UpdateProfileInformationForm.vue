@@ -15,7 +15,8 @@ const props = defineProps({
 
 const form = useForm({
     _method: "PUT",
-    name: props.user.name,
+    nombre: props.user.nombre,
+    apellidos: props.user.apellidos,
     email: props.user.email,
     photo: null,
 });
@@ -85,73 +86,79 @@ const clearPhotoFileInput = () => {
         </template>
 
         <template #form>
-            <!-- Profile Photo -->
+            <!-- Foto de perfil -->
             <div
                 v-if="$page.props.jetstream.managesProfilePhotos"
-                class="col-span-6 sm:col-span-4"
+                class="mb-3"
             >
-                <!-- Profile Photo File Input -->
+                <!-- Input de archivo oculto -->
                 <input
                     id="photo"
                     ref="photoInput"
                     type="file"
                     class="d-none"
+                    accept="image/png,image/jpeg,image/webp"
                     @change="updatePhotoPreview"
                 />
 
-                <InputLabel for="photo" value="Foto" />
+                <InputLabel for="photo" value="Foto de perfil" />
 
-                <!-- Current Profile Photo -->
-                <div v-show="!photoPreview" class="mt-2">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;">
+                    <!-- Foto actual o vista previa de la nueva -->
                     <img
-                        :src="user.profile_photo_url"
-                        :alt="user.name"
-                        class="rounded-full h-20 w-20 object-cover"
+                        :src="photoPreview || user.profile_photo_url"
+                        :alt="user.nombre"
+                        style="width: 80px; height: 80px; min-width: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #dee2e6; display: block;"
                     />
+
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+                        <SecondaryButton
+                            type="button"
+                            @click.prevent="selectNewPhoto"
+                        >
+                            Seleccionar nueva foto
+                        </SecondaryButton>
+
+                        <SecondaryButton
+                            v-if="user.profile_photo_path"
+                            type="button"
+                            @click.prevent="deletePhoto"
+                        >
+                            Eliminar foto
+                        </SecondaryButton>
+                    </div>
                 </div>
 
-                <!-- New Profile Photo Preview -->
-                <div v-show="photoPreview" class="mt-2">
-                    <span
-                        class="block rounded-full w-20 h-20 bg-cover bg-no-repeat bg-center"
-                        :style="
-                            'background-image: url(\'' + photoPreview + '\');'
-                        "
-                    />
-                </div>
-
-                <SecondaryButton
-                    class="mt-2 me-2"
-                    type="button"
-                    @click.prevent="selectNewPhoto"
-                >
-                    Seleccionar Nueva Foto
-                </SecondaryButton>
-
-                <SecondaryButton
-                    v-if="user.profile_photo_path"
-                    type="button"
-                    class="mt-2"
-                    @click.prevent="deletePhoto"
-                >
-                    Eliminar Foto
-                </SecondaryButton>
-
+                <div class="form-text">JPG, PNG o WEBP, máximo 5 MB.</div>
                 <InputError :message="form.errors.photo" class="mt-2" />
             </div>
 
-            <!-- Name -->
+            <!-- Nombre -->
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="name" value="Nombre" />
+                <InputLabel for="nombre" value="Nombre" />
                 <TextInput
-                    id="name"
-                    v-model="form.name"
+                    id="nombre"
+                    v-model="form.nombre"
                     type="text"
                     class="mt-1 block w-full"
                     required
-                    autocomplete="name"
+                    autocomplete="given-name"
                 />
-                <InputError :message="form.errors.name" class="mt-2" />
+                <InputError :message="form.errors.nombre" class="mt-2" />
+            </div>
+
+            <!-- Apellidos -->
+            <div class="col-span-6 sm:col-span-4">
+                <InputLabel for="apellidos" value="Apellidos" />
+                <TextInput
+                    id="apellidos"
+                    v-model="form.apellidos"
+                    type="text"
+                    class="mt-1 block w-full"
+                    required
+                    autocomplete="family-name"
+                />
+                <InputError :message="form.errors.apellidos" class="mt-2" />
             </div>
 
             <!-- Email -->
