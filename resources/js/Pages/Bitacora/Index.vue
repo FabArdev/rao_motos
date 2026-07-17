@@ -36,7 +36,7 @@ const badge = (a) => ({ LOGIN_OK: 'bg-success', LOGIN_FAIL: 'bg-danger', ACCESO_
                         <tr v-for="r in registros.data" :key="r.id">
                             <td class="small">{{ new Date(r.fecha).toLocaleString() }}</td>
                             <td>{{ r.usuario?.nombre }} {{ r.usuario?.apellidos }}</td>
-                            <td class="small">{{ r.email }}</td>
+                            <td class="small">{{ r.correo }}</td>
                             <td><span class="badge" :class="badge(r.accion)">{{ r.accion }}</span></td>
                             <td class="small font-monospace">{{ r.recurso }}</td>
                             <td class="small">{{ r.ip }}</td>

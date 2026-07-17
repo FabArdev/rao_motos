@@ -32,7 +32,7 @@ class VentaController extends Controller
             $estado = 'PAGADA';
         }
 
-        $ventas = Venta::with(['cliente.user', 'vendedor', 'credito' => function ($c) {
+        $ventas = Venta::with(['cliente.usuario', 'vendedor', 'credito' => function ($c) {
             $c->withCount([
                 'cuotas as cuotas_total',
                 'cuotas as cuotas_pagadas' => fn ($q) => $q->where('estado', 'PAGADO'),
@@ -53,8 +53,8 @@ class VentaController extends Controller
     public function create()
     {
         return Inertia::render('Ventas/Create', [
-            'clientes' => Cliente::with('user:id,nombre,apellidos')->get()
-                ->map(fn ($c) => ['id' => $c->id, 'nombre' => trim(($c->user->nombre ?? '').' '.($c->user->apellidos ?? '')), 'nit_ci' => $c->nit_ci]),
+            'clientes' => Cliente::with('usuario:id,nombre,apellidos')->get()
+                ->map(fn ($c) => ['id' => $c->id, 'nombre' => trim(($c->usuario->nombre ?? '').' '.($c->usuario->apellidos ?? '')), 'nit_ci' => $c->nit_ci]),
             'productos' => Producto::with('inventario:id,producto_id,stock_actual')
                 ->where('activo', true)->orderBy('nombre')
                 ->get(['id', 'codigo', 'nombre', 'precio_venta_base', 'precio_mayorista', 'cantidad_minima_mayorista']),
@@ -103,7 +103,7 @@ class VentaController extends Controller
 
     public function show(Venta $venta)
     {
-        $venta->load(['cliente.user', 'vendedor', 'detalles.producto', 'credito.cuotas']);
+        $venta->load(['cliente.usuario', 'vendedor', 'detalles.producto', 'credito.cuotas']);
 
         return Inertia::render('Ventas/Show', ['venta' => $venta]);
     }

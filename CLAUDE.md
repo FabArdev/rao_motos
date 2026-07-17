@@ -18,7 +18,7 @@ Spanish is the domain language — model names, columns, UI strings, and validat
 
 **Everything is implemented and verified** (backend + Vue, `migrate:fresh --seed` green, `npm run build` green, smoke-tested):
 
-- **Data layer:** 30 migrations (RAO schema), 22 Eloquent models, 8 seeders. Seeded demo: 4 roles, 10 users (3 admin, 1 vendedor, 1 almacenero, 5 clientes), 15 real products + inventario, 2 proveedores.
+- **Data layer:** 30 migrations (RAO schema), 23 Eloquent models (22 + `ModeloBase`), 8 seeders. Seeded demo: 4 roles, 10 usuarios (3 admin, 1 vendedor, 1 almacenero, 5 clientes), 15 real products + inventario, 2 proveedores.
 - **All CUs:** usuarios (CU1), productos con galería/carrusel (CU2), proveedores + compras (CU3), inventario (CU5), ventas con flujo pedido→venta→despacho y estado `PAGADA` (CU6), créditos + scheduler de mora (CU7), pedidos + catálogo (CU4), despachos (almacén), dashboard + reportes PDF (CU8).
 - **Transversales:** bitácora (REQ4), contador de visitas (REQ7), 3 temas + día/noche + accesibilidad (REQ5), búsqueda global (REQ9), notificaciones in-app, menú dinámico por rol (REQ2), PagoFácil QR (venta contado, pedido aprobado, cuotas).
 - **Recent additions:** stock validation on sale/pedido-approval (RN24, `InventarioService::verificarStock`), auto price recalculation on purchase receipt (RN23, `CompraController::recibir`), user profile photos (Jetstream `profilePhotos` enabled).
@@ -60,12 +60,20 @@ It is **Laravel 10** (`composer.json` pins `^10.10`, classic `app/Http/Kernel.ph
 
 Three layers: **Route → Controller → (Service) → Eloquent Model**, with a **Form Request** (Spanish `messages()`) for validation. Controllers stay thin and render Inertia pages via `Inertia::render('<Resource>/Index')`.
 
-**Models** (`app/Models/`, 22): all set `protected $table` to the singular Spanish name (e.g. `Producto`→`producto`, `DetalleVenta`→`detalle_venta`). `Cliente` is a 1:1 subtable of `users` (PK = `users.id`). Helpers: `Producto::precioPara($cant)`, `Inventario::bajoMinimo()`, `Configuracion::valor($clave,$default)`, `Notificacion::paraRol($rol,$tipo,$msg,$recurso)`.
+**Models** (`app/Models/`, 23): all set `protected $table` to the singular Spanish name (e.g. `Producto`→`producto`, `DetalleVenta`→`detalle_venta`). `Cliente` is a 1:1 subtable of `usuario` (PK = `usuario.id`), exposed via `Cliente::usuario()`. Helpers: `Producto::precioPara($cant)`, `Inventario::bajoMinimo()`, `Configuracion::valor($clave,$default)`, `Notificacion::paraRol($rol,$tipo,$msg,$recurso)`.
 
-**Services** (`app/Services/`): `VentaService` (creates ventas from mostrador or pedido, one pipeline), `CreditoService` (cuota calendar + mora), `InventarioService` (all stock movement + `verificarStock`), `PagoFacilService` (QR), `PageVisitService`.
+**Everything is in Spanish — including timestamps.** See **ALCANCE §12.1** for the full convention and the exhaustive list of what stays English. The load-bearing points:
+- **`ModeloBase`** (`app/Models/ModeloBase.php`) declares `CREATED_AT = 'creado_en'` / `UPDATED_AT = 'actualizado_en'`. **Every domain model must extend it** instead of `Model` — a new model that extends `Model` silently gets `created_at` and breaks on insert. `Usuario` is the one exception (must extend `Authenticatable` for Fortify) and repeats the constants inline. A trait does *not* work here: `Eloquent\Model` already defines those constants and PHP rejects the collision.
+- **`->latest()` / `->oldest()` with no argument default to `created_at`** and will blow up. Always pass `'creado_en'`.
+- Login is by **`correo`** (`config/fortify.php` `'username' => 'correo'`); the `config/auth.php` provider is `usuarios`. Full name is **`Usuario::nombre_completo`** (not `name`), which is why `Usuario` overrides Jetstream's `defaultProfilePhotoUrl()`.
+- Inertia shares the user as **`auth.usuario`** and the menu as **`itemsMenu`**.
+- Kept English (do not "fix"): `password`, `profile_photo_path`/`profile_photo_url`, `current_team_id`, `two_factor_*`, the `remember` login field, and the `sessions`/`failed_jobs`/`password_reset_tokens`/`personal_access_tokens` tables.
+- **PagoFácil:** our columns are Spanish (`pago_facil_id_transaccion`, …) but the API payload keys (`transactionId`, `paymentNumber`, `email`, …) are the external contract — never translate them.
+
+**Services** (`app/Services/`): `VentaService` (creates ventas from mostrador or pedido, one pipeline), `CreditoService` (cuota calendar + mora), `InventarioService` (all stock movement + `verificarStock`), `PagoFacilService` (QR), `VisitaPaginaService`.
 
 **Established CRUD pattern** (follow `UserController` / `ProductoController`):
-- `Route::resource('<plural>', XController::class)->parameters(['<plural>' => '<singular>'])` inside a `role:...` middleware group in `routes/web.php`.
+- `Route::resource('<plural>', XController::class)->parameters(['<plural>' => '<singular>'])` inside a `rol:...` middleware group in `routes/web.php`.
 - `index`: `->with(...)` eager load, `ilike` search on a `q` param, `paginate(12)->withQueryString()`.
 - `store`/`update`: `DB::transaction`, validate via `Store/Update<Recurso>Request`. File uploads use `$request->file('foto')->store('<dir>','public')` and store the relative path; on the **Vue side, updates with a file use `form.transform(d => ({...d, _method:'put'})).post(...)`** (PHP doesn't parse multipart on PUT).
 - `destroy`: prefer **logical delete** (`activo=false`) for entities referenced by FKs; guard against self-deletion (usuarios).
@@ -73,15 +81,15 @@ Three layers: **Route → Controller → (Service) → Eloquent Model**, with a 
 
 ## Authorization
 
-Single role per user (`users.role_id` → `roles`; **not** many-to-many). Roles: **`admin`, `vendedor`, `almacenero`, `cliente`**.
-- **Enforcement:** route-level `role` middleware (`app/Http/Middleware/RoleMiddleware.php`, alias in `app/Http/Kernel.php`, checks `User::tieneRol()`), plus **`admin` is a superuser** via `Gate::before` in `AuthServiceProvider`.
-- **`HandleInertiaRequests`** shares `auth.user` (with `rol`), `menuItems` (role-filtered from `menu_items`, `activo=true`), `notificaciones` (`{no_leidas, recientes}`), `visitas`, and `flash`.
-- **Dynamic navbar:** `AppLayout.vue` is a top navbar with grouped dropdowns (built in JS from the role's `menuItems`) + responsive offcanvas + footer visit counter. Items render only when their route exists (`route().has(...)`), so a module shows up once its route + seeded `menu_items` row (per role, in `MenuItemSeeder`) exist.
-- Login is **by email** (Fortify `username = email`). No self-service password reset (`resetPasswords` disabled) — the admin resets a specific user's password from user management. 2FA and account deletion are available in the profile.
+Single role per user (`usuario.rol_id` → `rol`; **not** many-to-many). Roles: **`admin`, `vendedor`, `almacenero`, `cliente`**.
+- **Enforcement:** route-level `rol` middleware (`app/Http/Middleware/RolMiddleware.php`, alias in `app/Http/Kernel.php`, checks `Usuario::tieneRol()`), plus **`admin` is a superuser** via `Gate::before` in `AuthServiceProvider`. Note `Gate::before` covers Gates only — a route behind `rol:cliente` still 403s for admin (e.g. `/catalogo`).
+- **`HandleInertiaRequests`** shares `auth.usuario` (with `rol`), `itemsMenu` (role-filtered from `item_menu`, `activo=true`), `notificaciones` (`{no_leidas, recientes}`), `visitas`, and `flash`.
+- **Dynamic navbar:** `AppLayout.vue` is a top navbar with grouped dropdowns (built in JS from the role's `itemsMenu`) + responsive offcanvas + footer visit counter. Items render only when their route exists (`route().has(...)`), so a module shows up once its route + seeded `item_menu` row (per role, in `ItemMenuSeeder`) exist.
+- Login is **by correo** (Fortify `username = correo`). No self-service password reset (`resetPasswords` disabled) — the admin resets a specific user's password from user management. 2FA and account deletion are available in the profile.
 
 ## Cross-cutting (all implemented)
 
-`menu_items` (dynamic menu REQ2), `bitacora` (REQ4, LOGIN_OK/FAIL/ACCESO_RECURSO), `page_visits` (REQ7 footer counter via `TrackPageVisits`), `configuracion` (admin-editable params), `notificacion` (in-app, badge + dropdown). Themes (REQ5) via `useTheme.js` + `ThemeSwitcher.vue`. Global search (REQ9) at `GET /buscar` (business data + role functionalities, accent/case-insensitive via `unaccent`). Dashboard Chart.js + PDF reports (REQ8, dompdf).
+`item_menu` (dynamic menu REQ2), `bitacora` (REQ4, LOGIN_OK/FAIL/ACCESO_RECURSO), `visita_pagina` (REQ7 footer counter via `RegistrarVisitasPagina`), `configuracion` (admin-editable params), `notificacion` (in-app, badge + dropdown). Themes (REQ5) via `useTheme.js` + `ThemeSwitcher.vue`. Global search (REQ9) at `GET /buscar` (business data + role functionalities, accent/case-insensitive via `unaccent`). Dashboard Chart.js + PDF reports (REQ8, dompdf).
 
 **Notifications are in-app only** (types: `STOCK_BAJO`, `PEDIDO_POR_APROBAR`, `VENTA_PAGADA`, `PEDIDO_APROBADO`, `PEDIDO_RECHAZADO`, `PEDIDO_DESPACHADO`, `MORA`). No email/SMTP.
 

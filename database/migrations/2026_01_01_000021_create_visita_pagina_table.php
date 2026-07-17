@@ -8,16 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('page_visits', function (Blueprint $table) {
+        Schema::create('visita_pagina', function (Blueprint $table) {
             $table->id();
             $table->string('ruta')->unique();
             $table->unsignedBigInteger('contador')->default(0);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('page_visits');
+        Schema::dropIfExists('visita_pagina');
     }
 };

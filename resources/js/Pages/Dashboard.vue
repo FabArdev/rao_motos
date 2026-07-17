@@ -16,9 +16,9 @@ const props = defineProps({
 });
 
 const page = usePage();
-const user = computed(() => page.props.auth?.user);
+const usuario = computed(() => page.props.auth?.usuario);
 const accesos = computed(() =>
-    (page.props.menuItems ?? []).filter((i) => route().has(i.ruta_laravel) && i.ruta_laravel !== 'dashboard')
+    (page.props.itemsMenu ?? []).filter((i) => route().has(i.ruta_laravel) && i.ruta_laravel !== 'dashboard')
 );
 
 const fmt = (n) => `Bs. ${Number(n ?? 0).toFixed(2)}`;
@@ -75,10 +75,10 @@ const barStacked = computed(() => ({
     <Head title="Dashboard" />
 
     <AppLayout title="Dashboard">
-        <h1 class="h4 mb-1">Hola, {{ user?.name }} 👋</h1>
+        <h1 class="h4 mb-1">Hola, {{ usuario?.nombre_completo }} 👋</h1>
         <p class="text-muted">
             Bienvenido a <strong>RAO MOTOS</strong> — tu rol es
-            <span class="badge bg-primary text-uppercase">{{ user?.rol }}</span>
+            <span class="badge bg-primary text-uppercase">{{ usuario?.rol }}</span>
         </p>
 
         <!-- Tarjetas de estadísticas -->

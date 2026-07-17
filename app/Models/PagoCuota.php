@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class PagoCuota extends Model
+class PagoCuota extends ModeloBase
 {
     protected $table = 'pago_cuota';
 
     protected $fillable = [
         'credito_id', 'numero_cuota', 'monto_cuota', 'fecha_vencimiento', 'fecha_pago',
         'mora', 'estado', 'metodo_pago_id',
-        'pago_facil_transaction_id', 'pago_facil_payment_number',
-        'pago_facil_qr_image', 'pago_facil_expires_at', 'pago_facil_status', 'pago_facil_raw_response',
+        'pago_facil_id_transaccion', 'pago_facil_numero_pago',
+        'pago_facil_imagen_qr', 'pago_facil_expira_en', 'pago_facil_estado', 'pago_facil_respuesta_cruda',
     ];
 
     protected $casts = [
@@ -21,7 +19,7 @@ class PagoCuota extends Model
         'mora' => 'decimal:2',
         'fecha_vencimiento' => 'date',
         'fecha_pago' => 'date',
-        'pago_facil_expires_at' => 'datetime',
+        'pago_facil_expira_en' => 'datetime',
     ];
 
     public function credito()

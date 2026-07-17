@@ -34,11 +34,11 @@ usuario autenticado.
 
 ### 2.1 Decisión de diseño — herencia por rol
 
-- `users` es la tabla base (la de Jetstream, para no romper el login). Tiene `role_id`.
+- `usuario` es la tabla base (la de Jetstream renombrada al español, sin romper el login). Tiene `rol_id`.
 - Solo el **cliente** tiene una subtabla 1:1 (`cliente`) con su dato de facturación (`nit_ci`). **No hay
   "tipo de cliente"**: un cliente es solo cliente; que una compra sea mayorista lo decide el sistema por
   la cantidad (RN3), no una etiqueta.
-- Admin, vendedor y almacenero se distinguen solo por `role_id` (no necesitan datos extra).
+- Admin, vendedor y almacenero se distinguen solo por `rol_id` (no necesitan datos extra).
 - **Registro público** añade el campo `direccion` (opcional) además de los datos personales.
 
 ---
@@ -225,11 +225,12 @@ Las notificaciones son **únicamente in-app** (tabla `notificacion` + badge en e
 
 ```
 ── CU1 Usuarios ──
-users   : id, nombre, apellidos, ci(unique), telefono, direccion, email(unique,null), password,
-          profile_photo_path, estado(bool), fecha_nacimiento, role_id→roles
-          ↑ tabla de Jetstream CONSERVADA (login/registro/perfil). `ci` = carnet personal.
-roles   : id, nombre, descripcion   (admin|vendedor|almacenero|cliente)
-cliente : id(=users.id, cascade), nit_ci      (sin "tipo de cliente"; el mayoreo lo decide la cantidad)
+usuario : id, nombre, apellidos, ci(unique), telefono, direccion, correo(unique,null), password,
+          profile_photo_path, estado(bool), fecha_nacimiento, rol_id→rol
+          ↑ tabla de Jetstream RENOMBRADA a `usuario` (login/registro/perfil siguen intactos).
+            `ci` = carnet personal.
+rol     : id, nombre, descripcion   (admin|vendedor|almacenero|cliente)
+cliente : id(=usuario.id, cascade), nit_ci    (sin "tipo de cliente"; el mayoreo lo decide la cantidad)
 
 ── CU2 Productos / CU5 Inventario ──
 producto : id, codigo(unique), nombre, marca, modelo, descripcion,
@@ -252,10 +253,10 @@ pedido : id, cliente_id→cliente, fecha,
 detalle_pedido : id, pedido_id→pedido(cascade), producto_id→producto, cantidad(>0)
 
 ── CU6 Ventas ──
-venta : id, numero_venta(unique), cliente_id→cliente, vendedor_id→users, fecha, monto_total(>0),
+venta : id, numero_venta(unique), cliente_id→cliente, vendedor_id→usuario, fecha, monto_total(>0),
         tipo_venta[CONTADO|CREDITO], metodo_pago[EFECTIVO|QR],
         estado[PENDIENTE|PAGADA|COMPLETADA|ANULADA] def PENDIENTE,
-        + pagofacil(transaction_id, qr_image, status, payment_number, raw_response)
+        + pago_facil_(id_transaccion, imagen_qr, estado, numero_pago, respuesta_cruda)
 detalle_venta : id, venta_id→venta(cascade), producto_id→producto(null), descripcion(null),
                 cantidad(>0), precio_unitario(>0)
 
@@ -264,20 +265,50 @@ credito : id, venta_id→venta(unique), numero_cuotas(>=2), tasa_interes, saldo_
           estado[VIGENTE|PAGADO|MOROSO]
 pago_cuota : id, credito_id→credito, numero_cuota, monto_cuota(>0), fecha_vencimiento,
              fecha_pago(null), mora def 0, estado[PENDIENTE|PAGADO|VENCIDO],
-             metodo_pago_id→metodos_pago(null),
-             + pagofacil(transaction_id, payment_number, qr_image, expires_at, status, raw_response)
-metodos_pago : id, nombre(unique), activo(bool)   (catálogo: EFECTIVO, QR)
+             metodo_pago_id→metodo_pago(null),
+             + pago_facil_(id_transaccion, numero_pago, imagen_qr, expira_en, estado, respuesta_cruda)
+metodo_pago : id, nombre(unique), activo(bool)   (catálogo: EFECTIVO, QR)
 
 ── Soporte y requisitos del docente ──
 configuracion : id, clave, valor, descripcion     (admin edita: tasa_mora_diaria, tasa_interes_credito, ...)
-notificacion  : id, usuario_id→users, tipo, mensaje, recurso, leido(bool), fecha   (in-app, sección 6.1)
-menu_items    : id, etiqueta, ruta_laravel, icono, orden, parent_id→menu_items(null), role_id→roles, activo(bool)
-bitacora      : id, usuario_id→users(null), email, accion[LOGIN_OK|LOGIN_FAIL|ACCESO_RECURSO],
-                recurso, ip, user_agent, fecha
-page_visits   : ruta(unique), contador
+notificacion  : id, usuario_id→usuario, tipo, mensaje, recurso, leido(bool), fecha   (in-app, sección 6.1)
+item_menu     : id, etiqueta, ruta_laravel, icono, orden, padre_id→item_menu(null), rol_id→rol, activo(bool)
+bitacora      : id, usuario_id→usuario(null), correo, accion[LOGIN_OK|LOGIN_FAIL|ACCESO_RECURSO],
+                recurso, ip, agente_usuario, fecha
+visita_pagina : ruta(unique), contador
 ```
 
+> **Todo el esquema está en español**, incluidas las marcas de tiempo: cada tabla propia usa
+> `creado_en` / `actualizado_en` en lugar de `created_at` / `updated_at` (ver §12.1).
+
 > Extensión de PostgreSQL **`unaccent`** habilitada por migración: la búsqueda global ignora tildes.
+
+### 12.1 Convención de nombres — español en todo el dominio
+
+Nombres de tabla, columna, modelo, relación y variable van **en español y en singular**. Lo único que se
+conserva en inglés es la fontanería de Laravel que no se puede renombrar sin romper el framework:
+
+| Se conserva en inglés | Por qué |
+|---|---|
+| `password` | Contrato `Authenticatable::getAuthPassword()` de Laravel |
+| `profile_photo_path`, `profile_photo_url`, `current_team_id` | Los gestiona el trait `HasProfilePhoto` de Jetstream |
+| `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at` | Los gestiona `TwoFactorAuthenticatable` de Fortify |
+| Tablas `sessions`, `failed_jobs`, `password_reset_tokens`, `personal_access_tokens` | Tablas internas del framework/Sanctum |
+| Campo `remember` del login | Fortify lo lee del request para "recordarme" |
+
+Detalles de implementación:
+
+- **Marcas de tiempo:** `App\Models\ModeloBase` declara `CREATED_AT = 'creado_en'` y
+  `UPDATED_AT = 'actualizado_en'`; **todo modelo del dominio debe extenderlo**. `Usuario` es la única
+  excepción (extiende `Authenticatable` porque lo exige Fortify) y por eso repite las constantes.
+  *No sirve un trait:* `Eloquent\Model` ya define esas constantes y PHP considera el choque incompatible.
+- **Login por `correo`:** `config/fortify.php` usa `'username' => 'correo'`. El *provider* de
+  `config/auth.php` se llama `usuarios`.
+- **`Usuario::nombre_completo`** sustituye al accesor `name` de Jetstream; por eso `Usuario` sobrescribe
+  `defaultProfilePhotoUrl()`, que en el original lee `$this->name` para las iniciales del avatar.
+- **PagoFácil:** las columnas propias van en español (`pago_facil_id_transaccion`, …), pero las claves del
+  *payload* que viaja al API (`transactionId`, `paymentNumber`, `phoneNumber`, `email`, …) son del contrato
+  externo y **no se traducen**.
 
 ---
 
@@ -317,12 +348,12 @@ resources/js/Pages/
 | REQ | Cómo se cumple |
 |---|---|
 | 1. Diseño y navegación | Topbar con logo + buscador + usuario + tema; **sidebar** con menús desplegables (mini-menú flotante); menú dinámico desde BD; footer con contador de visitas; responsive (offcanvas en móvil) |
-| 2. ≥2 roles de negocio + menú dinámico BD | **3 roles de negocio** (vendedor, almacenero, cliente) + admin; `menu_items` filtrado por rol |
+| 2. ≥2 roles de negocio + menú dinámico BD | **3 roles de negocio** (vendedor, almacenero, cliente) + admin; `item_menu` filtrado por rol |
 | 3. MVC-MVVM | Laravel + Inertia + Vue |
 | 4. Control de acceso + bitácora | Middleware `role` + `Gate::before` (admin superusuario); tabla `bitacora` (LOGIN_OK/FAIL/ACCESO_RECURSO) |
 | 5. 3 temas + accesibilidad | Temas Niños/Jóvenes/Adultos, día/noche, tamaño de letra, contraste (`useTheme`) |
 | 6. Validación en español | Form Requests con `messages()` + validación Vue |
-| 7. Contador de visitas | Middleware `TrackPageVisits` + `page_visits` en el footer de cada página |
+| 7. Contador de visitas | Middleware `RegistrarVisitasPagina` + `visita_pagina` en el footer de cada página |
 | 8. Estadísticas | Dashboard Chart.js (solo admin) + reportes PDF |
 | 9. Búsqueda global | Campo en el encabezado que busca **información del negocio** (productos, clientes, pedidos) **y funcionalidades** del rol (te lleva a la página); ignora tildes y mayúsculas; role-safe. Ruta `GET /buscar?q=...` |
 | 10. Pagos electrónicos | Catálogo de **métodos de pago** (EFECTIVO, QR) registrado en cada venta/pago + **pago único** (venta contado) + **plan de pagos** (cuotas). **PagoFácil QR** para venta al contado, pago de pedido aprobado y pago de cuotas |

@@ -16,7 +16,8 @@ return new class extends Migration
             $table->enum('tecnica_inventario', ['PERMANENTE', 'PERIODICO'])->default('PERMANENTE');
             $table->enum('tecnica_costo', ['PEPS', 'UEPS', 'PROMEDIO'])->default('PROMEDIO');
             $table->timestamp('fecha_actualizacion')->useCurrent();
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('producto_id')->references('id')->on('producto')->onDelete('restrict');
         });

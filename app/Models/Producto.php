@@ -2,10 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
-
-class Producto extends Model
+class Producto extends ModeloBase
 {
     protected $table = 'producto';
 
@@ -26,7 +23,7 @@ class Producto extends Model
 
     public function getFotoCompletaAttribute(): ?string
     {
-        return $this->foto_url ? asset('storage/' . $this->foto_url) : null;
+        return $this->foto_url ? asset('storage/'.$this->foto_url) : null;
     }
 
     public function inventario()

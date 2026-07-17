@@ -14,7 +14,8 @@ return new class extends Migration
             $table->timestamp('fecha')->useCurrent();
             $table->decimal('total', 12, 2)->default(0);     // calculado por el servidor desde el detalle
             $table->enum('estado', ['PENDIENTE', 'RECIBIDA', 'ANULADA'])->default('PENDIENTE');
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('proveedor_id')->references('id')->on('proveedor')->onDelete('restrict');
         });

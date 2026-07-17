@@ -11,15 +11,15 @@ const form = useForm({
     ci: props.usuario.ci,
     telefono: props.usuario.telefono,
     direccion: props.usuario.direccion ?? '',
-    email: props.usuario.email,
+    correo: props.usuario.correo,
     password: '',
     password_confirmation: '',
-    role_id: props.usuario.role_id,
+    rol_id: props.usuario.rol_id,
     estado: !!props.usuario.estado,
     nit_ci: props.usuario.cliente?.nit_ci ?? '',
 });
 
-const esCliente = computed(() => props.roles.find((r) => r.id == form.role_id)?.nombre === 'cliente');
+const esCliente = computed(() => props.roles.find((r) => r.id == form.rol_id)?.nombre === 'cliente');
 
 const enviar = () => form.put(route('usuarios.update', props.usuario.id));
 </script>
@@ -53,10 +53,10 @@ const enviar = () => form.put(route('usuarios.update', props.usuario.id));
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Rol</label>
-                        <select v-model="form.role_id" class="form-select" :class="{ 'is-invalid': form.errors.role_id }">
+                        <select v-model="form.rol_id" class="form-select" :class="{ 'is-invalid': form.errors.rol_id }">
                             <option v-for="r in roles" :key="r.id" :value="r.id" class="text-capitalize">{{ r.nombre }}</option>
                         </select>
-                        <div class="invalid-feedback">{{ form.errors.role_id }}</div>
+                        <div class="invalid-feedback">{{ form.errors.rol_id }}</div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Dirección</label>
@@ -65,8 +65,8 @@ const enviar = () => form.put(route('usuarios.update', props.usuario.id));
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Email</label>
-                        <input v-model="form.email" type="email" class="form-control" :class="{ 'is-invalid': form.errors.email }" />
-                        <div class="invalid-feedback">{{ form.errors.email }}</div>
+                        <input v-model="form.correo" type="email" class="form-control" :class="{ 'is-invalid': form.errors.correo }" />
+                        <div class="invalid-feedback">{{ form.errors.correo }}</div>
                     </div>
                     <div v-if="esCliente" class="col-md-6">
                         <label class="form-label">NIT / CI de facturación</label>

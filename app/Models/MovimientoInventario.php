@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class MovimientoInventario extends Model
+class MovimientoInventario extends ModeloBase
 {
     protected $table = 'movimiento_inventario';
 

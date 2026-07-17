@@ -10,9 +10,20 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class Usuario extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasProfilePhoto, Notifiable, TwoFactorAuthenticatable;
+
+    // Usuario no puede extender ModeloBase (Fortify exige Authenticatable),
+    // así que repite aquí las marcas de tiempo en español del resto del dominio.
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
+    protected $table = 'usuario';
+
+    /** La columna de "recuérdame" también va en español. */
+    protected $rememberTokenName = 'token_recordar';
 
     protected $fillable = [
         'nombre',
@@ -20,27 +31,27 @@ class User extends Authenticatable
         'ci',
         'telefono',
         'direccion',
-        'email',
+        'correo',
         'password',
-        'role_id',
+        'rol_id',
         'estado',
         'fecha_nacimiento',
     ];
 
     protected $hidden = [
         'password',
-        'remember_token',
+        'token_recordar',
         'two_factor_recovery_codes',
         'two_factor_secret',
     ];
 
     protected $appends = [
-        'name',
+        'nombre_completo',
         'profile_photo_url',
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
+        'correo_verificado_en' => 'datetime',
         'estado' => 'boolean',
         'fecha_nacimiento' => 'date',
     ];
@@ -48,9 +59,9 @@ class User extends Authenticatable
     /* ---------------------------------------------------------------------
      | Relaciones
      * ------------------------------------------------------------------- */
-    public function role()
+    public function rol()
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsTo(Rol::class);
     }
 
     /** Subtabla 1:1 (solo si el usuario es cliente). */
@@ -75,7 +86,7 @@ class User extends Authenticatable
      * ------------------------------------------------------------------- */
     public function tieneRol($rol): bool
     {
-        return $this->role && strcasecmp($this->role->nombre, $rol) === 0;
+        return $this->rol && strcasecmp($this->rol->nombre, $rol) === 0;
     }
 
     public function esAdmin(): bool
@@ -111,13 +122,28 @@ class User extends Authenticatable
         return Attribute::make(set: fn ($value) => ucwords(strtolower($value)));
     }
 
-    protected function email(): Attribute
+    protected function correo(): Attribute
     {
         return Attribute::make(set: fn ($value) => $value ? strtolower($value) : $value);
     }
 
-    protected function name(): Attribute
+    protected function nombreCompleto(): Attribute
     {
         return Attribute::make(get: fn () => trim($this->nombre.' '.$this->apellidos));
+    }
+
+    /**
+     * Avatar por defecto (iniciales) cuando el usuario no subió foto.
+     *
+     * Se sobrescribe el de Jetstream porque el original lee $this->name,
+     * atributo que aquí se llama nombre_completo.
+     */
+    protected function defaultProfilePhotoUrl(): string
+    {
+        $iniciales = trim(collect(explode(' ', $this->nombre_completo))
+            ->map(fn ($parte) => mb_substr($parte, 0, 1))
+            ->join(' '));
+
+        return 'https://ui-avatars.com/api/?name='.urlencode($iniciales).'&color=7F9CF5&background=EBF4FF';
     }
 }

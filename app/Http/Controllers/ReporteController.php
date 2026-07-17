@@ -24,7 +24,7 @@ class ReporteController extends Controller
         $desde = $request->date('desde') ?? now()->subMonth();
         $hasta = $request->date('hasta') ?? now();
 
-        $ventas = Venta::with(['cliente.user', 'vendedor'])
+        $ventas = Venta::with(['cliente.usuario', 'vendedor'])
             ->whereBetween('fecha', [$desde->startOfDay(), $hasta->endOfDay()])
             ->where('estado', '!=', 'ANULADA')
             ->orderBy('fecha')
@@ -45,7 +45,7 @@ class ReporteController extends Controller
     /** Reporte de créditos por estado (vigentes / morosos / pagados). */
     public function creditos()
     {
-        $creditos = Credito::with('venta.cliente.user')->orderBy('estado')->get();
+        $creditos = Credito::with('venta.cliente.usuario')->orderBy('estado')->get();
 
         return Pdf::loadView('reportes.creditos', [
             'creditos' => $creditos,

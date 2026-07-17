@@ -10,12 +10,12 @@ class Bitacora extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['usuario_id', 'email', 'accion', 'recurso', 'ip', 'user_agent', 'fecha'];
+    protected $fillable = ['usuario_id', 'correo', 'accion', 'recurso', 'ip', 'agente_usuario', 'fecha'];
 
     protected $casts = ['fecha' => 'datetime'];
 
     public function usuario()
     {
-        return $this->belongsTo(User::class, 'usuario_id');
+        return $this->belongsTo(Usuario::class, 'usuario_id');
     }
 }

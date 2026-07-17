@@ -54,24 +54,24 @@ class MisPedidosController extends Controller
         $monto = (float) $venta->monto_total;
 
         // Reutilizar un QR pendiente si ya existe.
-        if ($venta->pago_facil_transaction_id && $venta->pago_facil_qr_image && $venta->pago_facil_status === 'pending') {
+        if ($venta->pago_facil_id_transaccion && $venta->pago_facil_imagen_qr && $venta->pago_facil_estado === 'pending') {
             $qr = [
                 'success' => true,
-                'transaction_id' => $venta->pago_facil_transaction_id,
-                'payment_number' => $venta->pago_facil_payment_number,
-                'qr_image' => $venta->pago_facil_qr_image,
+                'transaction_id' => $venta->pago_facil_id_transaccion,
+                'payment_number' => $venta->pago_facil_numero_pago,
+                'qr_image' => $venta->pago_facil_imagen_qr,
                 'status' => 'pending',
-                'simulado' => ! str_starts_with((string) $venta->pago_facil_qr_image, 'data:'),
+                'simulado' => ! str_starts_with((string) $venta->pago_facil_imagen_qr, 'data:'),
             ];
         } else {
             try {
                 $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, "Pedido #{$pedido->id}");
                 $venta->update([
                     'metodo_pago' => 'QR',
-                    'pago_facil_transaction_id' => $qr['transaction_id'] ?? null,
-                    'pago_facil_payment_number' => $qr['payment_number'] ?? null,
-                    'pago_facil_qr_image' => $qr['qr_image'] ?? null,
-                    'pago_facil_status' => $qr['status'] ?? 'pending',
+                    'pago_facil_id_transaccion' => $qr['transaction_id'] ?? null,
+                    'pago_facil_numero_pago' => $qr['payment_number'] ?? null,
+                    'pago_facil_imagen_qr' => $qr['qr_image'] ?? null,
+                    'pago_facil_estado' => $qr['status'] ?? 'pending',
                 ]);
             } catch (\Throwable $e) {
                 Log::error('PagoFácil QR pedido cliente falló', ['pedido' => $pedido->id, 'error' => $e->getMessage()]);
@@ -105,14 +105,14 @@ class MisPedidosController extends Controller
             return response()->json(['pagado' => true]);
         }
 
-        if ($venta->pago_facil_transaction_id) {
-            $resultado = $this->pagofacil->verificarEstadoPago($venta->pago_facil_transaction_id, $venta->pago_facil_payment_number);
+        if ($venta->pago_facil_id_transaccion) {
+            $resultado = $this->pagofacil->verificarEstadoPago($venta->pago_facil_id_transaccion, $venta->pago_facil_numero_pago);
             $raw = $resultado['raw'] ?? [];
             $pagado = ($resultado['status'] ?? 'pending') === 'completed' || ! empty($raw['payerName']);
 
             if ($pagado) {
                 // Pago recibido → PAGADA (falta que el almacén despache). Avisar al almacén.
-                $venta->update(['estado' => 'PAGADA', 'pago_facil_status' => 'completed']);
+                $venta->update(['estado' => 'PAGADA', 'pago_facil_estado' => 'completed']);
                 Notificacion::paraRol(
                     'almacenero',
                     'VENTA_PAGADA',

@@ -5,7 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({ ventas: Object, filtros: Object });
 const page = usePage();
-const rol = computed(() => page.props.auth.user?.rol);
+const rol = computed(() => page.props.auth.usuario?.rol);
 const puedeVender = computed(() => ['admin', 'vendedor'].includes(rol.value));
 const q = ref(props.filtros?.q ?? '');
 
@@ -48,8 +48,8 @@ const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
                     <tbody>
                         <tr v-for="v in ventas.data" :key="v.id">
                             <td class="fw-semibold">{{ v.numero_venta }}</td>
-                            <td>{{ v.cliente?.user?.name }}</td>
-                            <td>{{ v.vendedor?.name || '—' }}</td>
+                            <td>{{ v.cliente?.usuario?.nombre_completo }}</td>
+                            <td>{{ v.vendedor?.nombre_completo || '—' }}</td>
                             <td>{{ new Date(v.fecha).toLocaleDateString() }}</td>
                             <td><span class="badge" :class="v.tipo_venta === 'CREDITO' ? 'bg-info text-dark' : 'bg-secondary'">{{ v.tipo_venta }}</span></td>
                             <td>{{ v.metodo_pago }}</td>

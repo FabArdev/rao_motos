@@ -10,7 +10,7 @@
                 <tr>
                     <td>{{ $c->id }}</td>
                     <td>{{ $c->venta?->numero_venta }}</td>
-                    <td>{{ $c->venta?->cliente?->user?->nombre }} {{ $c->venta?->cliente?->user?->apellidos }}</td>
+                    <td>{{ $c->venta?->cliente?->usuario?->nombre }} {{ $c->venta?->cliente?->usuario?->apellidos }}</td>
                     <td>{{ $c->numero_cuotas }}</td>
                     <td>{{ $c->tasa_interes }}%</td>
                     <td>{{ $c->estado }}</td>

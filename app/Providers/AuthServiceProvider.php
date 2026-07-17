@@ -20,8 +20,8 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // RN1: el admin es superusuario, salta todas las policies.
-        Gate::before(function ($user, $ability) {
-            return $user->esAdmin() ? true : null;
+        Gate::before(function ($usuario, $ability) {
+            return $usuario->esAdmin() ? true : null;
         });
     }
 }

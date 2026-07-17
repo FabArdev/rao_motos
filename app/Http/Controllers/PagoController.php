@@ -31,11 +31,12 @@ class PagoController extends Controller
     {
         $cuota->load('credito.venta');
         $esAdminOVendedor = $request->user()?->tieneRol('admin') || $request->user()?->tieneRol('vendedor');
-        if (!$esAdminOVendedor && $cuota->credito?->venta?->cliente_id !== $request->user()->id) {
+        if (! $esAdminOVendedor && $cuota->credito?->venta?->cliente_id !== $request->user()->id) {
             throw new NotFoundHttpException;
         }
         if ($cuota->estado === 'PAGADO') {
             $route = $esAdminOVendedor ? 'creditos.show' : 'mis-creditos.show';
+
             return redirect()->route($route, $cuota->credito_id)->with('error', 'La cuota ya fue pagada.');
         }
 
@@ -45,18 +46,18 @@ class PagoController extends Controller
 
         // Si ya hay un QR pendiente y no ha expirado, reusarlo
         // Si no tiene expires_at (QR previo a la migración), se considera expirado
-        $qrExpirado = !$cuota->pago_facil_expires_at || Carbon::parse($cuota->pago_facil_expires_at)->isPast();
-        if ($cuota->pago_facil_transaction_id && $cuota->pago_facil_qr_image && $cuota->pago_facil_status === 'pending' && !$qrExpirado) {
+        $qrExpirado = ! $cuota->pago_facil_expira_en || Carbon::parse($cuota->pago_facil_expira_en)->isPast();
+        if ($cuota->pago_facil_id_transaccion && $cuota->pago_facil_imagen_qr && $cuota->pago_facil_estado === 'pending' && ! $qrExpirado) {
             $qrExistente = [
                 'success' => true,
-                'transaction_id' => $cuota->pago_facil_transaction_id,
-                'payment_number' => $cuota->pago_facil_payment_number,
-                'qr_image' => $cuota->pago_facil_qr_image,
+                'transaction_id' => $cuota->pago_facil_id_transaccion,
+                'payment_number' => $cuota->pago_facil_numero_pago,
+                'qr_image' => $cuota->pago_facil_imagen_qr,
                 'status' => 'pending',
                 'monto' => $monto,
                 'glosa' => "Pago cuota #{$cuota->numero_cuota}",
                 // Un QR real es data-URI base64; el fallback simulado es una URL http externa.
-                'simulado' => ! str_starts_with((string) $cuota->pago_facil_qr_image, 'data:'),
+                'simulado' => ! str_starts_with((string) $cuota->pago_facil_imagen_qr, 'data:'),
             ];
 
             return $this->renderQrCuota($cuota, $monto, $qrExistente, $esAdminOVendedor);
@@ -67,11 +68,11 @@ class PagoController extends Controller
 
             $cuota->update([
                 'metodo_pago_id' => $metodoQr,
-                'pago_facil_transaction_id' => $qr['transaction_id'] ?? null,
-                'pago_facil_payment_number' => $qr['payment_number'] ?? null,
-                'pago_facil_qr_image' => $qr['qr_image'] ?? null,
-                'pago_facil_expires_at' => isset($qr['expiration']) ? Carbon::parse($qr['expiration']) : null,
-                'pago_facil_status' => $qr['status'] ?? 'pending',
+                'pago_facil_id_transaccion' => $qr['transaction_id'] ?? null,
+                'pago_facil_numero_pago' => $qr['payment_number'] ?? null,
+                'pago_facil_imagen_qr' => $qr['qr_image'] ?? null,
+                'pago_facil_expira_en' => isset($qr['expiration']) ? Carbon::parse($qr['expiration']) : null,
+                'pago_facil_estado' => $qr['status'] ?? 'pending',
             ]);
 
             return $this->renderQrCuota($cuota, $monto, $qr, $esAdminOVendedor);
@@ -124,8 +125,8 @@ class PagoController extends Controller
             return response()->json(['error' => 1, 'status' => 0, 'message' => 'Identificador de pago requerido', 'values' => false], 422);
         }
 
-        $cuota = PagoCuota::when($paymentNumber, fn ($q) => $q->where('pago_facil_payment_number', $paymentNumber))
-            ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_transaction_id', $transactionId))
+        $cuota = PagoCuota::when($paymentNumber, fn ($q) => $q->where('pago_facil_numero_pago', $paymentNumber))
+            ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_id_transaccion', $transactionId))
             ->first();
 
         if (! $cuota) {
@@ -139,7 +140,7 @@ class PagoController extends Controller
             return response()->json(['error' => 0, 'status' => 1, 'message' => 'Ya estaba pagada', 'values' => true]);
         }
 
-        $cuota->update(['pago_facil_status' => 'completed']);
+        $cuota->update(['pago_facil_estado' => 'completed']);
         $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
 
         Log::info('✅ [PagoFácil] Callback: cuota pagada', ['cuota' => $cuota->id]);
@@ -157,8 +158,8 @@ class PagoController extends Controller
             return response()->json(['pagado' => true, 'estado' => 'PAGADO']);
         }
 
-        $transactionId = $cuota->pago_facil_transaction_id;
-        $paymentNumber = $cuota->pago_facil_payment_number;
+        $transactionId = $cuota->pago_facil_id_transaccion;
+        $paymentNumber = $cuota->pago_facil_numero_pago;
 
         if ($transactionId) {
             $resultado = $this->pagofacil->verificarEstadoPago($transactionId, $paymentNumber);
@@ -171,7 +172,7 @@ class PagoController extends Controller
                 || (! empty($raw['payerName']));
 
             if ($pagadoEnPagoFacil) {
-                $cuota->update(['pago_facil_status' => 'completed']);
+                $cuota->update(['pago_facil_estado' => 'completed']);
                 $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
 
                 Log::info('✅ [PagoFácil] Polling detectó pago completado', ['cuota' => $cuota->id, 'payerName' => $raw['payerName'] ?? null]);
@@ -182,14 +183,14 @@ class PagoController extends Controller
             return response()->json([
                 'pagado' => false,
                 'estado' => $cuota->estado,
-                'pago_facil_status' => $resultado['status'] ?? $cuota->pago_facil_status,
+                'pago_facil_estado' => $resultado['status'] ?? $cuota->pago_facil_estado,
             ]);
         }
 
         return response()->json([
             'pagado' => false,
             'estado' => $cuota->estado,
-            'pago_facil_status' => $cuota->pago_facil_status,
+            'pago_facil_estado' => $cuota->pago_facil_estado,
         ]);
     }
 
@@ -228,15 +229,15 @@ class PagoController extends Controller
         $monto = (float) $venta->monto_total;
 
         // Reutilizar un QR pendiente si ya existe (evita crear una transacción por recarga).
-        if ($venta->pago_facil_transaction_id && $venta->pago_facil_qr_image && $venta->pago_facil_status === 'pending') {
+        if ($venta->pago_facil_id_transaccion && $venta->pago_facil_imagen_qr && $venta->pago_facil_estado === 'pending') {
             $qrExistente = [
                 'success' => true,
-                'transaction_id' => $venta->pago_facil_transaction_id,
-                'payment_number' => $venta->pago_facil_payment_number,
-                'qr_image' => $venta->pago_facil_qr_image,
+                'transaction_id' => $venta->pago_facil_id_transaccion,
+                'payment_number' => $venta->pago_facil_numero_pago,
+                'qr_image' => $venta->pago_facil_imagen_qr,
                 'status' => 'pending',
                 // Un QR real es data-URI base64; el fallback simulado es una URL http externa.
-                'simulado' => ! str_starts_with((string) $venta->pago_facil_qr_image, 'data:'),
+                'simulado' => ! str_starts_with((string) $venta->pago_facil_imagen_qr, 'data:'),
             ];
 
             return $this->renderQrVenta($venta, $monto, $qrExistente);
@@ -246,10 +247,10 @@ class PagoController extends Controller
             $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, "Venta {$venta->numero_venta}");
 
             $venta->update([
-                'pago_facil_transaction_id' => $qr['transaction_id'] ?? null,
-                'pago_facil_payment_number' => $qr['payment_number'] ?? null,
-                'pago_facil_qr_image' => $qr['qr_image'] ?? null,
-                'pago_facil_status' => $qr['status'] ?? 'pending',
+                'pago_facil_id_transaccion' => $qr['transaction_id'] ?? null,
+                'pago_facil_numero_pago' => $qr['payment_number'] ?? null,
+                'pago_facil_imagen_qr' => $qr['qr_image'] ?? null,
+                'pago_facil_estado' => $qr['status'] ?? 'pending',
             ]);
 
             return $this->renderQrVenta($venta, $monto, $qr);
@@ -269,8 +270,8 @@ class PagoController extends Controller
             return response()->json(['pagado' => true, 'estado' => $venta->estado]);
         }
 
-        if ($venta->pago_facil_transaction_id) {
-            $resultado = $this->pagofacil->verificarEstadoPago($venta->pago_facil_transaction_id, $venta->pago_facil_payment_number);
+        if ($venta->pago_facil_id_transaccion) {
+            $resultado = $this->pagofacil->verificarEstadoPago($venta->pago_facil_id_transaccion, $venta->pago_facil_numero_pago);
             $raw = $resultado['raw'] ?? [];
             $pagado = ($resultado['status'] ?? 'pending') === 'completed' || ! empty($raw['payerName']);
 
@@ -300,8 +301,8 @@ class PagoController extends Controller
             return response()->json(['error' => 1, 'status' => 0, 'message' => 'Identificador de pago requerido', 'values' => false], 422);
         }
 
-        $venta = Venta::when($paymentNumber, fn ($q) => $q->where('pago_facil_payment_number', $paymentNumber))
-            ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_transaction_id', $transactionId))
+        $venta = Venta::when($paymentNumber, fn ($q) => $q->where('pago_facil_numero_pago', $paymentNumber))
+            ->when(! $paymentNumber && $transactionId, fn ($q) => $q->where('pago_facil_id_transaccion', $transactionId))
             ->first();
 
         if (! $venta) {
@@ -327,7 +328,7 @@ class PagoController extends Controller
         $esDePedido = Pedido::where('venta_id', $venta->id)->exists();
 
         if ($esDePedido) {
-            $venta->update(['estado' => 'PAGADA', 'pago_facil_status' => 'completed']);
+            $venta->update(['estado' => 'PAGADA', 'pago_facil_estado' => 'completed']);
             Notificacion::paraRol(
                 'almacenero',
                 'VENTA_PAGADA',
@@ -335,7 +336,7 @@ class PagoController extends Controller
                 route('despachos.show', $venta->id, false)
             );
         } else {
-            $venta->update(['estado' => 'COMPLETADA', 'pago_facil_status' => 'completed']);
+            $venta->update(['estado' => 'COMPLETADA', 'pago_facil_estado' => 'completed']);
         }
     }
 

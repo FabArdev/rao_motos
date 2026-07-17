@@ -5,25 +5,25 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreUsuarioRequest;
 use App\Http\Requests\UpdateUsuarioRequest;
 use App\Models\Cliente;
-use App\Models\Role;
-use App\Models\User;
+use App\Models\Rol;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
-class UserController extends Controller
+class UsuarioController extends Controller
 {
     public function index(Request $request)
     {
         $q = $request->string('q')->toString();
 
-        $usuarios = User::with('role')
+        $usuarios = Usuario::with('rol')
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('nombre', 'ilike', "%{$q}%")
                         ->orWhere('apellidos', 'ilike', "%{$q}%")
-                        ->orWhere('email', 'ilike', "%{$q}%")
+                        ->orWhere('correo', 'ilike', "%{$q}%")
                         ->orWhere('ci', 'ilike', "%{$q}%");
                 });
             })
@@ -40,7 +40,7 @@ class UserController extends Controller
     public function create()
     {
         return Inertia::render('Usuarios/Create', [
-            'roles' => Role::orderBy('id')->get(['id', 'nombre']),
+            'roles' => Rol::orderBy('id')->get(['id', 'nombre']),
         ]);
     }
 
@@ -49,44 +49,44 @@ class UserController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data) {
-            $user = User::create([
+            $usuario = Usuario::create([
                 'nombre' => $data['nombre'],
                 'apellidos' => $data['apellidos'],
                 'ci' => $data['ci'],
                 'telefono' => $data['telefono'],
                 'direccion' => $data['direccion'] ?? null,
-                'email' => $data['email'],
+                'correo' => $data['correo'],
                 'password' => Hash::make($data['password']),
-                'role_id' => $data['role_id'],
+                'rol_id' => $data['rol_id'],
                 'estado' => $data['estado'] ?? true,
             ]);
 
-            if ($this->esRolCliente($data['role_id'])) {
-                Cliente::updateOrCreate(['id' => $user->id], ['nit_ci' => $data['nit_ci'] ?? null]);
+            if ($this->esRolCliente($data['rol_id'])) {
+                Cliente::updateOrCreate(['id' => $usuario->id], ['nit_ci' => $data['nit_ci'] ?? null]);
             }
         });
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
     }
 
-    public function show(User $usuario)
+    public function show(Usuario $usuario)
     {
-        $usuario->load('role', 'cliente');
+        $usuario->load('rol', 'cliente');
 
         return Inertia::render('Usuarios/Show', ['usuario' => $usuario]);
     }
 
-    public function edit(User $usuario)
+    public function edit(Usuario $usuario)
     {
         $usuario->load('cliente');
 
         return Inertia::render('Usuarios/Edit', [
             'usuario' => $usuario,
-            'roles' => Role::orderBy('id')->get(['id', 'nombre']),
+            'roles' => Rol::orderBy('id')->get(['id', 'nombre']),
         ]);
     }
 
-    public function update(UpdateUsuarioRequest $request, User $usuario)
+    public function update(UpdateUsuarioRequest $request, Usuario $usuario)
     {
         $data = $request->validated();
 
@@ -97,8 +97,8 @@ class UserController extends Controller
                 'ci' => $data['ci'],
                 'telefono' => $data['telefono'],
                 'direccion' => $data['direccion'] ?? null,
-                'email' => $data['email'],
-                'role_id' => $data['role_id'],
+                'correo' => $data['correo'],
+                'rol_id' => $data['rol_id'],
                 'estado' => $data['estado'] ?? $usuario->estado,
             ]);
 
@@ -108,7 +108,7 @@ class UserController extends Controller
 
             $usuario->save();
 
-            if ($this->esRolCliente($data['role_id'])) {
+            if ($this->esRolCliente($data['rol_id'])) {
                 Cliente::updateOrCreate(['id' => $usuario->id], ['nit_ci' => $data['nit_ci'] ?? null]);
             }
         });
@@ -116,7 +116,7 @@ class UserController extends Controller
         return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function destroy(Request $request, User $usuario)
+    public function destroy(Request $request, Usuario $usuario)
     {
         if ($usuario->id === $request->user()->id) {
             return back()->with('error', 'No puedes eliminar tu propio usuario.');
@@ -127,8 +127,8 @@ class UserController extends Controller
         return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado.');
     }
 
-    private function esRolCliente($roleId): bool
+    private function esRolCliente($rolId): bool
     {
-        return optional(Role::find($roleId))->nombre === 'cliente';
+        return optional(Rol::find($rolId))->nombre === 'cliente';
     }
 }

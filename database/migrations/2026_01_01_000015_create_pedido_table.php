@@ -13,10 +13,11 @@ return new class extends Migration
             $table->unsignedBigInteger('cliente_id');
             $table->timestamp('fecha')->useCurrent();
             $table->enum('estado', ['SOLICITADO', 'APROBADO', 'RECHAZADO', 'EN_PROCESO', 'DESPACHADO', 'ANULADO'])
-                  ->default('SOLICITADO');
+                ->default('SOLICITADO');
             $table->string('motivo_rechazo')->nullable();
             $table->unsignedBigInteger('venta_id')->nullable();   // venta generada al aprobar
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('cliente_id')->references('id')->on('cliente')->onDelete('restrict');
             $table->foreign('venta_id')->references('id')->on('venta')->onDelete('set null');

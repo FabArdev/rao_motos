@@ -32,7 +32,7 @@ const generarQR = (cuota) => {
             <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <h5 class="fw-bold mb-1">Crédito #{{ credito.id }} <span class="badge ms-2" :class="badge(credito.estado)">{{ credito.estado }}</span></h5>
-                    <div class="text-muted">{{ credito.venta?.cliente?.user?.name }} · Venta {{ credito.venta?.numero_venta }}</div>
+                    <div class="text-muted">{{ credito.venta?.cliente?.usuario?.nombre_completo }} · Venta {{ credito.venta?.numero_venta }}</div>
                     <div class="small text-muted">{{ credito.numero_cuotas }} cuotas · Interés {{ credito.tasa_interes }}% · Saldo {{ fmt(credito.saldo_pendiente) }}</div>
                 </div>
             </div>

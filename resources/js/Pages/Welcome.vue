@@ -30,7 +30,7 @@ const verRepuestos = () => {
                     <AppLogo :height="30" />
                 </span>
                 <div class="d-flex gap-2">
-                    <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="btn btn-light btn-sm fw-semibold">
+                    <Link v-if="$page.props.auth.usuario" :href="route('dashboard')" class="btn btn-light btn-sm fw-semibold">
                         Ir al panel
                     </Link>
                     <template v-else-if="canLogin">
@@ -51,7 +51,7 @@ const verRepuestos = () => {
                     Venta al por menor y mayor · Compra al contado o en cuotas
                 </p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <Link v-if="!$page.props.auth.user && canRegister" :href="route('register')" class="btn btn-light btn-lg fw-semibold">
+                    <Link v-if="!$page.props.auth.usuario && canRegister" :href="route('register')" class="btn btn-light btn-lg fw-semibold">
                         <i class="bi bi-person-plus me-1"></i>Regístrate y haz tu pedido
                     </Link>
                     <a href="#catalogo" @click.prevent="verRepuestos" class="btn btn-outline-light btn-lg fw-semibold"><i class="bi bi-box-seam me-1"></i>Ver repuestos</a>
@@ -100,7 +100,7 @@ const verRepuestos = () => {
                         <h2 class="fw-bold mb-0">Nuestros repuestos</h2>
                         <p class="text-muted mb-0">Una muestra de nuestro inventario. Regístrate para hacer tu pedido.</p>
                     </div>
-                    <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="btn btn-sm btn-outline-danger">Ver todo</Link>
+                    <Link v-if="$page.props.auth.usuario" :href="route('dashboard')" class="btn btn-sm btn-outline-danger">Ver todo</Link>
                 </div>
 
                 <div class="row g-4">
@@ -124,7 +124,7 @@ const verRepuestos = () => {
                 </div>
 
                 <div class="text-center mt-4">
-                    <Link v-if="!$page.props.auth.user && canRegister" :href="route('register')" class="btn btn-danger btn-lg">
+                    <Link v-if="!$page.props.auth.usuario && canRegister" :href="route('register')" class="btn btn-danger btn-lg">
                         Crear una cuenta para comprar
                     </Link>
                 </div>

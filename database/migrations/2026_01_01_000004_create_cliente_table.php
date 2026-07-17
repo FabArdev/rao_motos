@@ -15,9 +15,10 @@ return new class extends Migration
         Schema::create('cliente', function (Blueprint $table) {
             $table->unsignedBigInteger('id')->primary();
             $table->string('nit_ci', 20)->nullable();
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
-            $table->foreign('id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('id')->references('id')->on('usuario')->onDelete('cascade');
         });
     }
 

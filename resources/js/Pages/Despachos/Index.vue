@@ -37,7 +37,7 @@ const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
                     <tbody>
                         <tr v-for="v in ventas.data" :key="v.id">
                             <td class="fw-semibold">{{ v.numero_venta }}</td>
-                            <td>{{ v.cliente?.user?.name }}</td>
+                            <td>{{ v.cliente?.usuario?.nombre_completo }}</td>
                             <td>{{ new Date(v.fecha).toLocaleDateString() }}</td>
                             <td class="text-end">{{ v.detalles_count }}</td>
                             <td class="text-end">{{ fmt(v.monto_total) }}</td>

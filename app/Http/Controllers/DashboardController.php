@@ -16,9 +16,9 @@ class DashboardController extends Controller
     {
         // El dashboard de estadísticas es solo para el administrador.
         // Cada otro rol entra directo a su módulo principal.
-        $user = $request->user();
-        if (! $user->esAdmin()) {
-            return redirect()->route(match ($user->role?->nombre) {
+        $usuario = $request->user();
+        if (! $usuario->esAdmin()) {
+            return redirect()->route(match ($usuario->rol?->nombre) {
                 'vendedor' => 'ventas.index',
                 'almacenero' => 'inventario.index',
                 'cliente' => 'catalogo.index',

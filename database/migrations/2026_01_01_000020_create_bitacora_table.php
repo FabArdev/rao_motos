@@ -11,14 +11,14 @@ return new class extends Migration
         Schema::create('bitacora', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('usuario_id')->nullable();
-            $table->string('email')->nullable();
+            $table->string('correo')->nullable();
             $table->enum('accion', ['LOGIN_OK', 'LOGIN_FAIL', 'ACCESO_RECURSO']);
             $table->string('recurso')->nullable();
             $table->string('ip', 45)->nullable();
-            $table->string('user_agent')->nullable();
+            $table->string('agente_usuario')->nullable();
             $table->timestamp('fecha')->useCurrent();
 
-            $table->foreign('usuario_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('usuario_id')->references('id')->on('usuario')->onDelete('set null');
         });
     }
 

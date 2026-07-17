@@ -39,7 +39,7 @@ El flujo comercial separa funciones: el **cliente** hace pedidos, el **vendedor*
 | Capa | Tecnología |
 |---|---|
 | Backend | **Laravel 10** (PHP 8.4) |
-| Autenticación | Jetstream + Fortify (login por **email**, 2FA opcional) |
+| Autenticación | Jetstream + Fortify (login por **correo**, 2FA opcional) |
 | Puente SPA | **Inertia.js** |
 | Frontend | **Vue 3** + **Bootstrap 5** (SPA, responsive) |
 | Build | Vite |
@@ -116,12 +116,12 @@ Editables por el admin (tabla `configuracion`); todos con valor por defecto semb
 | REQ | Cobertura |
 |---|---|
 | 1. Diseño y navegación | Topbar (logo, buscador, usuario, tema), menús dinámicos, footer con contador de visitas, responsive |
-| 2. ≥2 roles de negocio + menú dinámico BD | 3 roles de negocio + admin; `menu_items` filtrado por rol |
+| 2. ≥2 roles de negocio + menú dinámico BD | 3 roles de negocio + admin; `item_menu` filtrado por rol |
 | 3. MVC-MVVM | Laravel + Inertia + Vue |
-| 4. Control de acceso + bitácora | Middleware `role` + `Gate::before`; tabla `bitacora` (LOGIN_OK/FAIL/ACCESO_RECURSO) |
+| 4. Control de acceso + bitácora | Middleware `rol` + `Gate::before`; tabla `bitacora` (LOGIN_OK/FAIL/ACCESO_RECURSO) |
 | 5. 3 temas + accesibilidad | Temas Niños/Jóvenes/Adultos, día/noche, tamaño de letra, contraste |
 | 6. Validación en español | Form Requests con `messages()` + validación en Vue |
-| 7. Contador de visitas | Middleware `TrackPageVisits` + `page_visits` en el footer |
+| 7. Contador de visitas | Middleware `RegistrarVisitasPagina` + `visita_pagina` en el footer |
 | 8. Estadísticas | Dashboard Chart.js (solo admin) + reportes PDF |
 | 9. Búsqueda global | Busca información del negocio y funcionalidades del rol; ignora tildes/mayúsculas; `GET /buscar?q=...` |
 | 10. Pagos electrónicos | Métodos EFECTIVO/QR + pago único (contado) + plan de pagos (cuotas); **PagoFácil QR** |

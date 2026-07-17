@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class MetodoPago extends Model
+class MetodoPago extends ModeloBase
 {
-    protected $table = 'metodos_pago';
+    protected $table = 'metodo_pago';
 
     protected $fillable = ['nombre', 'activo'];
 

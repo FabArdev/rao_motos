@@ -14,7 +14,8 @@ return new class extends Migration
             $table->unsignedBigInteger('producto_id');
             $table->integer('cantidad');
             $table->decimal('precio_unitario', 10, 2);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('compra_id')->references('id')->on('compra')->onDelete('cascade');
             $table->foreign('producto_id')->references('id')->on('producto')->onDelete('restrict');

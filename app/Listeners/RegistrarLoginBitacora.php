@@ -15,11 +15,11 @@ class RegistrarLoginBitacora
     {
         Bitacora::create([
             'usuario_id' => $event->user->id ?? null,
-            'email' => $event->user->email ?? null,
+            'correo' => $event->user->correo ?? null,
             'accion' => 'LOGIN_OK',
             'recurso' => 'auth',
             'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
+            'agente_usuario' => request()->userAgent(),
             'fecha' => now(),
         ]);
     }
@@ -28,11 +28,11 @@ class RegistrarLoginBitacora
     {
         Bitacora::create([
             'usuario_id' => $event->user->id ?? null,
-            'email' => $event->credentials['email'] ?? null,
+            'correo' => $event->credentials['correo'] ?? null,
             'accion' => 'LOGIN_FAIL',
             'recurso' => 'auth',
             'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
+            'agente_usuario' => request()->userAgent(),
             'fecha' => now(),
         ]);
     }

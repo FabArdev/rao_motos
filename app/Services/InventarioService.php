@@ -6,7 +6,7 @@ use App\Models\Inventario;
 use App\Models\MovimientoInventario;
 use App\Models\Notificacion;
 use App\Models\Producto;
-use App\Models\User;
+use App\Models\Usuario;
 
 /**
  * Centraliza el movimiento de stock. El stock se toca aquí y solo aquí,
@@ -105,7 +105,7 @@ class InventarioService
         $inv->loadMissing('producto');
         $nombre = $inv->producto?->nombre ?? "producto #{$inv->producto_id}";
 
-        $almaceneros = User::whereHas('role', fn ($q) => $q->where('nombre', 'almacenero'))->pluck('id');
+        $almaceneros = Usuario::whereHas('rol', fn ($q) => $q->where('nombre', 'almacenero'))->pluck('id');
 
         foreach ($almaceneros as $usuarioId) {
             Notificacion::create([

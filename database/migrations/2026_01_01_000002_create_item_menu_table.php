@@ -8,24 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('menu_items', function (Blueprint $table) {
+        Schema::create('item_menu', function (Blueprint $table) {
             $table->id();
             $table->string('etiqueta');
             $table->string('ruta_laravel');
             $table->string('icono')->nullable();
             $table->integer('orden')->default(0);
-            $table->unsignedBigInteger('role_id');
-            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->unsignedBigInteger('rol_id');
+            $table->unsignedBigInteger('padre_id')->nullable();
             $table->boolean('activo')->default(true);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
-            $table->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
-            $table->foreign('parent_id')->references('id')->on('menu_items')->onDelete('cascade');
+            $table->foreign('rol_id')->references('id')->on('rol')->onDelete('cascade');
+            $table->foreign('padre_id')->references('id')->on('item_menu')->onDelete('cascade');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('menu_items');
+        Schema::dropIfExists('item_menu');
     }
 };

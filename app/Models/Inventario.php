@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Inventario extends Model
+class Inventario extends ModeloBase
 {
     protected $table = 'inventario';
 

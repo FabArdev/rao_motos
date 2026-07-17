@@ -34,7 +34,7 @@ const colorRol = (rol) => ({
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <form class="d-flex gap-2" @submit.prevent="buscar" style="max-width: 360px;">
-                <input v-model="q" type="text" class="form-control" placeholder="Buscar por nombre, email o CI..." />
+                <input v-model="q" type="text" class="form-control" placeholder="Buscar por nombre, correo o CI..." />
                 <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
             </form>
             <Link :href="route('usuarios.create')" class="btn btn-primary">
@@ -53,9 +53,9 @@ const colorRol = (rol) => ({
                     <tbody>
                         <tr v-for="u in usuarios.data" :key="u.id">
                             <td>{{ u.nombre }} {{ u.apellidos }}</td>
-                            <td>{{ u.email }}</td>
+                            <td>{{ u.correo }}</td>
                             <td>{{ u.ci }}</td>
-                            <td><span class="badge text-uppercase" :class="colorRol(u.role?.nombre)">{{ u.role?.nombre }}</span></td>
+                            <td><span class="badge text-uppercase" :class="colorRol(u.rol?.nombre)">{{ u.rol?.nombre }}</span></td>
                             <td>
                                 <span class="badge" :class="u.estado ? 'bg-success' : 'bg-danger'">
                                     {{ u.estado ? 'Activo' : 'Inactivo' }}

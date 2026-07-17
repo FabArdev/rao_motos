@@ -12,11 +12,11 @@ const props = defineProps({ usuario: Object });
         <div class="card shadow-sm border-0" style="max-width: 640px;">
             <div class="card-body">
                 <h2 class="h5">{{ usuario.nombre }} {{ usuario.apellidos }}</h2>
-                <span class="badge text-uppercase bg-primary mb-3">{{ usuario.role?.nombre }}</span>
+                <span class="badge text-uppercase bg-primary mb-3">{{ usuario.rol?.nombre }}</span>
 
                 <dl class="row mb-0">
                     <dt class="col-sm-4 text-muted">CI</dt><dd class="col-sm-8">{{ usuario.ci }}</dd>
-                    <dt class="col-sm-4 text-muted">Email</dt><dd class="col-sm-8">{{ usuario.email }}</dd>
+                    <dt class="col-sm-4 text-muted">Correo</dt><dd class="col-sm-8">{{ usuario.correo }}</dd>
                     <dt class="col-sm-4 text-muted">Teléfono</dt><dd class="col-sm-8">{{ usuario.telefono }}</dd>
                     <dt class="col-sm-4 text-muted">Dirección</dt><dd class="col-sm-8">{{ usuario.direccion || '—' }}</dd>
                     <dt class="col-sm-4 text-muted">Estado</dt>

@@ -10,7 +10,7 @@
                 <tr>
                     <td>{{ $v->numero_venta }}</td>
                     <td>{{ $v->fecha->format('d/m/Y') }}</td>
-                    <td>{{ $v->cliente?->user?->nombre }} {{ $v->cliente?->user?->apellidos }}</td>
+                    <td>{{ $v->cliente?->usuario?->nombre }} {{ $v->cliente?->usuario?->apellidos }}</td>
                     <td>{{ $v->vendedor?->nombre }}</td>
                     <td>{{ $v->tipo_venta }}</td>
                     <td>{{ $v->metodo_pago }}</td>

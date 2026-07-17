@@ -38,7 +38,7 @@ const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
                         <tr v-for="c in creditos.data" :key="c.id">
                             <td>{{ c.id }}</td>
                             <td>{{ c.venta?.numero_venta }}</td>
-                            <td>{{ c.venta?.cliente?.user?.name }}</td>
+                            <td>{{ c.venta?.cliente?.usuario?.nombre_completo }}</td>
                             <td>{{ c.numero_cuotas }}</td>
                             <td>{{ c.tasa_interes }}%</td>
                             <td class="text-end">{{ fmt(c.saldo_pendiente) }}</td>

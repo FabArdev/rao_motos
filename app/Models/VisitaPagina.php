@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class PageVisit extends Model
+class VisitaPagina extends ModeloBase
 {
-    protected $table = 'page_visits';
+    protected $table = 'visita_pagina';
 
     protected $fillable = ['ruta', 'contador'];
 

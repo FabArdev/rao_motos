@@ -3,8 +3,8 @@
 namespace App\Actions\Fortify;
 
 use App\Models\Cliente;
-use App\Models\Role;
-use App\Models\User;
+use App\Models\Rol;
+use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -20,15 +20,15 @@ class CreateNewUser implements CreatesNewUsers
      *
      * @param  array<string, string>  $input
      */
-    public function create(array $input): User
+    public function create(array $input): Usuario
     {
         Validator::make($input, [
             'nombre' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
             'apellidos' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
-            'ci' => ['required', 'string', 'min:6', 'max:20', 'unique:users,ci', 'regex:/^[0-9]+$/'],
+            'ci' => ['required', 'string', 'min:6', 'max:20', 'unique:usuario,ci', 'regex:/^[0-9]+$/'],
             'telefono' => ['required', 'string', 'min:7', 'max:15', 'regex:/^[0-9]+$/'],
             'direccion' => ['nullable', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email:rfc,dns', 'max:255', 'unique:users,email'],
+            'correo' => ['required', 'string', 'email:rfc,dns', 'max:255', 'unique:usuario,correo'],
             'fecha_nacimiento' => ['nullable', 'date', 'before:today', 'after:1900-01-01'],
             'password' => $this->passwordRules(),
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
@@ -58,11 +58,11 @@ class CreateNewUser implements CreatesNewUsers
             'telefono.max' => 'El teléfono no puede exceder :max dígitos.',
             'telefono.regex' => 'El teléfono solo puede contener números.',
 
-            // Mensajes para email
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.email' => 'Debe ingresar un correo electrónico válido.',
-            'email.max' => 'El correo electrónico no puede exceder :max caracteres.',
-            'email.unique' => 'Este correo electrónico ya está registrado.',
+            // Mensajes para correo
+            'correo.required' => 'El correo electrónico es obligatorio.',
+            'correo.email' => 'Debe ingresar un correo electrónico válido.',
+            'correo.max' => 'El correo electrónico no puede exceder :max caracteres.',
+            'correo.unique' => 'Este correo electrónico ya está registrado.',
 
             // Mensajes para fecha de nacimiento
             'fecha_nacimiento.date' => 'La fecha de nacimiento debe ser una fecha válida.',
@@ -80,25 +80,25 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         // Registro público = cliente. Usuario + fila cliente de forma atómica (RN14).
-        $clienteRoleId = Role::where('nombre', 'cliente')->value('id');
+        $clienteRolId = Rol::where('nombre', 'cliente')->value('id');
 
-        return DB::transaction(function () use ($input, $clienteRoleId) {
-            $user = User::create([
+        return DB::transaction(function () use ($input, $clienteRolId) {
+            $usuario = Usuario::create([
                 'nombre' => $input['nombre'],
                 'apellidos' => $input['apellidos'],
                 'ci' => $input['ci'],
                 'telefono' => $input['telefono'],
                 'direccion' => $input['direccion'] ?? null,
-                'email' => $input['email'],
+                'correo' => $input['correo'],
                 'fecha_nacimiento' => $input['fecha_nacimiento'] ?? null,
                 'password' => Hash::make($input['password']),
-                'role_id' => $clienteRoleId,
+                'rol_id' => $clienteRolId,
                 'estado' => true,
             ]);
 
-            Cliente::create(['id' => $user->id, 'nit_ci' => $input['ci']]);
+            Cliente::create(['id' => $usuario->id, 'nit_ci' => $input['ci']]);
 
-            return $user;
+            return $usuario;
         });
     }
 }

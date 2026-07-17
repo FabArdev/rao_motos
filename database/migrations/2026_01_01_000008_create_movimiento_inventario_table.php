@@ -15,7 +15,8 @@ return new class extends Migration
             $table->integer('cantidad');
             $table->string('motivo')->nullable();
             $table->timestamp('fecha')->useCurrent();
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('inventario_id')->references('id')->on('inventario')->onDelete('restrict');
         });

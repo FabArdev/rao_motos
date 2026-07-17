@@ -8,7 +8,7 @@ class StoreProductoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // protegido por middleware role:admin,almacenero
+        return true; // protegido por middleware rol:admin,almacenero
     }
 
     public function rules(): array

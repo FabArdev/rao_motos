@@ -1,28 +1,28 @@
 <?php
 
+use App\Http\Controllers\BitacoraController;
+use App\Http\Controllers\BuscarController;
+use App\Http\Controllers\CatalogoController;
+use App\Http\Controllers\CompraController;
+use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\CreditoController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DespachoController;
+use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\MiCuentaController;
+use App\Http\Controllers\MisCreditosController;
+use App\Http\Controllers\MisPedidosController;
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\PagoController;
+use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\VentaController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\ProveedorController;
-use App\Http\Controllers\CompraController;
-use App\Http\Controllers\InventarioController;
-use App\Http\Controllers\VentaController;
-use App\Http\Controllers\DespachoController;
-use App\Http\Controllers\CreditoController;
-use App\Http\Controllers\PedidoController;
-use App\Http\Controllers\CatalogoController;
-use App\Http\Controllers\MisPedidosController;
-use App\Http\Controllers\ConfiguracionController;
-use App\Http\Controllers\BitacoraController;
-use App\Http\Controllers\NotificacionController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ReporteController;
-use App\Http\Controllers\MisCreditosController;
-use App\Http\Controllers\MiCuentaController;
-use App\Http\Controllers\BuscarController;
-use App\Http\Controllers\PagoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,12 +59,12 @@ Route::middleware([
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // CU1 — Gestión de usuarios (solo admin)
-    Route::middleware('role:admin')->group(function () {
-        Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
+    Route::middleware('rol:admin')->group(function () {
+        Route::resource('usuarios', UsuarioController::class)->parameters(['usuarios' => 'usuario']);
     });
 
     // CU2 — Gestión de productos / CU3 Proveedores·Compras / CU5 Inventario (almacenero; admin superusuario)
-    Route::middleware('role:admin,almacenero')->group(function () {
+    Route::middleware('rol:admin,almacenero')->group(function () {
         Route::resource('productos', ProductoController::class)->parameters(['productos' => 'producto']);
         Route::resource('proveedores', ProveedorController::class)->parameters(['proveedores' => 'proveedor']);
 
@@ -78,7 +78,7 @@ Route::middleware([
     });
 
     // CU6 — Ventas (vendedor; admin superusuario)
-    Route::middleware('role:admin,vendedor')->group(function () {
+    Route::middleware('rol:admin,vendedor')->group(function () {
         Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
         Route::post('ventas/{venta}/marcar-pagada', [VentaController::class, 'marcarPagada'])->name('ventas.marcar-pagada');
         Route::resource('ventas', VentaController::class)->parameters(['ventas' => 'venta'])->only(['index', 'create', 'store', 'show']);
@@ -100,14 +100,14 @@ Route::middleware([
     });
 
     // Despachos (logística del almacén: almacenero; admin superusuario)
-    Route::middleware('role:admin,almacenero')->group(function () {
+    Route::middleware('rol:admin,almacenero')->group(function () {
         Route::get('despachos', [DespachoController::class, 'index'])->name('despachos.index');
         Route::get('despachos/{venta}', [DespachoController::class, 'show'])->name('despachos.show');
         Route::post('despachos/{venta}/despachar', [DespachoController::class, 'despachar'])->name('despachos.despachar');
     });
 
     // CU4 (cliente) — Catálogo y mis pedidos
-    Route::middleware('role:cliente')->group(function () {
+    Route::middleware('rol:cliente')->group(function () {
         Route::get('catalogo', [CatalogoController::class, 'index'])->name('catalogo.index');
         Route::post('catalogo/pedido', [CatalogoController::class, 'store'])->name('catalogo.pedido');
         Route::get('mis-pedidos', [MisPedidosController::class, 'index'])->name('mis-pedidos.index');
@@ -125,14 +125,14 @@ Route::middleware([
     Route::post('notificaciones/todas', [NotificacionController::class, 'marcarTodas'])->name('notificaciones.todas');
 
     // Configuración y Bitácora (solo admin)
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('rol:admin')->group(function () {
         Route::get('configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
         Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
         Route::get('bitacora', [BitacoraController::class, 'index'])->name('bitacora.index');
     });
 
     // CU8 — Reportes (admin, vendedor, almacenero)
-    Route::middleware('role:admin,vendedor,almacenero')->group(function () {
+    Route::middleware('rol:admin,vendedor,almacenero')->group(function () {
         Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
         Route::get('reportes/ventas', [ReporteController::class, 'ventas'])->name('reportes.ventas');
         Route::get('reportes/creditos', [ReporteController::class, 'creditos'])->name('reportes.creditos');
@@ -141,7 +141,7 @@ Route::middleware([
     });
 
     // Cliente — Mis créditos y Mi cuenta
-    Route::middleware('role:cliente')->group(function () {
+    Route::middleware('rol:cliente')->group(function () {
         Route::get('mis-creditos', [MisCreditosController::class, 'index'])->name('mis-creditos.index');
         Route::get('mis-creditos/{credito}', [MisCreditosController::class, 'show'])->name('mis-creditos.show');
         Route::post('mis-creditos/{credito}/cuota/{cuota}/pagar', [MisCreditosController::class, 'pagar'])->name('mis-creditos.pagar');

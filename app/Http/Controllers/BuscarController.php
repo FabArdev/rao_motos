@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
-use App\Models\MenuItem;
+use App\Models\ItemMenu;
 use App\Models\Pedido;
 use App\Models\Producto;
 use Illuminate\Http\Request;
@@ -19,8 +19,8 @@ class BuscarController extends Controller
     public function index(Request $request)
     {
         $q = trim($request->string('q')->toString());
-        $user = $request->user();
-        $esCliente = $user->tieneRol('cliente');
+        $usuario = $request->user();
+        $esCliente = $usuario->tieneRol('cliente');
 
         $resultados = ['funcionalidades' => [], 'productos' => [], 'clientes' => [], 'pedidos' => []];
 
@@ -32,8 +32,8 @@ class BuscarController extends Controller
             $un = fn ($col) => "unaccent($col) ILIKE unaccent(?)";
 
             // Funcionalidades/módulos que el rol del usuario puede abrir (menú del rol).
-            // Es role-safe: solo se listan las páginas a las que ese rol tiene acceso.
-            $resultados['funcionalidades'] = MenuItem::where('role_id', $user->role_id)
+            // Es seguro por rol: solo se listan las páginas a las que ese rol tiene acceso.
+            $resultados['funcionalidades'] = ItemMenu::where('rol_id', $usuario->rol_id)
                 ->where('activo', true)
                 ->whereRaw($un('etiqueta'), [$like])
                 ->orderBy('orden')
@@ -49,16 +49,16 @@ class BuscarController extends Controller
 
             if (! $esCliente) {
                 // Clientes y pedidos: solo staff.
-                $resultados['clientes'] = Cliente::with('user:id,nombre,apellidos,ci')
-                    ->whereHas('user', fn ($u) => $u->whereRaw($un('nombre'), [$like])
+                $resultados['clientes'] = Cliente::with('usuario:id,nombre,apellidos,ci')
+                    ->whereHas('usuario', fn ($u) => $u->whereRaw($un('nombre'), [$like])
                         ->orWhereRaw($un('apellidos'), [$like])->orWhereRaw($un('ci'), [$like]))
                     ->limit(10)->get()
-                    ->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->user?->name, 'ci' => $c->user?->ci]);
+                    ->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->usuario?->nombre_completo, 'ci' => $c->usuario?->ci]);
 
-                $resultados['pedidos'] = Pedido::with('cliente.user:id,nombre,apellidos')
+                $resultados['pedidos'] = Pedido::with('cliente.usuario:id,nombre,apellidos')
                     ->when(is_numeric($q), fn ($query) => $query->where('id', $q))
                     ->limit(10)->get()
-                    ->map(fn ($p) => ['id' => $p->id, 'cliente' => $p->cliente?->user?->name, 'estado' => $p->estado]);
+                    ->map(fn ($p) => ['id' => $p->id, 'cliente' => $p->cliente?->usuario?->nombre_completo, 'estado' => $p->estado]);
             }
         }
 

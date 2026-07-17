@@ -20,7 +20,8 @@ return new class extends Migration
             $table->integer('cantidad_minima_mayorista')->default(1);    // umbral mayoreo POR PRODUCTO
             $table->string('foto_url', 500)->nullable();
             $table->boolean('activo')->default(true);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
         });
     }
 

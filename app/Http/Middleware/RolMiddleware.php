@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class RoleMiddleware
+class RolMiddleware
 {
     /**
      * Handle an incoming request.
@@ -19,8 +19,8 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
-        foreach ($roles as $role) {
-            if ($request->user()->tieneRol($role)) {
+        foreach ($roles as $rol) {
+            if ($request->user()->tieneRol($rol)) {
                 return $next($request);
             }
         }

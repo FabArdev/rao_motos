@@ -2,22 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Cliente extends Model
+class Cliente extends ModeloBase
 {
     protected $table = 'cliente';
 
-    // El PK es el mismo id de users (herencia 1:1), no autoincremental.
+    // El PK es el mismo id de usuario (herencia 1:1), no autoincremental.
     public $incrementing = false;
 
     protected $keyType = 'int';
 
     protected $fillable = ['id', 'nit_ci'];
 
-    public function user()
+    public function usuario()
     {
-        return $this->belongsTo(User::class, 'id');
+        return $this->belongsTo(Usuario::class, 'id');
     }
 
     public function pedidos()

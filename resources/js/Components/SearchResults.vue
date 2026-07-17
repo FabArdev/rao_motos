@@ -40,8 +40,8 @@
                         </div>
                         <div class="flex-grow-1">
                             <h6 class="mb-0">{{ menu.label }}</h6>
-                            <small v-if="menu.parent" class="text-muted">
-                                <i class="bi bi-arrow-return-right me-1"></i>{{ menu.parent }}
+                            <small v-if="menu.padre" class="text-muted">
+                                <i class="bi bi-arrow-return-right me-1"></i>{{ menu.padre }}
                             </small>
                             <small v-else-if="menu.submenus && menu.submenus.length > 0" class="text-muted">
                                 {{ menu.submenus.length }} {{ menu.submenus.length === 1 ? 'opción' : 'opciones' }}

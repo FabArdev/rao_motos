@@ -13,7 +13,8 @@ return new class extends Migration
             $table->unsignedBigInteger('pedido_id');
             $table->unsignedBigInteger('producto_id');
             $table->integer('cantidad');
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('pedido_id')->references('id')->on('pedido')->onDelete('cascade');
             $table->foreign('producto_id')->references('id')->on('producto')->onDelete('restrict');

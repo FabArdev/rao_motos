@@ -2,14 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Models\ItemMenu;
 use Illuminate\Database\Seeder;
-use App\Models\MenuItem;
 
-class MenuItemSeeder extends Seeder
+class ItemMenuSeeder extends Seeder
 {
     public function run(): void
     {
-        // role_id => [ [etiqueta, ruta_laravel, icono], ... ]
+        // rol_id => [ [etiqueta, ruta_laravel, icono], ... ]
         $menus = [
             1 => [ // admin
                 ['Dashboard', 'dashboard', 'speedometer2'],
@@ -46,15 +46,15 @@ class MenuItemSeeder extends Seeder
             ],
         ];
 
-        foreach ($menus as $roleId => $items) {
+        foreach ($menus as $rolId => $items) {
             $orden = 1;
             foreach ($items as [$etiqueta, $ruta, $icono]) {
-                MenuItem::create([
+                ItemMenu::create([
                     'etiqueta' => $etiqueta,
                     'ruta_laravel' => $ruta,
                     'icono' => $icono,
                     'orden' => $orden++,
-                    'role_id' => $roleId,
+                    'rol_id' => $rolId,
                     'activo' => true,
                 ]);
             }

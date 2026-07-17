@@ -23,7 +23,7 @@ defineProps({
             <div class="container py-4">
                 <div v-if="$page.props.jetstream.canUpdateProfileInformation">
                     <UpdateProfileInformationForm
-                        :user="$page.props.auth.user"
+                        :usuario="$page.props.auth.usuario"
                     />
 
                     <SectionBorder />

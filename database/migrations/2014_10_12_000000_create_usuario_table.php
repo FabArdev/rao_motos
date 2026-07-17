@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('usuario', function (Blueprint $table) {
             $table->id();
 
             // Datos personales
@@ -21,13 +21,13 @@ return new class extends Migration
             $table->string('telefono', 15);
             $table->string('direccion')->nullable();
 
-            // Email (nullable solo para clientes)
-            $table->string('email')->nullable()->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            // Correo (nullable solo para clientes)
+            $table->string('correo')->nullable()->unique();
+            $table->timestamp('correo_verificado_en')->nullable();
 
             // Acceso
             $table->string('password');
-            $table->rememberToken();
+            $table->string('token_recordar', 100)->nullable();
 
             // Otros campos del sistema Jetstream
             $table->foreignId('current_team_id')->nullable();
@@ -40,10 +40,11 @@ return new class extends Migration
             $table->date('fecha_nacimiento')->nullable();
 
             // Rol (un rol por usuario)
-            $table->unsignedBigInteger('role_id')->nullable();
-            $table->foreign('role_id')->references('id')->on('roles')->onDelete('restrict');
+            $table->unsignedBigInteger('rol_id')->nullable();
+            $table->foreign('rol_id')->references('id')->on('rol')->onDelete('restrict');
 
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
         });
     }
 
@@ -52,6 +53,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('usuario');
     }
 };

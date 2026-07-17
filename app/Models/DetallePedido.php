@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class DetallePedido extends Model
+class DetallePedido extends ModeloBase
 {
     protected $table = 'detalle_pedido';
 

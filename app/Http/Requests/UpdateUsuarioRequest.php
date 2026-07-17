@@ -9,7 +9,7 @@ class UpdateUsuarioRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // protegido por middleware role:admin
+        return true; // protegido por middleware rol:admin
     }
 
     public function rules(): array
@@ -19,12 +19,12 @@ class UpdateUsuarioRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:100', "regex:/^[\pL\pM\s.'-]+$/u"],
             'apellidos' => ['required', 'string', 'max:100', "regex:/^[\pL\pM\s.'-]+$/u"],
-            'ci' => ['required', 'string', 'max:20', 'regex:/^[0-9]{4,15}([-\s]?[0-9A-Za-z]{1,3})?$/', Rule::unique('users', 'ci')->ignore($id)],
+            'ci' => ['required', 'string', 'max:20', 'regex:/^[0-9]{4,15}([-\s]?[0-9A-Za-z]{1,3})?$/', Rule::unique('usuario', 'ci')->ignore($id)],
             'telefono' => ['required', 'string', 'regex:/^[0-9+][0-9\s-]{6,14}$/'],
             'direccion' => ['nullable', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($id)],
+            'correo' => ['required', 'email', 'max:255', Rule::unique('usuario', 'correo')->ignore($id)],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'role_id' => ['required', 'integer', 'exists:roles,id'],
+            'rol_id' => ['required', 'integer', 'exists:rol,id'],
             'estado' => ['boolean'],
             'nit_ci' => ['nullable', 'string', 'max:20', 'regex:/^[0-9]+$/'],
         ];
@@ -42,13 +42,13 @@ class UpdateUsuarioRequest extends FormRequest
             'ci.unique' => 'Ya existe un usuario con ese CI.',
             'telefono.required' => 'El teléfono es obligatorio.',
             'telefono.regex' => 'El teléfono debe contener solo números (7 a 15 dígitos).',
-            'email.required' => 'El correo es obligatorio.',
-            'email.email' => 'El correo no tiene un formato válido.',
-            'email.unique' => 'Ya existe un usuario con ese correo.',
+            'correo.required' => 'El correo es obligatorio.',
+            'correo.email' => 'El correo no tiene un formato válido.',
+            'correo.unique' => 'Ya existe un usuario con ese correo.',
             'password.min' => 'La contraseña debe tener al menos :min caracteres.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
-            'role_id.required' => 'Debe seleccionar un rol.',
-            'role_id.exists' => 'El rol seleccionado no es válido.',
+            'rol_id.required' => 'Debe seleccionar un rol.',
+            'rol_id.exists' => 'El rol seleccionado no es válido.',
             'nit_ci.regex' => 'El NIT/CI de facturación debe ser numérico.',
         ];
     }

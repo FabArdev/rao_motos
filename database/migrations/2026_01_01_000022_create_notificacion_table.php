@@ -20,7 +20,7 @@ return new class extends Migration
             $table->boolean('leido')->default(false);
             $table->timestamp('fecha')->useCurrent();
 
-            $table->foreign('usuario_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('usuario_id')->references('id')->on('usuario')->onDelete('cascade');
         });
     }
 

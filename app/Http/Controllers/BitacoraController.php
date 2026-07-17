@@ -15,7 +15,7 @@ class BitacoraController extends Controller
 
         $registros = Bitacora::with('usuario:id,nombre,apellidos')
             ->when($accion, fn ($query) => $query->where('accion', $accion))
-            ->when($q, fn ($query) => $query->where(fn ($s) => $s->where('email', 'ilike', "%{$q}%")->orWhere('recurso', 'ilike', "%{$q}%")))
+            ->when($q, fn ($query) => $query->where(fn ($s) => $s->where('correo', 'ilike', "%{$q}%")->orWhere('recurso', 'ilike', "%{$q}%")))
             ->latest('fecha')
             ->paginate(25)
             ->withQueryString();

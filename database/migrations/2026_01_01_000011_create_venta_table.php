@@ -20,16 +20,17 @@ return new class extends Migration
             $table->enum('estado', ['COMPLETADA', 'PENDIENTE', 'ANULADA'])->default('PENDIENTE');
 
             // PagoFácil (pago por QR)
-            $table->string('pago_facil_transaction_id', 100)->nullable();
-            $table->string('pago_facil_payment_number', 120)->nullable();
-            $table->text('pago_facil_qr_image')->nullable();
-            $table->string('pago_facil_status', 50)->nullable();     // pending, completed, failed
-            $table->text('pago_facil_raw_response')->nullable();
+            $table->string('pago_facil_id_transaccion', 100)->nullable();
+            $table->string('pago_facil_numero_pago', 120)->nullable();
+            $table->text('pago_facil_imagen_qr')->nullable();
+            $table->string('pago_facil_estado', 50)->nullable();     // pending, completed, failed
+            $table->text('pago_facil_respuesta_cruda')->nullable();
 
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('cliente_id')->references('id')->on('cliente')->onDelete('restrict');
-            $table->foreign('vendedor_id')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('vendedor_id')->references('id')->on('usuario')->onDelete('restrict');
         });
     }
 

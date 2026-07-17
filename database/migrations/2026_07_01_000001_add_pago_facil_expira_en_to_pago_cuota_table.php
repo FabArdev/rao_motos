@@ -9,14 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pago_cuota', function (Blueprint $table) {
-            $table->timestamp('pago_facil_expires_at')->nullable()->after('pago_facil_qr_image');
+            $table->timestamp('pago_facil_expira_en')->nullable()->after('pago_facil_imagen_qr');
         });
     }
 
     public function down(): void
     {
         Schema::table('pago_cuota', function (Blueprint $table) {
-            $table->dropColumn('pago_facil_expires_at');
+            $table->dropColumn('pago_facil_expira_en');
         });
     }
 };

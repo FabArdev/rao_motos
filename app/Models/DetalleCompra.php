@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class DetalleCompra extends Model
+class DetalleCompra extends ModeloBase
 {
     protected $table = 'detalle_compra';
 

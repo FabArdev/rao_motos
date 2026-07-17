@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\MetodoPago;
+use Illuminate\Database\Seeder;
 
 class MetodoPagoSeeder extends Seeder
 {

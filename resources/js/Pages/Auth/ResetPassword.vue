@@ -8,13 +8,13 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 
 const props = defineProps({
-    email: String,
+    correo: String,
     token: String,
 });
 
 const form = useForm({
     token: props.token,
-    email: props.email,
+    correo: props.correo,
     password: '',
     password_confirmation: '',
 });
@@ -36,17 +36,17 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Correo Electrónico" />
+                <InputLabel for="correo" value="Correo Electrónico" />
                 <TextInput
-                    id="email"
-                    v-model="form.email"
+                    id="correo"
+                    v-model="form.correo"
                     type="email"
                     class="mt-1 block w-full"
                     required
                     autofocus
                     autocomplete="username"
                 />
-                <InputError class="mt-2" :message="form.errors.email" />
+                <InputError class="mt-2" :message="form.errors.correo" />
             </div>
 
             <div class="mt-2">

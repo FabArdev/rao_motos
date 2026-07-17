@@ -13,7 +13,7 @@
         </a>
 
         <ul class="dropdown-menu" :class="{ show: isOpen }">
-            <li v-for="child in item.children" :key="child.id">
+            <li v-for="child in item.hijos" :key="child.id">
                 <Link
                     :href="route(child.route)"
                     class="dropdown-item"
@@ -43,10 +43,10 @@ const isOpen = ref(false);
 
 const isActive = computed(() => {
     // Verificar si algún hijo está activo
-    if (!props.item.children || props.item.children.length === 0) {
+    if (!props.item.hijos || props.item.hijos.length === 0) {
         return false;
     }
-    return props.item.children.some((child) => route().current(child.route));
+    return props.item.hijos.some((child) => route().current(child.route));
 });
 
 const toggleDropdown = () => {

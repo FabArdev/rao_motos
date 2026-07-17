@@ -22,11 +22,11 @@ class BitacoraAcceso
         if ($request->isMethod('GET') && $request->user() && $nombreRuta) {
             Bitacora::create([
                 'usuario_id' => $request->user()->id,
-                'email' => $request->user()->email,
+                'correo' => $request->user()->correo,
                 'accion' => 'ACCESO_RECURSO',
                 'recurso' => $nombreRuta,
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
+                'agente_usuario' => $request->userAgent(),
                 'fecha' => now(),
             ]);
         }

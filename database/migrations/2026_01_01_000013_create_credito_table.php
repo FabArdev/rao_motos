@@ -15,7 +15,8 @@ return new class extends Migration
             $table->decimal('tasa_interes', 5, 2)->default(0);
             $table->decimal('saldo_pendiente', 12, 2);
             $table->enum('estado', ['VIGENTE', 'PAGADO', 'MOROSO'])->default('VIGENTE');
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('venta_id')->references('id')->on('venta')->onDelete('restrict');
         });

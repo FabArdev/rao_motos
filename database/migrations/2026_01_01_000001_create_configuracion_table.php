@@ -13,7 +13,8 @@ return new class extends Migration
             $table->string('clave', 100)->unique();
             $table->string('valor');
             $table->string('descripcion')->nullable();
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
         });
     }
 

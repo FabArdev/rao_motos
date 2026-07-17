@@ -8,16 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('metodos_pago', function (Blueprint $table) {
+        Schema::create('metodo_pago', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 50)->unique();   // EFECTIVO, QR
             $table->boolean('activo')->default(true);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('metodos_pago');
+        Schema::dropIfExists('metodo_pago');
     }
 };

@@ -47,7 +47,7 @@ const marcarPagado = () => {
             <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <h5 class="fw-bold mb-1">Pedido #{{ pedido.id }} <span class="badge ms-2" :class="badge(pedido.estado)">{{ pedido.estado }}</span></h5>
-                    <div class="text-muted">{{ pedido.cliente?.user?.name }} · {{ new Date(pedido.fecha).toLocaleString() }}</div>
+                    <div class="text-muted">{{ pedido.cliente?.usuario?.nombre_completo }} · {{ new Date(pedido.fecha).toLocaleString() }}</div>
                     <div v-if="pedido.venta" class="small">Venta generada: <Link :href="route('ventas.show', pedido.venta.id)">{{ pedido.venta.numero_venta }}</Link></div>
                     <div v-if="pedido.motivo_rechazo" class="small text-danger">Motivo rechazo: {{ pedido.motivo_rechazo }}</div>
                 </div>

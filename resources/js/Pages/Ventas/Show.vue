@@ -10,7 +10,7 @@ const badge = (e) => ({ COMPLETADA: 'bg-success', PAGADA: 'bg-info text-dark', P
 const creditoLabel = (e) => ({ VIGENTE: 'Crédito vigente', MOROSO: 'Moroso', PAGADO: 'Pagado' }[e] ?? e);
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
 
-const rol = computed(() => page.props.auth.user?.rol);
+const rol = computed(() => page.props.auth.usuario?.rol);
 const puedeVender = computed(() => ['admin', 'vendedor'].includes(rol.value));
 
 // En crédito, el estado que importa es el del crédito (cuotas), no el de la venta.
@@ -37,8 +37,8 @@ const marcarPagada = () => { if (confirm('¿Confirmar el cobro en efectivo de es
                         <span v-else class="badge ms-2" :class="badge(venta.estado)">{{ venta.estado }}</span>
                         <span v-if="esCredito" class="text-muted small ms-2">({{ cuotasPagadas }}/{{ cuotasTotal }} cuotas pagadas)</span>
                     </h5>
-                    <div class="text-muted">{{ venta.cliente?.user?.name }} · {{ new Date(venta.fecha).toLocaleString() }}</div>
-                    <div class="small text-muted">{{ venta.tipo_venta }} · {{ venta.metodo_pago }} · Vendedor: {{ venta.vendedor?.name || '—' }}</div>
+                    <div class="text-muted">{{ venta.cliente?.usuario?.nombre_completo }} · {{ new Date(venta.fecha).toLocaleString() }}</div>
+                    <div class="small text-muted">{{ venta.tipo_venta }} · {{ venta.metodo_pago }} · Vendedor: {{ venta.vendedor?.nombre_completo || '—' }}</div>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     <button v-if="venta.estado === 'PENDIENTE' && puedeVender" class="btn btn-success" @click="marcarPagada">

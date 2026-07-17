@@ -17,12 +17,12 @@ const buscarGlobal = () => {
 };
 
 const page = usePage();
-const user = computed(() => page.props.auth?.user);
-const menuItems = computed(() => page.props.menuItems ?? []);
+const usuario = computed(() => page.props.auth?.usuario);
+const itemsMenu = computed(() => page.props.itemsMenu ?? []);
 
 // Solo mostramos ítems cuyo route ya existe (los módulos se agregan por CU).
 const visibleMenu = computed(() =>
-    menuItems.value.filter((i) => route().has(i.ruta_laravel))
+    itemsMenu.value.filter((i) => route().has(i.ruta_laravel))
 );
 
 // Navegación estilo "Menú 3C": ítems sueltos + grupos, ahora en barra lateral.
@@ -130,10 +130,10 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                 <!-- Usuario -->
                 <div class="dropdown">
                     <button class="btn btn-sm btn-light dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
-                        <img v-if="user?.profile_photo_url" :src="user.profile_photo_url" :alt="user.name" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0;" />
+                        <img v-if="usuario?.profile_photo_url" :src="usuario.profile_photo_url" :alt="usuario.nombre_completo" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0;" />
                         <i v-else class="bi bi-person-circle fs-6"></i>
-                        <span v-if="user" class="d-none d-sm-inline">{{ user.name }}</span>
-                        <span v-if="user" class="badge bg-secondary text-uppercase d-none d-md-inline">{{ user.rol }}</span>
+                        <span v-if="usuario" class="d-none d-sm-inline">{{ usuario.nombre_completo }}</span>
+                        <span v-if="usuario" class="badge bg-secondary text-uppercase d-none d-md-inline">{{ usuario.rol }}</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>

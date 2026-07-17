@@ -2,13 +2,13 @@
 
 namespace App\Http\Middleware;
 
-use App\Services\PageVisitService;
+use App\Services\VisitaPaginaService;
 use Closure;
 use Illuminate\Http\Request;
 
-class TrackPageVisits
+class RegistrarVisitasPagina
 {
-    public function __construct(protected PageVisitService $pageVisitService) {}
+    public function __construct(protected VisitaPaginaService $pageVisitService) {}
 
     /**
      * Handle an incoming request.

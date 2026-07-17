@@ -18,7 +18,8 @@ return new class extends Migration
             $table->string('nit', 20)->nullable();
             $table->string('telefono', 20)->nullable();
             $table->boolean('activo')->default(true);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
         });
     }
 

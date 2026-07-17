@@ -18,7 +18,8 @@ return new class extends Migration
             $table->string('descripcion')->nullable();               // texto opcional de la línea
             $table->integer('cantidad');
             $table->decimal('precio_unitario', 10, 2);
-            $table->timestamps();
+            $table->timestamp('creado_en')->nullable();
+            $table->timestamp('actualizado_en')->nullable();
 
             $table->foreign('venta_id')->references('id')->on('venta')->onDelete('cascade');
             $table->foreign('producto_id')->references('id')->on('producto')->onDelete('restrict');

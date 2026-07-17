@@ -10,74 +10,74 @@ import SecondaryButton from "@/Components/SecondaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 
 const props = defineProps({
-    user: Object,
+    usuario: Object,
 });
 
 const form = useForm({
     _method: "PUT",
-    nombre: props.user.nombre,
-    apellidos: props.user.apellidos,
-    email: props.user.email,
-    photo: null,
+    nombre: props.usuario.nombre,
+    apellidos: props.usuario.apellidos,
+    correo: props.usuario.correo,
+    foto: null,
 });
 
-const verificationLinkSent = ref(null);
-const photoPreview = ref(null);
-const photoInput = ref(null);
+const enlaceVerificacionEnviado = ref(null);
+const vistaPreviaFoto = ref(null);
+const inputFoto = ref(null);
 
-const updateProfileInformation = () => {
-    if (photoInput.value) {
-        form.photo = photoInput.value.files[0];
+const actualizarInformacionPerfil = () => {
+    if (inputFoto.value) {
+        form.foto = inputFoto.value.files[0];
     }
 
     form.post(route("user-profile-information.update"), {
         errorBag: "updateProfileInformation",
         preserveScroll: true,
-        onSuccess: () => clearPhotoFileInput(),
+        onSuccess: () => limpiarInputFoto(),
     });
 };
 
-const sendEmailVerification = () => {
-    verificationLinkSent.value = true;
+const enviarVerificacionCorreo = () => {
+    enlaceVerificacionEnviado.value = true;
 };
 
-const selectNewPhoto = () => {
-    photoInput.value.click();
+const seleccionarNuevaFoto = () => {
+    inputFoto.value.click();
 };
 
-const updatePhotoPreview = () => {
-    const photo = photoInput.value.files[0];
+const actualizarVistaPreviaFoto = () => {
+    const foto = inputFoto.value.files[0];
 
-    if (!photo) return;
+    if (!foto) return;
 
-    const reader = new FileReader();
+    const lector = new FileReader();
 
-    reader.onload = (e) => {
-        photoPreview.value = e.target.result;
+    lector.onload = (e) => {
+        vistaPreviaFoto.value = e.target.result;
     };
 
-    reader.readAsDataURL(photo);
+    lector.readAsDataURL(foto);
 };
 
-const deletePhoto = () => {
+const eliminarFoto = () => {
     router.delete(route("current-user-photo.destroy"), {
         preserveScroll: true,
         onSuccess: () => {
-            photoPreview.value = null;
-            clearPhotoFileInput();
+            vistaPreviaFoto.value = null;
+            limpiarInputFoto();
         },
     });
 };
 
-const clearPhotoFileInput = () => {
-    if (photoInput.value?.value) {
-        photoInput.value.value = null;
+const limpiarInputFoto = () => {
+    if (inputFoto.value?.value) {
+        inputFoto.value.value = null;
     }
 };
 </script>
 
 <template>
-    <FormSection @submitted="updateProfileInformation">
+    <FormSection @submitted="actualizarInformacionPerfil">
         <template #title> Información del Perfil </template>
 
         <template #description>
@@ -93,36 +93,36 @@ const clearPhotoFileInput = () => {
             >
                 <!-- Input de archivo oculto -->
                 <input
-                    id="photo"
-                    ref="photoInput"
+                    id="foto"
+                    ref="inputFoto"
                     type="file"
                     class="d-none"
                     accept="image/png,image/jpeg,image/webp"
-                    @change="updatePhotoPreview"
+                    @change="actualizarVistaPreviaFoto"
                 />
 
-                <InputLabel for="photo" value="Foto de perfil" />
+                <InputLabel for="foto" value="Foto de perfil" />
 
                 <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;">
                     <!-- Foto actual o vista previa de la nueva -->
                     <img
-                        :src="photoPreview || user.profile_photo_url"
-                        :alt="user.nombre"
+                        :src="vistaPreviaFoto || usuario.profile_photo_url"
+                        :alt="usuario.nombre"
                         style="width: 80px; height: 80px; min-width: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #dee2e6; display: block;"
                     />
 
                     <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
                         <SecondaryButton
                             type="button"
-                            @click.prevent="selectNewPhoto"
+                            @click.prevent="seleccionarNuevaFoto"
                         >
                             Seleccionar nueva foto
                         </SecondaryButton>
 
                         <SecondaryButton
-                            v-if="user.profile_photo_path"
+                            v-if="usuario.profile_photo_path"
                             type="button"
-                            @click.prevent="deletePhoto"
+                            @click.prevent="eliminarFoto"
                         >
                             Eliminar foto
                         </SecondaryButton>
@@ -130,7 +130,7 @@ const clearPhotoFileInput = () => {
                 </div>
 
                 <div class="form-text">JPG, PNG o WEBP, máximo 5 MB.</div>
-                <InputError :message="form.errors.photo" class="mt-2" />
+                <InputError :message="form.errors.foto" class="mt-2" />
             </div>
 
             <!-- Nombre -->
@@ -161,23 +161,23 @@ const clearPhotoFileInput = () => {
                 <InputError :message="form.errors.apellidos" class="mt-2" />
             </div>
 
-            <!-- Email -->
+            <!-- Correo -->
             <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="email" value="Correo Electrónico" />
+                <InputLabel for="correo" value="Correo Electrónico" />
                 <TextInput
-                    id="email"
-                    v-model="form.email"
+                    id="correo"
+                    v-model="form.correo"
                     type="email"
                     class="mt-1 block w-full"
                     required
                     autocomplete="username"
                 />
-                <InputError :message="form.errors.email" class="mt-2" />
+                <InputError :message="form.errors.correo" class="mt-2" />
 
                 <div
                     v-if="
                         $page.props.jetstream.hasEmailVerification &&
-                        user.email_verified_at === null
+                        usuario.correo_verificado_en === null
                     "
                 >
                     <p class="text-sm mt-2">
@@ -188,14 +188,14 @@ const clearPhotoFileInput = () => {
                             method="post"
                             as="button"
                             class="text-decoration-underline small text-muted"
-                            @click.prevent="sendEmailVerification"
+                            @click.prevent="enviarVerificacionCorreo"
                         >
                             Haz clic aquí para reenviar el correo de verificación.
                         </Link>
                     </p>
 
                     <div
-                        v-show="verificationLinkSent"
+                        v-show="enlaceVerificacionEnviado"
                         class="mt-2 font-medium text-sm text-green-600"
                     >
                         Se ha enviado un nuevo enlace de verificación a tu

@@ -22,9 +22,9 @@ class CreditoController extends Controller
     {
         $estado = $request->string('estado')->toString();
 
-        $creditos = Credito::with(['venta.cliente.user'])
+        $creditos = Credito::with(['venta.cliente.usuario'])
             ->when($estado, fn ($q) => $q->where('estado', $estado))
-            ->latest()
+            ->latest('creado_en')
             ->paginate(12)
             ->withQueryString();
 
@@ -43,7 +43,7 @@ class CreditoController extends Controller
 
     public function show(Credito $credito)
     {
-        $credito->load(['venta.cliente.user', 'cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
+        $credito->load(['venta.cliente.usuario', 'cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
 
         $this->verificarCuotasPendientes($credito);
         $credito->load(['cuotas' => fn ($q) => $q->orderBy('numero_cuota')]);
@@ -69,22 +69,22 @@ class CreditoController extends Controller
     private function verificarCuotasPendientes(Credito $credito): void
     {
         foreach ($credito->cuotas as $cuota) {
-            if ($cuota->estado === 'PAGADO' || !$cuota->pago_facil_transaction_id) {
+            if ($cuota->estado === 'PAGADO' || ! $cuota->pago_facil_id_transaccion) {
                 continue;
             }
 
             $resultado = $this->pagofacil->verificarEstadoPago(
-                $cuota->pago_facil_transaction_id,
-                $cuota->pago_facil_payment_number
+                $cuota->pago_facil_id_transaccion,
+                $cuota->pago_facil_numero_pago
             );
 
             $raw = $resultado['raw'] ?? [];
 
             $pagado = ($resultado['status'] ?? 'pending') === 'completed'
-                || !empty($raw['payerName']);
+                || ! empty($raw['payerName']);
 
             if ($pagado) {
-                $cuota->update(['pago_facil_status' => 'completed']);
+                $cuota->update(['pago_facil_estado' => 'completed']);
                 $this->creditos->registrarPagoCuota($cuota, $cuota->metodo_pago_id);
 
                 Log::info('✅ [PagoFácil] Verificación desde Creditos/Show detectó pago', [

@@ -19,7 +19,7 @@ class PedidoController extends Controller
     {
         $estado = $request->string('estado')->toString();
 
-        $pedidos = Pedido::with(['cliente.user', 'venta:id,numero_venta,estado,metodo_pago'])
+        $pedidos = Pedido::with(['cliente.usuario', 'venta:id,numero_venta,estado,metodo_pago'])
             ->withCount('detalles')
             ->when($estado, fn ($q) => $q->where('estado', $estado))
             ->latest('fecha')
@@ -34,7 +34,7 @@ class PedidoController extends Controller
 
     public function show(Pedido $pedido)
     {
-        $pedido->load(['cliente.user', 'detalles.producto.inventario', 'venta']);
+        $pedido->load(['cliente.usuario', 'detalles.producto.inventario', 'venta']);
 
         return Inertia::render('Pedidos/Show', ['pedido' => $pedido]);
     }

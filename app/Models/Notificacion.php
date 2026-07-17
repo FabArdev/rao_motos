@@ -20,13 +20,14 @@ class Notificacion extends Model
     /** Garantiza que recurso sea URL absoluta, necesaria para Inertia en subdirectorio. */
     public function getRecursoAttribute(?string $value): ?string
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
         // Si ya es absoluta, se devuelve tal cual.
         if (str_starts_with($value, 'http')) {
             return $value;
         }
+
         // Si es relativa (notificaciones viejas o generadas con route(…,false)),
         // se completa con la URL base del servidor.
         return url($value);
@@ -34,13 +35,13 @@ class Notificacion extends Model
 
     public function usuario()
     {
-        return $this->belongsTo(User::class, 'usuario_id');
+        return $this->belongsTo(Usuario::class, 'usuario_id');
     }
 
     /** Crea la misma notificación in-app para todos los usuarios de un rol. */
     public static function paraRol(string $rol, string $tipo, string $mensaje, ?string $recurso = null): void
     {
-        $ids = User::whereHas('role', fn ($q) => $q->where('nombre', $rol))->pluck('id');
+        $ids = Usuario::whereHas('rol', fn ($q) => $q->where('nombre', $rol))->pluck('id');
         foreach ($ids as $usuarioId) {
             static::create([
                 'usuario_id' => $usuarioId,

@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Venta extends Model
+class Venta extends ModeloBase
 {
     protected $table = 'venta';
 
     protected $fillable = [
         'numero_venta', 'cliente_id', 'vendedor_id', 'fecha', 'monto_total',
         'tipo_venta', 'metodo_pago', 'estado',
-        'pago_facil_transaction_id', 'pago_facil_payment_number',
-        'pago_facil_qr_image', 'pago_facil_status', 'pago_facil_raw_response',
+        'pago_facil_id_transaccion', 'pago_facil_numero_pago',
+        'pago_facil_imagen_qr', 'pago_facil_estado', 'pago_facil_respuesta_cruda',
     ];
 
     protected $casts = [
@@ -27,7 +25,7 @@ class Venta extends Model
 
     public function vendedor()
     {
-        return $this->belongsTo(User::class, 'vendedor_id');
+        return $this->belongsTo(Usuario::class, 'vendedor_id');
     }
 
     public function detalles()

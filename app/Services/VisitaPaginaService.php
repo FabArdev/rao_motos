@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\PageVisit;
+use App\Models\VisitaPagina;
 
 /**
  * Contador de visitas por ruta (REQ7). El total se muestra en el footer.
  */
-class PageVisitService
+class VisitaPaginaService
 {
     /** Rutas que NO se contabilizan (assets, callbacks, etc.). */
     private array $excluidas = ['webhook', 'pagofacil', 'livewire', 'build', 'storage'];
@@ -26,16 +26,16 @@ class PageVisitService
     public function registrarVisita(string $ruta): void
     {
         // upsert atómico: crea la fila o incrementa el contador.
-        $existe = PageVisit::where('ruta', $ruta)->exists();
+        $existe = VisitaPagina::where('ruta', $ruta)->exists();
         if ($existe) {
-            PageVisit::where('ruta', $ruta)->increment('contador');
+            VisitaPagina::where('ruta', $ruta)->increment('contador');
         } else {
-            PageVisit::create(['ruta' => $ruta, 'contador' => 1]);
+            VisitaPagina::create(['ruta' => $ruta, 'contador' => 1]);
         }
     }
 
     public function total(): int
     {
-        return (int) PageVisit::sum('contador');
+        return (int) VisitaPagina::sum('contador');
     }
 }

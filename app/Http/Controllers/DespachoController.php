@@ -23,7 +23,7 @@ class DespachoController extends Controller
     {
         $q = $request->string('q')->toString();
 
-        $ventas = Venta::with('cliente.user')
+        $ventas = Venta::with('cliente.usuario')
             ->withCount('detalles')
             ->where('estado', 'PAGADA')
             ->when($q, fn ($query) => $query->where('numero_venta', 'ilike', "%{$q}%"))
@@ -37,7 +37,7 @@ class DespachoController extends Controller
     /** Detalle de lo que hay que preparar (productos, cantidades, stock). */
     public function show(Venta $venta)
     {
-        $venta->load(['cliente.user', 'vendedor', 'detalles.producto.inventario']);
+        $venta->load(['cliente.usuario', 'vendedor', 'detalles.producto.inventario']);
 
         return Inertia::render('Despachos/Show', ['venta' => $venta]);
     }

@@ -46,7 +46,7 @@ const pago = (p) => {
                     <tbody>
                         <tr v-for="p in pedidos.data" :key="p.id">
                             <td>{{ p.id }}</td>
-                            <td>{{ p.cliente?.user?.name }}</td>
+                            <td>{{ p.cliente?.usuario?.nombre_completo }}</td>
                             <td>{{ new Date(p.fecha).toLocaleDateString() }}</td>
                             <td>{{ p.detalles_count }}</td>
                             <td>{{ p.venta?.numero_venta || '—' }}</td>

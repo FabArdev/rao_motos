@@ -6,7 +6,7 @@ use App\Models\DetallePedido;
 use App\Models\Notificacion;
 use App\Models\Pedido;
 use App\Models\Producto;
-use App\Models\User;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -65,12 +65,12 @@ class CatalogoController extends Controller
             }
 
             // Aviso in-app a los vendedores (pedido por aprobar).
-            $vendedores = User::whereHas('role', fn ($r) => $r->where('nombre', 'vendedor'))->pluck('id');
+            $vendedores = Usuario::whereHas('rol', fn ($r) => $r->where('nombre', 'vendedor'))->pluck('id');
             foreach ($vendedores as $usuarioId) {
                 Notificacion::create([
                     'usuario_id' => $usuarioId,
                     'tipo' => 'PEDIDO_POR_APROBAR',
-                    'mensaje' => "Nuevo pedido #{$pedido->id} de {$request->user()->name} por aprobar.",
+                    'mensaje' => "Nuevo pedido #{$pedido->id} de {$request->user()->nombre_completo} por aprobar.",
                     'recurso' => route('pedidos.show', $pedido->id),
                     'leido' => false,
                     'fecha' => now(),

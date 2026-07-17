@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Producto;
 use App\Models\Inventario;
+use App\Models\Producto;
+use Illuminate\Database\Seeder;
 
 class ProductoSeeder extends Seeder
 {
@@ -57,8 +57,13 @@ class ProductoSeeder extends Seeder
 
     private function umbral(float $base): int
     {
-        if ($base < 100) return 20;
-        if ($base <= 200) return 8;
+        if ($base < 100) {
+            return 20;
+        }
+        if ($base <= 200) {
+            return 8;
+        }
+
         return 3;
     }
 }
