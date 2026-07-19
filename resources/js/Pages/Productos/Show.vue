@@ -2,9 +2,19 @@
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
-const props = defineProps({ producto: Object });
+const props = defineProps({ producto: Object, ultimoCosto: { type: Number, default: null } });
 const bs = (n) => 'Bs. ' + Number(n).toFixed(2);
 const galeria = [props.producto.foto_completa, ...(props.producto.imagenes ?? []).map((i) => i.url)].filter(Boolean);
+
+// Margen % implícito sobre el último costo: (precio / costo - 1) * 100. Solo si hay costo (> 0).
+const margen = (precio) => {
+    if (!props.ultimoCosto || props.ultimoCosto <= 0) return null;
+    return ((Number(precio) / props.ultimoCosto - 1) * 100);
+};
+const fmtMargen = (precio) => {
+    const m = margen(precio);
+    return m === null ? null : `${m >= 0 ? '+' : ''}${m.toFixed(1)}%`;
+};
 </script>
 
 <template>
@@ -41,8 +51,21 @@ const galeria = [props.producto.foto_completa, ...(props.producto.imagenes ?? []
                         <p class="text-muted mb-3"><code>{{ producto.codigo }}</code> · {{ [producto.marca, producto.modelo].filter(Boolean).join(' · ') }}</p>
 
                         <dl class="row mb-0">
-                            <dt class="col-sm-5 text-muted">Precio minorista</dt><dd class="col-sm-7">{{ bs(producto.precio_venta_base) }}</dd>
-                            <dt class="col-sm-5 text-muted">Precio mayorista</dt><dd class="col-sm-7">{{ bs(producto.precio_mayorista) }} <small class="text-muted">(desde {{ producto.cantidad_minima_mayorista }} u.)</small></dd>
+                            <dt class="col-sm-5 text-muted">Último costo</dt>
+                            <dd class="col-sm-7">
+                                <template v-if="ultimoCosto">{{ bs(ultimoCosto) }}</template>
+                                <small v-else class="text-muted">sin compras recibidas</small>
+                            </dd>
+                            <dt class="col-sm-5 text-muted">Precio minorista</dt>
+                            <dd class="col-sm-7">
+                                {{ bs(producto.precio_venta_base) }}
+                                <span v-if="fmtMargen(producto.precio_venta_base)" class="badge bg-success-subtle text-success-emphasis ms-1">margen {{ fmtMargen(producto.precio_venta_base) }}</span>
+                            </dd>
+                            <dt class="col-sm-5 text-muted">Precio mayorista</dt>
+                            <dd class="col-sm-7">
+                                {{ bs(producto.precio_mayorista) }} <small class="text-muted">(desde {{ producto.cantidad_minima_mayorista }} u.)</small>
+                                <span v-if="fmtMargen(producto.precio_mayorista)" class="badge bg-info-subtle text-info-emphasis ms-1">margen {{ fmtMargen(producto.precio_mayorista) }}</span>
+                            </dd>
                             <dt class="col-sm-5 text-muted">Stock actual</dt><dd class="col-sm-7">{{ producto.inventario?.stock_actual ?? 0 }}</dd>
                             <dt class="col-sm-5 text-muted">Stock mínimo</dt><dd class="col-sm-7">{{ producto.inventario?.stock_minimo ?? 0 }}</dd>
                         </dl>

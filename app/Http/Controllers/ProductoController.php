@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
+use App\Models\DetalleCompra;
 use App\Models\Inventario;
 use App\Models\Producto;
 use App\Models\ProductoImagen;
@@ -93,7 +94,17 @@ class ProductoController extends Controller
     {
         $producto->load('inventario', 'imagenes');
 
-        return Inertia::render('Productos/Show', ['producto' => $producto]);
+        // Último costo conocido = precio unitario de la compra RECIBIDA más reciente (base del
+        // margen, RN23). Con esto la ficha muestra el % de margen implícito minorista/mayorista.
+        $ultimoCosto = DetalleCompra::where('producto_id', $producto->id)
+            ->whereHas('compra', fn ($c) => $c->where('estado', 'RECIBIDA'))
+            ->latest('id')
+            ->value('precio_unitario');
+
+        return Inertia::render('Productos/Show', [
+            'producto' => $producto,
+            'ultimoCosto' => $ultimoCosto !== null ? (float) $ultimoCosto : null,
+        ]);
     }
 
     public function edit(Producto $producto)

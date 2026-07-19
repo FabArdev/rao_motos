@@ -64,6 +64,14 @@ const enviar = () => {
                                 <h6 class="fw-semibold">{{ p.nombre }}</h6>
                                 <div class="fw-bold text-primary">{{ fmt(p.precio_venta_base) }}</div>
                                 <div class="small text-muted">Mayorista {{ fmt(p.precio_mayorista) }} desde {{ p.cantidad_minima_mayorista }} u.</div>
+                                <div class="small mt-1">
+                                    <span v-if="(p.inventario?.stock_actual ?? 0) > 0" class="badge bg-success-subtle text-success-emphasis">
+                                        <i class="bi bi-box-seam me-1"></i>Stock: {{ p.inventario.stock_actual }}
+                                    </span>
+                                    <span v-else class="badge bg-danger-subtle text-danger-emphasis">
+                                        <i class="bi bi-x-circle me-1"></i>Sin stock
+                                    </span>
+                                </div>
                             </div>
                             <div class="card-footer bg-white border-0">
                                 <button class="btn btn-sm btn-primary w-100" @click="agregar(p)"

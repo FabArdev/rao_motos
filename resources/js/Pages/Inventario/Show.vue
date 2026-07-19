@@ -18,6 +18,15 @@ const ajustar = () => form.post(route('inventario.ajuste', props.inventario.id),
         <div v-if="page.props.flash?.success" class="alert alert-success">{{ page.props.flash.success }}</div>
         <div v-if="page.props.flash?.error" class="alert alert-danger">{{ page.props.flash.error }}</div>
 
+        <div class="alert alert-info d-flex gap-2 align-items-start">
+            <i class="bi bi-info-circle fs-5 mt-1"></i>
+            <div class="small">
+                <strong>¿Para qué sirve esta pantalla?</strong> Aquí <strong>no se editan los datos ni el precio del producto</strong> (eso se hace en <em>Productos</em>).
+                Esta vista es para <strong>ajustar el stock manualmente</strong> (correcciones de conteo, mermas, ingresos que no vienen de una compra)
+                y para <strong>ver el historial de movimientos (kardex)</strong> del producto.
+            </div>
+        </div>
+
         <div class="row g-3">
             <div class="col-md-5">
                 <div class="card shadow-sm border-0 mb-3">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Notificacion;
 use App\Models\Pedido;
+use App\Services\InventarioService;
 use App\Services\VentaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ class PedidoController extends Controller
 {
     public function __construct(
         private VentaService $ventas,
+        private InventarioService $inventario,
     ) {}
 
     public function index(Request $request)

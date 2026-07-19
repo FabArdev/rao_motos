@@ -73,7 +73,21 @@ const notificaciones = computed(() => {
         recientes: Array.isArray(n?.recientes) ? n.recientes : [],
     };
 });
-const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APROBAR: 'bag', PEDIDO_APROBADO: 'check-circle', PEDIDO_RECHAZADO: 'x-circle', PEDIDO_DESPACHADO: 'truck', MORA: 'cash-coin' }[t] ?? 'bell');
+const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APROBAR: 'bag', VENTA_PAGADA: 'cash-stack', PEDIDO_APROBADO: 'check-circle', PEDIDO_RECHAZADO: 'x-circle', PEDIDO_DESPACHADO: 'truck', MORA: 'cash-coin' }[t] ?? 'bell');
+
+// Al abrir una notificación: marcarla como leída (baja el contador) y luego ir al recurso.
+const abrirNotif = (n) => {
+    const ir = () => { if (n.recurso) router.visit(n.recurso); };
+    if (n.leido) {
+        ir();
+        return;
+    }
+    router.post(route('notificaciones.leida', n.id), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: ir,
+    });
+};
 </script>
 
 <template>
@@ -115,14 +129,11 @@ const iconoNotif = (t) => ({ STOCK_BAJO: 'exclamation-triangle', PEDIDO_POR_APRO
                         </li>
                         <li v-if="!notificaciones.recientes.length" class="dropdown-item-text text-muted small">Sin notificaciones.</li>
                         <li v-for="n in notificaciones.recientes" :key="n.id">
-                            <Link v-if="n.recurso" :href="n.recurso" class="dropdown-item small d-flex gap-2 text-wrap" :class="{ 'fw-semibold': !n.leido }">
+                            <button type="button" class="dropdown-item small d-flex gap-2 text-wrap text-start" :class="{ 'fw-semibold': !n.leido }" @click="abrirNotif(n)">
                                 <i class="bi mt-1" :class="`bi-${iconoNotif(n.tipo)}`"></i>
                                 <span>{{ n.mensaje }}</span>
-                            </Link>
-                            <span v-else class="dropdown-item small d-flex gap-2 text-wrap" :class="{ 'fw-semibold': !n.leido }">
-                                <i class="bi mt-1" :class="`bi-${iconoNotif(n.tipo)}`"></i>
-                                <span>{{ n.mensaje }}</span>
-                            </span>
+                                <span v-if="!n.leido" class="ms-auto badge rounded-pill bg-danger align-self-center">&nbsp;</span>
+                            </button>
                         </li>
                     </ul>
                 </div>
