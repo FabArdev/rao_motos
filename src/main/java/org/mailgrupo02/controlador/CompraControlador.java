@@ -15,6 +15,8 @@ public class CompraControlador {
         switch (cmd.toUpperCase()) {
             case "LISTARCOMPRAS": case "LISTARCOMPRA":
             case "CREARCOMPRA":
+            case "AGREGARDETALLECOMPRA":
+            case "RECIBIRCOMPRA":
             case "ANULARCOMPRA":
             case "GETCOMPRA":
                 return true;
@@ -41,10 +43,22 @@ public class CompraControlador {
                 }
 
                 case "CREARCOMPRA":
-                    if (params.size() < 2) return PCompras.generarHtml(cmd, "Error: se requieren 2 parámetros [proveedorId,total].");
-                    rawResult = service.crearCompra(
+                    if (params.isEmpty()) return PCompras.generarHtml(cmd, "Error: se requiere el ID del proveedor. Formato CREARCOMPRA[proveedorId].");
+                    rawResult = service.crearCompra(Integer.parseInt(params.get(0).trim()), 0);
+                    break;
+
+                case "AGREGARDETALLECOMPRA":
+                    if (params.size() < 4) return PCompras.generarHtml(cmd, "Error: formato AGREGARDETALLECOMPRA[compraId,productoId,cantidad,precioUnitario].");
+                    rawResult = service.agregarDetalle(
                         Integer.parseInt(params.get(0).trim()),
-                        Double.parseDouble(params.get(1).trim()));
+                        Integer.parseInt(params.get(1).trim()),
+                        Integer.parseInt(params.get(2).trim()),
+                        Double.parseDouble(params.get(3).trim()));
+                    break;
+
+                case "RECIBIRCOMPRA":
+                    if (params.isEmpty()) return PCompras.generarHtml(cmd, "Error: se requiere el ID de la compra.");
+                    rawResult = service.recibirCompra(Integer.parseInt(params.get(0).trim()));
                     break;
 
                 case "ANULARCOMPRA":

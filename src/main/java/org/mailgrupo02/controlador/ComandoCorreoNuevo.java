@@ -4,6 +4,8 @@ import org.mailgrupo02.vista.*;
 import org.mailgrupo02.modelo.entidad.*;
 
 import org.mailgrupo02.modelo.dao.UsuarioM;
+import org.mailgrupo02.modelo.dao.BitacoraM;
+import org.mailgrupo02.modelo.servicio.UsuarioService;
 import org.mailgrupo02.controlador.*;
 
 import java.sql.SQLException;
@@ -24,19 +26,36 @@ public class ComandoCorreoNuevo {
             }
             asunto = asunto.trim();
 
-            if (asunto.equalsIgnoreCase("HELP")) {
-                return PAyuda.generarHtml();
-            }
-
-            if (asunto.equalsIgnoreCase("WHOAMI")) {
-                return whoAmI(correoRemitente);
-            }
-
             String[] parsed = parsearAsunto(asunto);
             String cmd = parsed[0].toUpperCase();
             List<String> params = parsed[1].isEmpty()
                     ? Collections.emptyList()
                     : Arrays.asList(parsed[1].replaceAll("\"", "").split(",\\s*"));
+
+            // Resolver identidad y rol del remitente (la identidad ES el correo)
+            UsuarioService usuarioService = new UsuarioService(null);
+            String rol = usuarioService.buscarRolPorCorreo(correoRemitente);   // "DESCONOCIDO" si no tiene cuenta
+            int userId = usuarioService.buscarIdPorCorreo(correoRemitente);
+
+            // Bitácora del acceso (nunca interrumpe el flujo)
+            BitacoraM.registrar(userId > 0 ? userId : null, correoRemitente, "ACCESO_RECURSO", cmd);
+
+            // HELP filtrado por rol / WHOAMI
+            if ("HELP".equals(cmd))   return ayudaPorRol(rol);
+            if ("WHOAMI".equals(cmd)) return whoAmI(correoRemitente);
+
+            // Gate RBAC (admin es superusuario)
+            if (Permisos.existe(cmd) && !Permisos.puedeEjecutar(cmd, rol)) {
+                if (!Permisos.esPublico(cmd) && "DESCONOCIDO".equalsIgnoreCase(rol)) {
+                    return PAyuda.generarError(
+                        "El correo <strong>" + correoRemitente + "</strong> no está registrado.<br>" +
+                        "Regístrate con <strong>CREATEUSUARIO[nombre,correo,password,cliente,telefono,direccion]</strong> " +
+                        "o envía <strong>HELP</strong>.");
+                }
+                return PAyuda.generarError(
+                    "Tu rol (<strong>" + rol + "</strong>) no tiene permiso para ejecutar <strong>" + cmd + "</strong>.<br>" +
+                    "Envía <strong>HELP</strong> para ver los comandos disponibles para tu rol.");
+            }
 
             // Despachar al controlador correspondiente
             if (UsuarioControlador.canHandle(cmd))    return UsuarioControlador.handle(cmd, params, correoRemitente);
@@ -56,6 +75,36 @@ public class ComandoCorreoNuevo {
         } catch (Exception e) {
             return PAyuda.generarError("Error inesperado al procesar el comando: " + e.getMessage());
         }
+    }
+
+    /** HELP filtrado: solo los comandos que el rol puede ejecutar, agrupados por categoría. */
+    private static String ayudaPorRol(String rol) {
+        boolean anonimo = rol == null || rol.isBlank() || "DESCONOCIDO".equalsIgnoreCase(rol);
+        StringBuilder sb = new StringBuilder();
+        sb.append("<h2 style=\"font-size:18px;font-weight:700;color:#111827;margin:0 0 12px;\">Comandos disponibles");
+        if (!anonimo) sb.append(" &mdash; rol: ").append(rol);
+        sb.append("</h2>");
+        if (anonimo) sb.append("<p style=\"color:#6b7280;font-size:13px;\">No est&aacute;s registrado: solo ves los comandos p&uacute;blicos.</p>");
+
+        String categoriaActual = null;
+        for (CatalogoComandos.Comando c : CatalogoComandos.todos()) {
+            boolean permitido = anonimo ? Permisos.esPublico(c.nombre) : Permisos.puedeEjecutar(c.nombre, rol);
+            if (!permitido) continue;
+            if (!c.categoria.equals(categoriaActual)) {
+                categoriaActual = c.categoria;
+                sb.append("<h3 style=\"font-size:14px;font-weight:700;color:#b91c1c;margin:14px 0 6px;\">")
+                  .append(categoriaActual).append("</h3>");
+            }
+            sb.append("<div style=\"margin:5px 0;\">")
+              .append("<code style=\"font-family:'Courier New',monospace;background:#f1f5f9;color:#1d4ed8;")
+              .append("padding:2px 7px;border-radius:4px;font-size:12px;\">").append(escapar(c.sintaxis)).append("</code>")
+              .append(" &mdash; <span style=\"color:#374151;font-size:13px;\">").append(c.descripcion).append("</span></div>");
+        }
+        return PlantillaBase.envolver("Ayuda", sb.toString());
+    }
+
+    private static String escapar(String s) {
+        return s == null ? "" : s.replace("<", "&lt;").replace(">", "&gt;");
     }
 
     private static String whoAmI(String correoRemitente) {

@@ -6,6 +6,7 @@ import org.mailgrupo02.modelo.dao.*;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Date;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -246,6 +247,179 @@ public class VentaService {
     public String eliminarVenta(int id) throws SQLException {
         VentaValidator.validarEliminarVenta(id);
         return VentaM.eliminar(id);
+    }
+
+    // ── Pipeline por ítems: total server-side (RN11), precio por línea (RN3), stock una vez (RN18) ──
+
+    /** Parsea "prod:cant;prod:cant" → lista de {productoId, cantidad}. */
+    public static List<int[]> parseItems(String seg) {
+        List<int[]> items = new ArrayList<>();
+        if (seg == null || seg.isBlank()) return items;
+        for (String par : seg.split(";")) {
+            String[] kv = par.trim().split(":");
+            if (kv.length == 2)
+                items.add(new int[]{Integer.parseInt(kv[0].trim()), Integer.parseInt(kv[1].trim())});
+        }
+        return items;
+    }
+
+    /** Venta al contado (mostrador): total calculado, stock descontado una vez, estado COMPLETADA. */
+    public String crearContadoItems(int vendedorId, int clienteId, String metodoPago, List<int[]> items)
+            throws SQLException {
+        return crearItems(vendedorId, clienteId, "CONTADO", metodoPago, items, 0, 0);
+    }
+
+    /** Venta a crédito (mostrador): genera crédito + calendario de cuotas (interés infla el saldo). */
+    public String crearCreditoItems(int vendedorId, int clienteId, int cuotas, double interes,
+            String metodoPago, List<int[]> items) throws SQLException {
+        if (cuotas < 2) return "Error: las cuotas deben ser al menos 2.";
+        return crearItems(vendedorId, clienteId, "CREDITO", metodoPago, items, cuotas, interes);
+    }
+
+    private String crearItems(int vendedorId, int clienteId, String tipo, String metodoPago,
+            List<int[]> items, int cuotas, double interes) throws SQLException {
+        if (items == null || items.isEmpty())
+            return "Error: no hay ítems. Formato: prod:cant;prod:cant";
+        metodoPago = metodoPago == null ? "EFECTIVO" : metodoPago.toUpperCase().trim();
+
+        InventarioService inv = new InventarioService();
+
+        // 1) Validar existencia + stock y calcular total en el servidor (RN11/RN18)
+        double total = 0;
+        for (int[] it : items) {
+            ProductoM p = ProductoM.leer(it[0]);           // lanza si no existe
+            if (it[1] <= 0) return "Error: cantidad inválida para producto " + it[0] + ".";
+            int stock = inv.obtenerStock(it[0]);
+            if (stock < it[1])
+                return "Stock insuficiente para " + p.getNombre() + " (disp: " + stock + ", pedido: " + it[1] + ").";
+            total += p.precioPara(it[1]) * it[1];
+        }
+
+        // 2) Crear la venta
+        Timestamp ahora = new Timestamp(System.currentTimeMillis());
+        VentaM venta = new VentaM();
+        venta.setClienteId(clienteId);
+        venta.setVendedorId(vendedorId > 0 ? vendedorId : null);
+        venta.setFecha(ahora);
+        venta.setMontoTotal(total);
+        venta.setTipoVenta(tipo);
+        venta.setMetodoPago(metodoPago);
+        venta.setEstado("CONTADO".equals(tipo) ? "COMPLETADA" : "PENDIENTE");
+        int ventaId = VentaM.crear(venta);
+        String numero = String.format("V-%06d", ventaId);
+        VentaM.asignarNumero(ventaId, numero);
+
+        // 3) Detalle + descuento de stock una sola vez (RN18)
+        for (int[] it : items) {
+            ProductoM p = ProductoM.leer(it[0]);
+            DetalleVentaM dv = new DetalleVentaM();
+            dv.setVentaId(ventaId);
+            dv.setProductoId(it[0]);
+            dv.setCantidad(it[1]);
+            dv.setPrecioUnitario(p.precioPara(it[1]));
+            dv.crear();
+            inv.registrarEgreso(it[0], it[1], "Venta " + numero);
+        }
+
+        // 4) Si es crédito, generar crédito + calendario de cuotas
+        String extra = "";
+        if ("CREDITO".equals(tipo)) {
+            CreditoM credito = new CreditoM();
+            credito.setVentaId(ventaId);
+            credito.setNumeroCuotas(cuotas);
+            credito.setTasaInteres(interes);
+            credito.setSaldoPendiente(total * (1 + interes / 100));
+            credito.setEstado("VIGENTE");
+            int creditoId = CreditoM.crear(credito);
+
+            double montoCuota = (total * (1 + interes / 100)) / cuotas;
+            int dias = (int) ConfiguracionM.valorNum("dias_entre_cuotas", 30);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(ahora);
+            for (int i = 1; i <= cuotas; i++) {
+                cal.add(Calendar.DAY_OF_MONTH, dias);
+                PagoCuotaM pago = new PagoCuotaM();
+                pago.setCreditoId(creditoId);
+                pago.setNumeroCuota(i);
+                pago.setMontoCuota(montoCuota);
+                pago.setFechaVencimiento(new Date(cal.getTimeInMillis()));
+                pago.setMora(0);
+                pago.setEstado("PENDIENTE");
+                pago.crear();
+            }
+            extra = " | Crédito ID " + creditoId + ": " + cuotas + " cuotas de Bs. " + String.format("%.2f", montoCuota);
+        }
+
+        return "Venta " + numero + " creada (ID: " + ventaId + ") — Total Bs. "
+                + String.format("%.2f", total) + extra;
+    }
+
+    /**
+     * Crea una venta PENDIENTE desde ítems SIN descontar stock (flujo de pedido: el stock
+     * sale recién al despachar, RN18). Total server-side + precioPara. Devuelve el id de la venta.
+     */
+    public int crearVentaPendienteDesdeItems(int clienteId, List<int[]> items, String metodo) throws SQLException {
+        double total = 0;
+        for (int[] it : items) {
+            ProductoM p = ProductoM.leer(it[0]);
+            total += p.precioPara(it[1]) * it[1];
+        }
+        Timestamp ahora = new Timestamp(System.currentTimeMillis());
+        VentaM venta = new VentaM();
+        venta.setClienteId(clienteId);
+        venta.setFecha(ahora);
+        venta.setMontoTotal(total);
+        venta.setTipoVenta("CONTADO");
+        venta.setMetodoPago(metodo == null ? "EFECTIVO" : metodo.toUpperCase().trim());
+        venta.setEstado("PENDIENTE");
+        int ventaId = VentaM.crear(venta);
+        VentaM.asignarNumero(ventaId, String.format("V-%06d", ventaId));
+        for (int[] it : items) {
+            ProductoM p = ProductoM.leer(it[0]);
+            DetalleVentaM dv = new DetalleVentaM();
+            dv.setVentaId(ventaId);
+            dv.setProductoId(it[0]);
+            dv.setCantidad(it[1]);
+            dv.setPrecioUnitario(p.precioPara(it[1]));
+            dv.crear();
+        }
+        return ventaId;
+    }
+
+    /** Despacha una venta PAGADA: descuenta stock de sus líneas y la marca COMPLETADA (RN18/RN20/21). */
+    public String despacharVenta(int ventaId) throws SQLException {
+        VentaM v = VentaM.leer(ventaId);
+        if (!"PAGADA".equals(v.getEstado()))
+            return "La venta " + ventaId + " no está PAGADA (estado: " + v.getEstado() + "); no se puede despachar.";
+        InventarioService inv = new InventarioService();
+        for (DetalleVentaM d : new DetalleVentaM().obtenerPorVenta(ventaId)) {
+            if (d.getProductoId() > 0)
+                inv.registrarEgreso(d.getProductoId(), d.getCantidad(), "Despacho venta " + ventaId);
+        }
+        VentaM.cambiarEstado(ventaId, "COMPLETADA");
+        return "Venta " + ventaId + " despachada y stock descontado.";
+    }
+
+    /** Confirma el pago de una venta PENDIENTE → PAGADA (RN20). */
+    public String confirmarPago(int ventaId) throws SQLException {
+        VentaM v = VentaM.leer(ventaId);
+        if (!"PENDIENTE".equals(v.getEstado()))
+            return "La venta " + ventaId + " no está PENDIENTE (estado: " + v.getEstado() + ").";
+        VentaM.cambiarEstado(ventaId, "PAGADA");
+        return "Pago confirmado: venta " + ventaId + " → PAGADA.";
+    }
+
+    /** Anula una venta y repone el stock de sus líneas. */
+    public String anularVenta(int ventaId) throws SQLException {
+        VentaM v = VentaM.leer(ventaId);
+        if ("ANULADA".equals(v.getEstado())) return "La venta " + ventaId + " ya está anulada.";
+        InventarioService inv = new InventarioService();
+        for (DetalleVentaM d : new DetalleVentaM().obtenerPorVenta(ventaId)) {
+            if (d.getProductoId() > 0)
+                inv.registrarIngreso(d.getProductoId(), d.getCantidad(), "Anulación venta " + ventaId);
+        }
+        VentaM.cambiarEstado(ventaId, "ANULADA");
+        return "Venta " + ventaId + " anulada y stock repuesto.";
     }
 
     private String mapear(List<VentaM> ventas) throws SQLException {

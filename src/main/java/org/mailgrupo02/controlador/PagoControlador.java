@@ -24,6 +24,7 @@ public class PagoControlador {
             case "VERCUOTAS":
             case "PAGARCUOTA":
             case "REGISTRARPAGO":
+            case "CORRERMORA":
             case "MISCREDITOS":
             case "MISCUOTAS":
             case "ESTADOCUENTA":
@@ -69,12 +70,21 @@ public class PagoControlador {
 
                 // ── Ambos ────────────────────────────────────────────────────────
                 case "PAGARCUOTA":
-                case "REGISTRARPAGO":
-                    if (params.size() < 2) return PPagos.generarHtml(cmd, "Error: se requieren 2 parámetros [creditoId,numeroCuota].");
-                    rawResult = service.registrarPago(
+                case "REGISTRARPAGO": {
+                    if (params.size() < 2) return PPagos.generarHtml(cmd, "Error: formato PAGARCUOTA[creditoId,numeroCuota,QR|EFECTIVO].");
+                    String metodo = params.size() >= 3 ? params.get(2).trim() : "QR";
+                    rawResult = service.pagarCuota(
                         Integer.parseInt(params.get(0).trim()),
-                        Integer.parseInt(params.get(1).trim()));
+                        Integer.parseInt(params.get(1).trim()),
+                        metodo);
                     break;
+                }
+
+                case "CORRERMORA": {
+                    int n = org.mailgrupo02.modelo.servicio.CreditoService.marcarVencidas();
+                    rawResult = "Proceso de mora ejecutado: " + n + " cuota(s) marcada(s) como vencidas.";
+                    break;
+                }
 
                 case "ESTADOCUENTA": {
                     int clienteId = usuarioService.buscarIdPorCorreo(correoRemitente);

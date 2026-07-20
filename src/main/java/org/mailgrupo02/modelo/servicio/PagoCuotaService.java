@@ -85,6 +85,44 @@ public class PagoCuotaService {
         return sb.toString();
     }
 
+    /**
+     * Paga una cuota. EFECTIVO liquida en el acto (aplica mora RN16, reduce saldo);
+     * QR genera el código PagoFácil para que el cliente pague (se confirma luego).
+     */
+    public String pagarCuota(int creditoId, int numeroCuota, String metodo) throws SQLException {
+        metodo = metodo == null ? "EFECTIVO" : metodo.toUpperCase().trim();
+        if ("QR".equals(metodo)) {
+            return registrarPago(creditoId, numeroCuota);
+        }
+        PagoCuotaM cuota = new PagoCuotaM().obtenerPorCreditoYNumero(creditoId, numeroCuota);
+        if (cuota == null) return "Error: no se encontró la cuota " + numeroCuota + " del crédito " + creditoId + ".";
+        if (!"PENDIENTE".equals(cuota.getEstado()) && !"VENCIDO".equals(cuota.getEstado()))
+            return "La cuota " + numeroCuota + " ya está " + cuota.getEstado() + ".";
+
+        double mora = CreditoService.calcularMora(cuota);
+        cuota.setMora(mora);
+        cuota.setFechaPago(new Date(System.currentTimeMillis()));
+        cuota.setEstado("PAGADO");
+        cuota.actualizar();
+        reducirSaldo(creditoId, cuota.getMontoCuota());
+        actualizarEstadoCredito(creditoId);
+
+        String extra = mora > 0 ? " (incluye mora Bs. " + String.format("%.2f", mora) + ")" : "";
+        return "Cuota " + numeroCuota + " del crédito " + creditoId + " pagada en EFECTIVO" + extra + ".";
+    }
+
+    private void reducirSaldo(int creditoId, double monto) {
+        try (Connection conn = Conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(
+                 "UPDATE credito SET saldo_pendiente = GREATEST(saldo_pendiente - ?, 0), actualizado_en = CURRENT_TIMESTAMP WHERE id = ?")) {
+            ps.setDouble(1, monto);
+            ps.setInt(2, creditoId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("[PagoCuotaService] reducirSaldo: " + e.getMessage());
+        }
+    }
+
     public String confirmarPago(int creditoId, int numeroCuota) throws SQLException {
         PagoCuotaM cuota = new PagoCuotaM().obtenerPorCreditoYNumero(creditoId, numeroCuota);
         if (cuota == null) {
@@ -113,11 +151,11 @@ public class PagoCuotaService {
             ps.setInt(1, creditoId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next() && rs.getInt(1) == 0) {
-                    String updateSql = "UPDATE credito SET estado = 'CANCELADO', saldo_pendiente = 0 WHERE id = ?";
+                    String updateSql = "UPDATE credito SET estado = 'PAGADO', saldo_pendiente = 0, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?";
                     try (PreparedStatement ps2 = conn.prepareStatement(updateSql)) {
                         ps2.setInt(1, creditoId);
                         ps2.executeUpdate();
-                        System.out.println("[PagoCuotaService] Credito #" + creditoId + " marcado como CANCELADO (todas las cuotas pagadas).");
+                        System.out.println("[PagoCuotaService] Credito #" + creditoId + " marcado como PAGADO (todas las cuotas pagadas).");
                     }
                 }
             }

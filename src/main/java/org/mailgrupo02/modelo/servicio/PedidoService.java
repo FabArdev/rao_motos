@@ -123,40 +123,55 @@ public class PedidoService {
         return PedidoM.actualizar(p);
     }
 
+    /** Vendedor: aprueba un pedido SOLICITADO → genera venta PENDIENTE (sin descontar stock) y lo deja APROBADO (RN18/20). */
+    public String aprobarPedido(int pedidoId) throws SQLException {
+        PedidoM pedido = PedidoM.leer(pedidoId);
+        if (!"SOLICITADO".equals(pedido.getEstado()))
+            return "Error: solo se aprueban pedidos SOLICITADO (estado actual: " + pedido.getEstado() + ").";
+        List<PedidoDetalleM> items = PedidoDetalleM.obtenerPorPedido(pedidoId);
+        if (items == null || items.isEmpty())
+            return "Error: el pedido #" + pedidoId + " no tiene productos.";
+        List<int[]> lineas = new java.util.ArrayList<>();
+        for (PedidoDetalleM d : items) lineas.add(new int[]{d.getProductoId(), d.getCantidad()});
+        int ventaId = new VentaService(new VentaM(), new CreditoM())
+                .crearVentaPendienteDesdeItems(pedido.getClienteId(), lineas, "EFECTIVO");
+        PedidoM.vincularVenta(pedidoId, ventaId);
+        return "Pedido #" + pedidoId + " aprobado → venta " + ventaId + " (PENDIENTE de pago). "
+             + "El cliente debe pagar antes del despacho.";
+    }
+
+    /** Vendedor: rechaza un pedido SOLICITADO con motivo. */
+    public String rechazarPedido(int pedidoId, String motivo) throws SQLException {
+        PedidoM pedido = PedidoM.leer(pedidoId);
+        if (!"SOLICITADO".equals(pedido.getEstado()))
+            return "Error: solo se rechazan pedidos SOLICITADO (estado actual: " + pedido.getEstado() + ").";
+        PedidoM.rechazar(pedidoId, motivo != null && !motivo.isBlank() ? motivo : "Sin motivo");
+        return "Pedido #" + pedidoId + " rechazado. Motivo: " + (motivo != null ? motivo : "Sin motivo");
+    }
+
+    /** Cliente: paga la venta generada por su pedido aprobado (RN20). */
+    public String pagarPedido(int pedidoId, String metodo) throws SQLException {
+        PedidoM pedido = PedidoM.leer(pedidoId);
+        if (!"APROBADO".equals(pedido.getEstado()))
+            return "Error: el pedido debe estar APROBADO para pagarse (estado actual: " + pedido.getEstado() + ").";
+        if (pedido.getVentaId() == null)
+            return "Error: el pedido no tiene una venta asociada.";
+        return new VentaService(new VentaM(), new CreditoM()).confirmarPago(pedido.getVentaId());
+    }
+
+    /** Almacenero: despacha un pedido cuya venta ya está PAGADA → descuenta stock, venta COMPLETADA, pedido DESPACHADO (RN20/21). */
     public String despacharPedido(int id) throws SQLException {
         PedidoM pedido = PedidoM.leer(id);
-        if (pedido == null) return "Error: pedido #" + id + " no encontrado.";
         if ("DESPACHADO".equals(pedido.getEstado())) return "Error: el pedido ya fue despachado.";
         if ("ANULADO".equals(pedido.getEstado()))    return "Error: el pedido está anulado.";
+        if (!"APROBADO".equals(pedido.getEstado()))
+            return "Error: el pedido debe estar APROBADO y pagado para despacharse (estado actual: " + pedido.getEstado() + ").";
+        if (pedido.getVentaId() == null) return "Error: el pedido no tiene una venta asociada.";
 
-        List<PedidoDetalleM> detalles = PedidoDetalleM.obtenerPorPedido(id);
-        InventarioService invService = new InventarioService();
-
-        // ── Verificar stock antes de despachar ────────────────────────────────
-        StringBuilder errores = new StringBuilder();
-        for (PedidoDetalleM det : detalles) {
-            int stock = invService.obtenerStock(det.getProductoId());
-            ProductoM p = ProductoM.leer(det.getProductoId());
-            String nombre = p != null ? p.getNombre() : "ID:" + det.getProductoId();
-            if (stock < 0) {
-                errores.append("\n  • ").append(nombre).append(": sin inventario registrado.");
-            } else if (stock < det.getCantidad()) {
-                errores.append("\n  • ").append(nombre)
-                       .append(": stock insuficiente — disponible: ").append(stock)
-                       .append(", requerido: ").append(det.getCantidad()).append(".");
-            }
-        }
-        if (errores.length() > 0) {
-            return "No se puede despachar el pedido #" + id + " por stock insuficiente:" + errores.toString();
-        }
-
-        // ── Descontar stock de cada producto ──────────────────────────────────
-        for (PedidoDetalleM det : detalles) {
-            invService.registrarEgreso(det.getProductoId(), det.getCantidad(), "Despacho Pedido #" + id);
-        }
-
-        pedido.setEstado("DESPACHADO");
-        return PedidoM.actualizar(pedido);
+        String r = new VentaService(new VentaM(), new CreditoM()).despacharVenta(pedido.getVentaId());
+        if (r.startsWith("La venta")) return r;   // la venta no estaba PAGADA
+        PedidoM.cambiarEstado(id, "DESPACHADO");
+        return "Pedido #" + id + " despachado. " + r;
     }
 
     public String anularPedido(int id) throws SQLException {

@@ -23,6 +23,8 @@ public class VentaControlador {
             case "LISTARVENTAS": case "LISTARVENTA":
             case "CREARVENTA_CONTADO":
             case "CREARVENTA_CREDITO":
+            case "CONFIRMARPAGO":
+            case "ANULARVENTA":
             case "GETVENTA":
             case "DELETEVENTA":
             case "MISVENTAS":
@@ -51,14 +53,15 @@ public class VentaControlador {
                 }
 
                 case "CREARVENTA_CONTADO": {
-                    if (params.size() < 4) return PVentas.generarHtml(cmd, "Error: se requieren 4 par&aacute;metros [clienteId,fecha,montoTotal,metodoPago].");
-                    String metodo = params.get(3).trim();
+                    if (params.size() < 3) return PVentas.generarHtml(cmd, "Error: formato CREARVENTA_CONTADO[clienteId,metodo,prod:cant;prod:cant].");
                     int cId = Integer.parseInt(params.get(0).trim());
-                    double monto = Double.parseDouble(params.get(2).trim());
-                    rawResult = service.crearVentaContado(cId, Timestamp.valueOf(params.get(1).trim()), monto, metodo);
+                    String metodo = params.get(1).trim();
+                    int vendedorId = new UsuarioService(null).buscarIdPorCorreo(correoRemitente);
+                    rawResult = service.crearContadoItems(vendedorId, cId, metodo, VentaService.parseItems(params.get(2)));
                     if ("QR".equalsIgnoreCase(metodo)) {
                         String idStr = PlantillaBase.extraerId(rawResult);
                         if (idStr != null) {
+                            double monto = VentaM.leer(Integer.parseInt(idStr)).getMontoTotal();
                             String qrHtml = generarQRVenta(Integer.parseInt(idStr), cId, monto);
                             if (qrHtml != null) rawResult += qrHtml;
                         }
@@ -67,14 +70,24 @@ public class VentaControlador {
                 }
 
                 case "CREARVENTA_CREDITO":
-                    if (params.size() < 6) return PVentas.generarHtml(cmd, "Error: se requieren 6 par&aacute;metros [clienteId,fecha,montoTotal,nroCuotas,tasaInteres,metodoPago].");
-                    rawResult = service.crearVentaCredito(
+                    if (params.size() < 5) return PVentas.generarHtml(cmd, "Error: formato CREARVENTA_CREDITO[clienteId,cuotas,interes,metodo,prod:cant;prod:cant].");
+                    rawResult = service.crearCreditoItems(
+                        new UsuarioService(null).buscarIdPorCorreo(correoRemitente),
                         Integer.parseInt(params.get(0).trim()),
-                        Timestamp.valueOf(params.get(1).trim()),
+                        Integer.parseInt(params.get(1).trim()),
                         Double.parseDouble(params.get(2).trim()),
-                        Integer.parseInt(params.get(3).trim()),
-                        Double.parseDouble(params.get(4).trim()),
-                        params.get(5).trim());
+                        params.get(3).trim(),
+                        VentaService.parseItems(params.get(4)));
+                    break;
+
+                case "CONFIRMARPAGO":
+                    if (params.isEmpty()) return PVentas.generarHtml(cmd, "Error: se requiere el ID de la venta.");
+                    rawResult = service.confirmarPago(Integer.parseInt(params.get(0).trim()));
+                    break;
+
+                case "ANULARVENTA":
+                    if (params.isEmpty()) return PVentas.generarHtml(cmd, "Error: se requiere el ID de la venta.");
+                    rawResult = service.anularVenta(Integer.parseInt(params.get(0).trim()));
                     break;
 
                 case "DELETEVENTA":

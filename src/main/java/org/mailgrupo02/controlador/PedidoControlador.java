@@ -19,6 +19,9 @@ public class PedidoControlador {
         switch (cmd.toUpperCase()) {
             case "LISTARPEDIDOS": case "LISTARPEDIDO":
             case "CREARPEDIDO":
+            case "APROBARPEDIDO":
+            case "RECHAZARPEDIDO":
+            case "PAGARPEDIDO":
             case "DESPACHARPEDIDO":
             case "ANULARPEDIDO":
             case "GETPEDIDO":
@@ -68,6 +71,26 @@ public class PedidoControlador {
                     if (params.isEmpty()) return PPedidos.generarHtml(cmd, "Error: se requiere el ID del pedido.");
                     rawResult = service.anularPedido(Integer.parseInt(params.get(0).trim()));
                     break;
+
+                // ── Flujo aprobar → pagar → despachar ──────────────────────────
+                case "APROBARPEDIDO":
+                    if (params.isEmpty()) return PPedidos.generarHtml(cmd, "Error: se requiere el ID del pedido.");
+                    rawResult = service.aprobarPedido(Integer.parseInt(params.get(0).trim()));
+                    break;
+
+                case "RECHAZARPEDIDO": {
+                    if (params.isEmpty()) return PPedidos.generarHtml(cmd, "Error: formato RECHAZARPEDIDO[pedidoId,motivo].");
+                    String motivo = params.size() >= 2 ? params.get(1).trim() : "Sin motivo";
+                    rawResult = service.rechazarPedido(Integer.parseInt(params.get(0).trim()), motivo);
+                    break;
+                }
+
+                case "PAGARPEDIDO": {
+                    if (params.isEmpty()) return PPedidos.generarHtml(cmd, "Error: formato PAGARPEDIDO[pedidoId,QR|EFECTIVO].");
+                    String metodo = params.size() >= 2 ? params.get(1).trim() : "EFECTIVO";
+                    rawResult = service.pagarPedido(Integer.parseInt(params.get(0).trim()), metodo);
+                    break;
+                }
 
                 case "PROCESARPEDIDO": {
                     if (params.size() < 3) return PPedidos.generarHtml(cmd,
