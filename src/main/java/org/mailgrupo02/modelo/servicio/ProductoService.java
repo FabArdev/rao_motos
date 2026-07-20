@@ -23,17 +23,23 @@ public class ProductoService {
     }
 
     public String agregarProducto(String codigo, String nombre, String marca, String modelo,
-            String descripcion, double precioVentaBase) throws SQLException {
-        ProductoValidator.validarCampos(codigo, nombre, marca, modelo, descripcion, precioVentaBase);
-        ProductoM productoMObj = cargar(0, codigo, nombre, marca, modelo, descripcion, precioVentaBase, true);
+            String descripcion, double precioVentaBase, double precioMayorista,
+            int cantidadMinimaMayorista) throws SQLException {
+        ProductoValidator.validarCampos(codigo, nombre, marca, modelo, descripcion,
+                precioVentaBase, precioMayorista, cantidadMinimaMayorista);
+        ProductoM productoMObj = cargar(0, codigo, nombre, marca, modelo, descripcion,
+                precioVentaBase, precioMayorista, cantidadMinimaMayorista, true);
         int id = ProductoM.crear(productoMObj);
         return "Producto creado con éxito (ID: " + id + ")";
     }
 
     public String actualizarProducto(int id, String codigo, String nombre, String marca, String modelo,
-            String descripcion, double precioVentaBase, boolean activo) throws SQLException {
-        ProductoValidator.validarCampos(codigo, nombre, marca, modelo, descripcion, precioVentaBase);
-        ProductoM productoMObj = cargar(id, codigo, nombre, marca, modelo, descripcion, precioVentaBase, activo);
+            String descripcion, double precioVentaBase, double precioMayorista,
+            int cantidadMinimaMayorista, boolean activo) throws SQLException {
+        ProductoValidator.validarCampos(codigo, nombre, marca, modelo, descripcion,
+                precioVentaBase, precioMayorista, cantidadMinimaMayorista);
+        ProductoM productoMObj = cargar(id, codigo, nombre, marca, modelo, descripcion,
+                precioVentaBase, precioMayorista, cantidadMinimaMayorista, activo);
         return ProductoM.actualizar(productoMObj);
     }
 
@@ -43,8 +49,9 @@ public class ProductoService {
 
     private String mapear(List<ProductoM> productos) throws SQLException {
         StringBuilder sb = new StringBuilder();
-        String format = "%-5s %-15s %-30s %-20s %-20s %-18s %-10s%n";
-        sb.append(String.format(format, "ID", "Código", "Nombre", "Marca", "Modelo", "Precio Vta Base", "Activo"));
+        String format = "%-5s %-12s %-28s %-16s %-14s %-14s %-8s %-8s%n";
+        sb.append(String.format(format, "ID", "Código", "Nombre", "Marca",
+                "P.Minorista", "P.Mayorista", "MinMay", "Activo"));
         sb.append(
                 "------------------------------------------------------------------------------------------------------------------------\r\n");
 
@@ -54,8 +61,9 @@ public class ProductoService {
                     producto.getCodigo() != null ? producto.getCodigo() : "N/A",
                     producto.getNombre(),
                     producto.getMarca() != null ? producto.getMarca() : "N/A",
-                    producto.getModelo() != null ? producto.getModelo() : "N/A",
                     String.format("%.2f", producto.getPrecioVentaBase()),
+                    String.format("%.2f", producto.getPrecioMayorista()),
+                    producto.getCantidadMinimaMayorista(),
                     producto.isActivo() ? "Sí" : "No"));
         }
         return sb.toString();
@@ -70,6 +78,8 @@ public class ProductoService {
         productoN.setModelo(productoM.getModelo());
         productoN.setDescripcion(productoM.getDescripcion());
         productoN.setPrecioVentaBase(productoM.getPrecioVentaBase());
+        productoN.setPrecioMayorista(productoM.getPrecioMayorista());
+        productoN.setCantidadMinimaMayorista(productoM.getCantidadMinimaMayorista());
         productoN.setFotoUrl(productoM.getFotoUrl());
         productoN.setActivo(productoM.isActivo());
         productoN.setFechaReg(productoM.getFechaReg() != null ? productoM.getFechaReg().toString() : null);
@@ -77,7 +87,8 @@ public class ProductoService {
     }
 
     private ProductoM cargar(int id, String codigo, String nombre, String marca, String modelo,
-            String descripcion, double precioVentaBase, boolean activo) throws SQLException {
+            String descripcion, double precioVentaBase, double precioMayorista,
+            int cantidadMinimaMayorista, boolean activo) throws SQLException {
         ProductoM productoMObj = new ProductoM();
         productoMObj.setId(id);
         productoMObj.setCodigo(codigo);
@@ -86,6 +97,8 @@ public class ProductoService {
         productoMObj.setModelo(modelo);
         productoMObj.setDescripcion(descripcion);
         productoMObj.setPrecioVentaBase(precioVentaBase);
+        productoMObj.setPrecioMayorista(precioMayorista);
+        productoMObj.setCantidadMinimaMayorista(cantidadMinimaMayorista);
         productoMObj.setActivo(activo);
         return productoMObj;
     }

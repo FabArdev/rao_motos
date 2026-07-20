@@ -46,11 +46,14 @@ public class ProductoControlador {
                 }
 
                 case "CREATEPRODUCTO": {
-                    if (params.size() < 6)
-                        return PProductos.generarHtml(cmd, "Error: se requieren 6 parámetros [codigo,nombre,marca,modelo,descripcion,precioVentaBase].");
+                    if (params.size() < 8)
+                        return PProductos.generarHtml(cmd, "Error: se requieren 8 parámetros [codigo,nombre,marca,modelo,descripcion,precioMinorista,precioMayorista,cantMinMayorista].");
                     String msg = service.agregarProducto(
                         params.get(0), params.get(1), params.get(2),
-                        params.get(3), params.get(4), Double.parseDouble(params.get(5).trim()));
+                        params.get(3), params.get(4),
+                        Double.parseDouble(params.get(5).trim()),
+                        Double.parseDouble(params.get(6).trim()),
+                        Integer.parseInt(params.get(7).trim()));
                     int newId = extraerId(msg);
                     if (newId > 0) {
                         ProductoN p = service.leerProducto(newId);
@@ -60,14 +63,16 @@ public class ProductoControlador {
                 }
 
                 case "UPDATEPRODUCTO": {
-                    if (params.size() < 8)
-                        return PProductos.generarHtml(cmd, "Error: se requieren 8 parámetros [id,codigo,nombre,marca,modelo,descripcion,precio,activo].");
+                    if (params.size() < 10)
+                        return PProductos.generarHtml(cmd, "Error: se requieren 10 parámetros [id,codigo,nombre,marca,modelo,descripcion,precioMinorista,precioMayorista,cantMinMayorista,activo].");
                     int id = Integer.parseInt(params.get(0).trim());
                     ProductoN antes = service.leerProducto(id);
                     service.actualizarProducto(id,
                         params.get(1), params.get(2), params.get(3), params.get(4), params.get(5),
                         Double.parseDouble(params.get(6).trim()),
-                        Boolean.parseBoolean(params.get(7).trim()));
+                        Double.parseDouble(params.get(7).trim()),
+                        Integer.parseInt(params.get(8).trim()),
+                        Boolean.parseBoolean(params.get(9).trim()));
                     ProductoN despues = service.leerProducto(id);
                     return PProductos.generarHtml(cmd, diffProducto(antes, despues));
                 }

@@ -5,7 +5,7 @@ import org.mailgrupo02.modelo.entidad.*;
 public class ProductoValidator {
 
     public static void validarCampos(String codigo, String nombre, String marca, String modelo,
-            String descripcion, double precioVentaBase) {
+            String descripcion, double precioVentaBase, double precioMayorista, int cantidadMinimaMayorista) {
         if (codigo == null || codigo.trim().isEmpty()) {
             throw new IllegalArgumentException("El código es obligatorio");
         }
@@ -27,7 +27,19 @@ public class ProductoValidator {
         }
 
         if (precioVentaBase <= 0) {
-            throw new IllegalArgumentException("El precio de venta base debe ser mayor a 0");
+            throw new IllegalArgumentException("El precio de venta base (minorista) debe ser mayor a 0");
+        }
+
+        if (precioMayorista <= 0) {
+            throw new IllegalArgumentException("El precio mayorista debe ser mayor a 0");
+        }
+
+        if (precioMayorista > precioVentaBase) {
+            throw new IllegalArgumentException("El precio mayorista no puede ser mayor al minorista");
+        }
+
+        if (cantidadMinimaMayorista < 1) {
+            throw new IllegalArgumentException("La cantidad mínima para mayoreo debe ser >= 1");
         }
     }
 }

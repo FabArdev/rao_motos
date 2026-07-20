@@ -12,6 +12,8 @@ public class ProductoN implements Serializable {
     private String modelo;
     private String descripcion;
     private double precioVentaBase;
+    private double precioMayorista;
+    private int cantidadMinimaMayorista;
     private String fotoUrl;
     private boolean activo;
     private String fechaReg;
@@ -47,6 +49,10 @@ public class ProductoN implements Serializable {
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public double getPrecioVentaBase() { return precioVentaBase; }
     public void setPrecioVentaBase(double precioVentaBase) { this.precioVentaBase = precioVentaBase; }
+    public double getPrecioMayorista() { return precioMayorista; }
+    public void setPrecioMayorista(double precioMayorista) { this.precioMayorista = precioMayorista; }
+    public int getCantidadMinimaMayorista() { return cantidadMinimaMayorista; }
+    public void setCantidadMinimaMayorista(int cantidadMinimaMayorista) { this.cantidadMinimaMayorista = cantidadMinimaMayorista; }
     public String getFotoUrl() { return fotoUrl; }
     public void setFotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; }
     public boolean isActivo() { return activo; }
