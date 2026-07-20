@@ -34,8 +34,7 @@ public class Main {
                 System.out.println("1. Probar conexion BD");
                 System.out.println("2. Probar servicios CRUD");
                 System.out.println("3. Servicio de correo");
-                System.out.println("4. Ejecutar suite de pruebas (TestRunner)");
-                System.out.println("5. Salir");
+                System.out.println("4. Salir");
                 System.out.print("Opcion: ");
                 int opcion = scanner.nextInt();
                 switch (opcion) {
@@ -49,9 +48,6 @@ public class Main {
                         iniciarServicioCorreo();
                         break;
                     case 4:
-                        TestRunner.main(new String[]{});
-                        break;
-                    case 5:
                         System.out.println("Saliendo...");
                         scanner.close();
                         return;
