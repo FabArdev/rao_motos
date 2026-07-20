@@ -1,18 +1,18 @@
 package org.mailgrupo02;
 
-import org.mailgrupo02.presentacion.email.ClientePOP;
-import org.mailgrupo02.presentacion.email.ClienteSMTP;
-import org.mailgrupo02.presentacion.email.ComandoEmailNuevo;
-import org.mailgrupo02.presentacion.email.PPagos;
-import org.mailgrupo02.presentacion.email.PVentas;
-import org.mailgrupo02.datos.conexion.Conexion;
-import org.mailgrupo02.datos.modelo.*;
-import org.mailgrupo02.datos.backup.BackupService;
-import org.mailgrupo02.negocio.pagos.PagoFacilService;
-import org.mailgrupo02.negocio.pagos.PagoCuotaService;
-import org.mailgrupo02.negocio.usuarios.UsuarioService;
-import org.mailgrupo02.negocio.productos.ProductoService;
-import org.mailgrupo02.negocio.ventas.VentaService;
+import org.mailgrupo02.infraestructura.ClientePOP;
+import org.mailgrupo02.infraestructura.ClienteSMTP;
+import org.mailgrupo02.controlador.ComandoCorreoNuevo;
+import org.mailgrupo02.vista.PPagos;
+import org.mailgrupo02.vista.PVentas;
+import org.mailgrupo02.infraestructura.Conexion;
+import org.mailgrupo02.modelo.dao.*;
+import org.mailgrupo02.infraestructura.BackupService;
+import org.mailgrupo02.modelo.servicio.PagoFacilService;
+import org.mailgrupo02.modelo.servicio.PagoCuotaService;
+import org.mailgrupo02.modelo.servicio.UsuarioService;
+import org.mailgrupo02.modelo.servicio.ProductoService;
+import org.mailgrupo02.modelo.servicio.VentaService;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -22,8 +22,8 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        if (args.length > 0 && args[0].equalsIgnoreCase("email")) {
-            iniciarServicioEmail();
+        if (args.length > 0 && args[0].equalsIgnoreCase("correo")) {
+            iniciarServicioCorreo();
             return;
         }
 
@@ -46,7 +46,7 @@ public class Main {
                         probarServicios();
                         break;
                     case 3:
-                        iniciarServicioEmail();
+                        iniciarServicioCorreo();
                         break;
                     case 4:
                         TestRunner.main(new String[]{});
@@ -86,27 +86,27 @@ public class Main {
         System.out.println("Ventas: " + ves.obtenerVentas());
     }
 
-    private static void iniciarServicioEmail() {
+    private static void iniciarServicioCorreo() {
         System.out.println("\n=== SERVICIO EMAIL ===");
         System.out.println("Revisando cada 10s... Ctrl+C para salir");
-        new ServicioEmail().iniciar();
+        new ServicioCorreo().iniciar();
     }
 
-    static class ServicioEmail {
+    static class ServicioCorreo {
         private ClientePOP pop = new ClientePOP();
         private ClienteSMTP smtp = new ClienteSMTP();
-        private ComandoEmailNuevo cmd;
+        private ComandoCorreoNuevo cmd;
 
         // Backup: bandera de "hay datos nuevos" + contador para backup periódico
         private volatile boolean backupNecesario = false;
         private int cicloCount = 0;
         private static final int CICLOS_BACKUP_PERIODICO = 60; // 60 × 5s = 5 minutos
 
-        public ServicioEmail() {
+        public ServicioCorreo() {
             try {
-                this.cmd = new ComandoEmailNuevo();
+                this.cmd = new ComandoCorreoNuevo();
             } catch (SQLException e) {
-                System.err.println("Error inicializando ComandoEmail: " + e.getMessage());
+                System.err.println("Error inicializando ComandoCorreo: " + e.getMessage());
             }
         }
 
@@ -176,7 +176,7 @@ public class Main {
                 String[] parts = entry.getValue().split(";");
                 if (parts.length < 4) continue;
 
-                String email = parts[0];
+                String correo = parts[0];
                 double monto;
                 long pfTxId;
                 try {
@@ -204,7 +204,7 @@ public class Main {
                             String html = PPagos.generarHtml("PAGARCUOTA",
                                 "Pago de Cuota " + numeroCuota + " del Credito #" + creditoId
                                 + " confirmado exitosamente. Monto: " + String.format("%.2f", monto) + " Bs.");
-                            smtp.enviarCorreo(email, "Confirmacion de Pago - " + txId, html);
+                            smtp.enviarCorreo(correo, "Confirmacion de Pago - " + txId, html);
                         } catch (Exception e) {
                             System.err.println("[Reconciliacion] Error al confirmar " + txId + ": " + e.getMessage());
                         }
@@ -215,7 +215,7 @@ public class Main {
                             String html = PVentas.generarHtml("CREARVENTA_CONTADO",
                                 "Pago de Venta #" + ventaId + " confirmado exitosamente. Monto: "
                                 + String.format("%.2f", monto) + " Bs.");
-                            smtp.enviarCorreo(email, "Confirmacion de Pago - " + txId, html);
+                            smtp.enviarCorreo(correo, "Confirmacion de Pago - " + txId, html);
                         } catch (Exception e) {
                             System.err.println("[Reconciliacion] Error al confirmar " + txId + ": " + e.getMessage());
                         }
@@ -234,18 +234,18 @@ public class Main {
         private void procesarCorreo(String correo) {
             try {
                 String from = extraer(correo, "From: ", 6);
-                String subj = extraer(correo, "Subject: ", 9);
+                String subj = org.mailgrupo02.infraestructura.TextoMime.decodificar(extraer(correo, "Subject: ", 9));
                 System.out.println("  De: " + from + " | " + subj);
-                String emailRemitente = extraerEmail(from);
+                String correoRemitente = extraerCorreo(from);
 
                 // Ignorar rebotes, notificaciones del sistema y bucles de auto-respuesta
-                if (esCorreoSistema(emailRemitente, subj)) {
+                if (esCorreoSistema(correoRemitente, subj)) {
                     System.out.println("  [IGNORADO] Correo de sistema/rebote — no se procesa ni responde.");
                     return;
                 }
 
-                String resp = cmd.evaluarYEjecutar(subj, emailRemitente);
-                smtp.enviarCorreo(emailRemitente, "Re: " + subj, resp);
+                String resp = cmd.evaluarYEjecutar(subj, correoRemitente);
+                smtp.enviarCorreo(correoRemitente, "Re: " + subj, resp);
                 System.out.println("  Enviado (" + resp.length() + " chars)");
                 if (esComandoEscritura(subj)) {
                     backupNecesario = true;
@@ -255,19 +255,19 @@ public class Main {
             }
         }
 
-        private boolean esCorreoSistema(String email, String subject) {
-            if (email == null) return true;
-            String emailLower   = email.toLowerCase();
+        private boolean esCorreoSistema(String correo, String subject) {
+            if (correo == null) return true;
+            String correoLower   = correo.toLowerCase();
             String subjectLower = subject != null ? subject.toLowerCase() : "";
 
             // Direcciones de rebote y sistema que nunca deben recibir respuesta
-            if (emailLower.startsWith("mailer-daemon")
-                    || emailLower.startsWith("postmaster@")
-                    || emailLower.startsWith("noreply@")
-                    || emailLower.startsWith("no-reply@")
-                    || emailLower.startsWith("donotreply@")
-                    || emailLower.startsWith("daemon@")
-                    || emailLower.contains("mailer-daemon")) {
+            if (correoLower.startsWith("mailer-daemon")
+                    || correoLower.startsWith("postmaster@")
+                    || correoLower.startsWith("noreply@")
+                    || correoLower.startsWith("no-reply@")
+                    || correoLower.startsWith("donotreply@")
+                    || correoLower.startsWith("daemon@")
+                    || correoLower.contains("mailer-daemon")) {
                 return true;
             }
 
@@ -296,7 +296,7 @@ public class Main {
                 || s.startsWith("CREATEPROVEEDOR") || s.startsWith("UPDATEPROVEEDOR") || s.startsWith("DELETEPROVEEDOR");
         }
 
-        private String extraerEmail(String from) {
+        private String extraerCorreo(String from) {
             int ini = from.lastIndexOf('<');
             int fin = from.lastIndexOf('>');
             if (ini != -1 && fin != -1 && fin > ini) {

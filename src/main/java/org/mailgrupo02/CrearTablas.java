@@ -1,6 +1,6 @@
 package org.mailgrupo02;
 
-import org.mailgrupo02.datos.conexion.Conexion;
+import org.mailgrupo02.infraestructura.Conexion;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.Connection;
