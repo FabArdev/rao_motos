@@ -1,5 +1,24 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Venta — Una venta realizada
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Guarda cada venta: quién compró, quién vendió, cuánto, si fue
+ *  al contado o a crédito, cómo se pagó y en qué estado está.
+ *  También guarda los datos del cobro por QR (PagoFácil).
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: venta. Extiende ModeloBase.
+ *  - Estados: PENDIENTE -> PAGADA -> COMPLETADA (o ANULADA).
+ *  - Columnas pago_facil_* guardan el QR y su estado.
+ *  - Relaciones: cliente(), vendedor() (Usuario), detalles()
+ *    (líneas), credito() (si es a cuotas).
+ *  - esCredito(): true si tipo_venta = CREDITO.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class Venta extends ModeloBase

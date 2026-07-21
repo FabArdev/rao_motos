@@ -1,5 +1,27 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Notificacion — Aviso dentro de la aplicación
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Son los avisos que aparecen en la campanita: "stock bajo",
+ *  "pedido por aprobar", "venta pagada", etc. Cada aviso es para
+ *  un usuario y puede llevar un enlace al recurso relacionado.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: notificacion. Extiende Model (sin timestamps propios,
+ *    usa su columna 'fecha').
+ *  - Accessor recurso: garantiza que el enlace sea URL absoluta
+ *    (necesario para Inertia servido en subdirectorio).
+ *  - Relación: usuario().
+ *  - paraRol($rol, $tipo, $mensaje, $recurso): crea el mismo aviso
+ *    para todos los usuarios de un rol.
+ *  - Tipos: STOCK_BAJO, PEDIDO_POR_APROBAR, VENTA_PAGADA,
+ *    PEDIDO_APROBADO, PEDIDO_RECHAZADO, PEDIDO_DESPACHADO, MORA.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -17,19 +39,16 @@ class Notificacion extends Model
         'fecha' => 'datetime',
     ];
 
-    /** Garantiza que recurso sea URL absoluta, necesaria para Inertia en subdirectorio. */
     public function getRecursoAttribute(?string $value): ?string
     {
         if (! $value) {
             return null;
         }
-        // Si ya es absoluta, se devuelve tal cual.
+
         if (str_starts_with($value, 'http')) {
             return $value;
         }
 
-        // Si es relativa (notificaciones viejas o generadas con route(…,false)),
-        // se completa con la URL base del servidor.
         return url($value);
     }
 
@@ -38,7 +57,6 @@ class Notificacion extends Model
         return $this->belongsTo(Usuario::class, 'usuario_id');
     }
 
-    /** Crea la misma notificación in-app para todos los usuarios de un rol. */
     public static function paraRol(string $rol, string $tipo, string $mensaje, ?string $recurso = null): void
     {
         $ids = Usuario::whereHas('rol', fn ($q) => $q->where('nombre', $rol))->pluck('id');

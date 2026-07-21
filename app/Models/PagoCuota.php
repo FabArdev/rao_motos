@@ -1,5 +1,22 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  PagoCuota — Una cuota del calendario de un crédito
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Cada cuota que el cliente debe pagar: su número, monto, fecha
+ *  de vencimiento, si ya se pagó y cuánta mora acumuló por atraso.
+ *  Puede cobrarse por QR (PagoFácil).
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: pago_cuota. Extiende ModeloBase.
+ *  - Estados: PENDIENTE / PAGADO. Columnas pago_facil_* para el QR.
+ *  - Relaciones: credito(), metodoPago().
+ *  - totalAPagar(): monto_cuota + mora.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class PagoCuota extends ModeloBase
@@ -32,7 +49,6 @@ class PagoCuota extends ModeloBase
         return $this->belongsTo(MetodoPago::class, 'metodo_pago_id');
     }
 
-    /** Total a pagar = cuota + mora acumulada. */
     public function totalAPagar(): float
     {
         return (float) $this->monto_cuota + (float) $this->mora;

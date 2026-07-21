@@ -1,5 +1,32 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  VentaService — Creación de ventas (una sola tubería)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Es la "caja registradora". Toma los productos de una venta
+ *  (ya sea de mostrador o nacida de un pedido web), calcula el
+ *  total sumando línea por línea, guarda la venta con su número
+ *  (V-000001) y descuenta el stock. Siempre pasa por aquí, sin
+ *  importar de dónde venga la venta, para no repetir lógica.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tipo: Service (App\Services).
+ *  - Depende de InventarioService (inyectado en el constructor).
+ *  - Modelos: Venta, DetalleVenta, Producto.
+ *  - crear(array $data): todo dentro de DB::transaction (o se
+ *    guarda todo o nada). El total lo calcula el servidor, nunca
+ *    se teclea (RN11). El precio de cada línea sale del umbral
+ *    mayorista del producto con precioPara() (RN3).
+ *  - descontar_stock (por defecto true): el stock se resta una
+ *    sola vez; si el pedido ya lo descontó, se pasa en false (RN18).
+ *  - Si una línea no tiene producto_id, es un servicio/mano de obra
+ *    con precio dado.
+ *  - Reglas de negocio: RN3, RN11, RN18, RN24.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Services;
 
 use App\Models\DetalleVenta;
@@ -7,28 +34,14 @@ use App\Models\Producto;
 use App\Models\Venta;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Crea ventas (mostrador o desde pedido) con el mismo pipeline.
- * El total lo calcula el servidor por línea (RN11); el precio por línea sale del
- * umbral mayorista del producto (RN3). El stock se descuenta aquí una sola vez,
- * salvo que el origen ya lo haya descontado (pedido → descontarStock=false, RN18).
- */
 class VentaService
 {
     public function __construct(private InventarioService $inventario) {}
 
-    /**
-     * @param  array  $data  {
-     *                       cliente_id, vendedor_id, tipo_venta[CONTADO|CREDITO], metodo_pago[EFECTIVO|QR],
-     *                       estado?, descontar_stock?(bool, def true),
-     *                       items: [ { producto_id?, descripcion?, cantidad, precio_unitario? } ]
-     *                       }
-     */
     public function crear(array $data): Venta
     {
         $descontarStock = $data['descontar_stock'] ?? true;
 
-        // Si esta venta saca stock ahora, verifica disponibilidad antes de crear nada (mensaje claro).
         if ($descontarStock) {
             $this->inventario->verificarStock($data['items']);
         }
@@ -42,12 +55,12 @@ class VentaService
 
                 if (! empty($item['producto_id'])) {
                     $producto = Producto::findOrFail($item['producto_id']);
-                    // Precio por línea según el umbral del producto (RN3), nunca tecleado.
+
                     $precio = $producto->precioPara($cantidad);
                     $descripcion = null;
                     $productoId = $producto->id;
                 } else {
-                    // Línea de servicio / mano de obra: el precio viene dado.
+
                     $precio = (float) $item['precio_unitario'];
                     $descripcion = $item['descripcion'] ?? 'Servicio';
                     $productoId = null;
@@ -79,7 +92,6 @@ class VentaService
                     'precio_unitario' => $l['precio'],
                 ]);
 
-                // El stock sale físicamente aquí, salvo que ya se haya descontado en el origen.
                 if ($descontarStock && $l['productoId']) {
                     $this->inventario->egreso($l['productoId'], $l['cantidad'], "Venta {$venta->numero_venta}");
                 }

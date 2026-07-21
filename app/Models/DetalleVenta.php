@@ -1,5 +1,22 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  DetalleVenta — Una línea de una venta
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Cada renglón de una venta: qué producto (o servicio), cuántos y
+ *  a qué precio. Si no tiene producto, es mano de obra/servicio.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: detalle_venta. Extiende ModeloBase.
+ *  - Campos: venta_id, producto_id, descripcion, cantidad,
+ *    precio_unitario.
+ *  - Relaciones: venta(), producto().
+ *  - esServicio(): true cuando no hay producto_id asociado.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class DetalleVenta extends ModeloBase
@@ -23,7 +40,6 @@ class DetalleVenta extends ModeloBase
         return $this->belongsTo(Producto::class, 'producto_id');
     }
 
-    /** Una línea es servicio/mano de obra cuando no tiene producto asociado. */
     public function esServicio(): bool
     {
         return is_null($this->producto_id);

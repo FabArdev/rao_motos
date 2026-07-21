@@ -1,5 +1,34 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  CreditoService — Créditos y calendario de cuotas
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Cuando una venta es a crédito (en cuotas), este archivo arma
+ *  el "plan de pagos": calcula cuánto se debe con el interés,
+ *  parte el total en cuotas iguales y les pone fecha de
+ *  vencimiento. También sabe cobrar una cuota y cerrar el crédito
+ *  cuando ya no queda nada por pagar. La multa por atraso (mora)
+ *  la calcula aquí, pero quien la aplica cada día es la tarea
+ *  programada MarcarCuotasVencidas.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tipo: Service (App\Services).
+ *  - Modelos: Credito, PagoCuota, Venta, Configuracion.
+ *  - Usa Carbon para las fechas de vencimiento.
+ *  - generar(): crea el crédito y sus cuotas; el saldo = total +
+ *    total * tasaInteres/100; el redondeo sobrante va en la última
+ *    cuota. Parámetros configurables: tasa_interes_credito,
+ *    dias_entre_cuotas.
+ *  - calcularMora(): diaria proporcional con tope (tasa_mora_diaria,
+ *    tope_mora_pct); no guarda, sólo devuelve el monto.
+ *  - registrarPagoCuota(): marca la cuota PAGADO, descuenta del
+ *    saldo y pasa el crédito a PAGADO si ya no hay pendientes.
+ *  - Reglas de negocio: RN8, RN12, RN16 (ALCANCE §CU7).
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Services;
 
 use App\Models\Configuracion;
@@ -8,18 +37,9 @@ use App\Models\PagoCuota;
 use App\Models\Venta;
 use Carbon\Carbon;
 
-/**
- * Genera y mantiene créditos y su calendario de cuotas.
- * El interés infla el saldo al inicio; la mora es aparte (por atraso), la calcula
- * la tarea programada diaria (MarcarCuotasVencidas). Ver ALCANCE §CU7 / RN8 / RN16.
- */
 class CreditoService
 {
-    /**
-     * Crea un crédito para una venta y genera su calendario de cuotas.
-     *
-     * @param  float  $tasaInteres  interés % por crédito (default configurable).
-     */
+
     public function generar(Venta $venta, int $numeroCuotas, ?float $tasaInteres = null): Credito
     {
         $tasaInteres ??= (float) Configuracion::valor('tasa_interes_credito', 5.00);
@@ -36,7 +56,6 @@ class CreditoService
             'estado' => 'VIGENTE',
         ]);
 
-        // Reparto en cuotas iguales; el redondeo residual va en la última cuota.
         $base = floor($saldo / $numeroCuotas * 100) / 100;
         $acumulado = 0;
 
@@ -57,10 +76,6 @@ class CreditoService
         return $credito;
     }
 
-    /**
-     * Calcula la mora de una cuota vencida: diaria proporcional con tope (RN16).
-     * No persiste; devuelve el monto de mora para la fecha dada.
-     */
     public function calcularMora(PagoCuota $cuota, ?Carbon $hasta = null): float
     {
         $hasta ??= Carbon::now();
@@ -80,10 +95,6 @@ class CreditoService
         return round(min($mora, $tope), 2);
     }
 
-    /**
-     * Registra el pago de una cuota (efectivo o QR ya confirmado).
-     * Descuenta del saldo, marca la cuota PAGADO y cierra el crédito si ya no quedan pendientes.
-     */
     public function registrarPagoCuota(PagoCuota $cuota, ?int $metodoPagoId = null): void
     {
         $mora = $this->calcularMora($cuota);

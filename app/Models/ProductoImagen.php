@@ -1,5 +1,21 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  ProductoImagen — Imagen adicional de un producto (galería)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Las fotos extra de un producto, además de la portada, para el
+ *  carrusel/galería. Cada una tiene un orden de aparición.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: producto_imagen. Extiende ModeloBase.
+ *  - Campos: producto_id, ruta, orden.
+ *  - Accessor url: arma la URL pública desde storage.
+ *  - Relación: producto().
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class ProductoImagen extends ModeloBase

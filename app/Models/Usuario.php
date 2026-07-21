@@ -1,5 +1,31 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Usuario — Persona que usa el sistema (y login)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Representa a cualquier persona con cuenta: administrador,
+ *  vendedor, almacenero o cliente. Guarda sus datos personales y
+ *  es con lo que se inicia sesión (por correo). Sabe qué rol tiene
+ *  y ofrece atajos como esAdmin() o esCliente().
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: usuario. Extiende Authenticatable (no ModeloBase)
+ *    porque Fortify lo exige; repite CREATED_AT/UPDATED_AT en español.
+ *  - Traits: HasApiTokens (Sanctum), HasFactory, HasProfilePhoto
+ *    (Jetstream), Notifiable, TwoFactorAuthenticatable (Fortify).
+ *  - Login por 'correo'; token "recuérdame" = token_recordar.
+ *  - Relaciones: rol(), cliente() (1:1), ventasComoVendedor(),
+ *    notificaciones().
+ *  - Helpers de rol: tieneRol(), esAdmin(), esVendedor(),
+ *    esAlmacenero(), esCliente().
+ *  - Accessors/mutators: nombre/apellidos con ucwords, correo en
+ *    minúsculas, nombre_completo (get), defaultProfilePhotoUrl()
+ *    (avatar de iniciales, sobrescribe el de Jetstream).
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -14,15 +40,12 @@ class Usuario extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasProfilePhoto, Notifiable, TwoFactorAuthenticatable;
 
-    // Usuario no puede extender ModeloBase (Fortify exige Authenticatable),
-    // así que repite aquí las marcas de tiempo en español del resto del dominio.
     public const CREATED_AT = 'creado_en';
 
     public const UPDATED_AT = 'actualizado_en';
 
     protected $table = 'usuario';
 
-    /** La columna de "recuérdame" también va en español. */
     protected $rememberTokenName = 'token_recordar';
 
     protected $fillable = [
@@ -56,21 +79,16 @@ class Usuario extends Authenticatable
         'fecha_nacimiento' => 'date',
     ];
 
-    /* ---------------------------------------------------------------------
-     | Relaciones
-     * ------------------------------------------------------------------- */
     public function rol()
     {
         return $this->belongsTo(Rol::class);
     }
 
-    /** Subtabla 1:1 (solo si el usuario es cliente). */
     public function cliente()
     {
         return $this->hasOne(Cliente::class, 'id');
     }
 
-    /** Ventas en las que este usuario fue el vendedor. */
     public function ventasComoVendedor()
     {
         return $this->hasMany(Venta::class, 'vendedor_id');
@@ -81,9 +99,6 @@ class Usuario extends Authenticatable
         return $this->hasMany(Notificacion::class, 'usuario_id');
     }
 
-    /* ---------------------------------------------------------------------
-     | Helpers de rol  (RAO MOTOS: admin | vendedor | almacenero | cliente)
-     * ------------------------------------------------------------------- */
     public function tieneRol($rol): bool
     {
         return $this->rol && strcasecmp($this->rol->nombre, $rol) === 0;
@@ -109,9 +124,6 @@ class Usuario extends Authenticatable
         return $this->tieneRol('cliente');
     }
 
-    /* ---------------------------------------------------------------------
-     | Mutators / Accessors
-     * ------------------------------------------------------------------- */
     protected function nombre(): Attribute
     {
         return Attribute::make(set: fn ($value) => ucwords(strtolower($value)));
@@ -132,12 +144,6 @@ class Usuario extends Authenticatable
         return Attribute::make(get: fn () => trim($this->nombre.' '.$this->apellidos));
     }
 
-    /**
-     * Avatar por defecto (iniciales) cuando el usuario no subió foto.
-     *
-     * Se sobrescribe el de Jetstream porque el original lee $this->name,
-     * atributo que aquí se llama nombre_completo.
-     */
     protected function defaultProfilePhotoUrl(): string
     {
         $iniciales = trim(collect(explode(' ', $this->nombre_completo))

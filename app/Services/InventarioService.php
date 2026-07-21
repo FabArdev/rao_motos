@@ -1,5 +1,31 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  InventarioService — Movimiento de stock (almacén central)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Es el "almacén" del sistema. Cada vez que entran productos
+ *  (una compra) o salen (una venta), la cantidad en stock se
+ *  cambia AQUÍ y sólo aquí, para que los números nunca se
+ *  descuadren. Además, si un producto baja del mínimo, avisa
+ *  al almacenero. Lo usan las ventas, las compras y los pedidos.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tipo: Service (App\Services), capa de lógica de negocio.
+ *  - Modelos que usa: Inventario, MovimientoInventario, Producto,
+ *    Notificacion, Usuario.
+ *  - Métodos: ingreso() suma stock; egreso() resta stock (valida
+ *    que alcance); verificarStock() revisa varias líneas antes de
+ *    vender; alertarStockBajo() crea la notificación STOCK_BAJO.
+ *  - Cada movimiento queda registrado en movimiento_inventario.
+ *  - lockForUpdate() bloquea la fila para evitar condiciones de
+ *    carrera cuando dos operaciones tocan el mismo stock.
+ *  - Lanza \RuntimeException con nombres de producto si falta
+ *    stock. Reglas de negocio: RN18 y RN24.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Services;
 
 use App\Models\Inventario;
@@ -8,14 +34,9 @@ use App\Models\Notificacion;
 use App\Models\Producto;
 use App\Models\Usuario;
 
-/**
- * Centraliza el movimiento de stock. El stock se toca aquí y solo aquí,
- * de modo que compras (ingreso) y ventas (egreso) queden consistentes
- * y cada movimiento quede registrado en movimiento_inventario (RN18).
- */
 class InventarioService
 {
-    /** Ingreso de stock (recepción de compra, ajuste positivo). */
+
     public function ingreso(int $productoId, int $cantidad, string $motivo): void
     {
         $inv = $this->inventarioDe($productoId);
@@ -32,11 +53,6 @@ class InventarioService
         ]);
     }
 
-    /**
-     * Verifica que haya stock suficiente para un conjunto de líneas {producto_id, cantidad}
-     * ANTES de comprometer la operación (venta de mostrador, aprobación de pedido). Suma las
-     * cantidades del mismo producto y lanza RuntimeException con NOMBRES si algo no alcanza.
-     */
     public function verificarStock(array $items): void
     {
         $requeridoPorProducto = [];
@@ -62,10 +78,6 @@ class InventarioService
         }
     }
 
-    /**
-     * Egreso de stock (venta directa, venta desde pedido).
-     * Valida que haya stock suficiente y dispara la alerta de stock bajo.
-     */
     public function egreso(int $productoId, int $cantidad, string $motivo): void
     {
         $inv = $this->inventarioDe($productoId);
@@ -99,7 +111,6 @@ class InventarioService
         return Inventario::where('producto_id', $productoId)->lockForUpdate()->firstOrFail();
     }
 
-    /** Notifica a los almaceneros (in-app, refuerzo A) que un producto cayó bajo el mínimo. */
     private function alertarStockBajo(Inventario $inv): void
     {
         $inv->loadMissing('producto');

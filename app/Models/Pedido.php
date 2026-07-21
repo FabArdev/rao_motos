@@ -1,5 +1,22 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Pedido — Solicitud de compra hecha por un cliente (web)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Es el "carrito enviado": el cliente elige productos del catálogo
+ *  y crea un pedido. El vendedor lo aprueba (y se vuelve venta) o
+ *  lo rechaza con un motivo.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: pedido. Extiende ModeloBase.
+ *  - Campos: cliente_id, fecha, estado, motivo_rechazo, venta_id.
+ *  - Relaciones: cliente(), detalles() (líneas), venta() (si se
+ *    aprobó y generó una venta).
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class Pedido extends ModeloBase

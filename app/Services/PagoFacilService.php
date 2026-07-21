@@ -1,5 +1,36 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  PagoFacilService — Pago electrónico por QR (PagoFácil Bolivia)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Habla con el servicio boliviano PagoFácil para generar códigos
+ *  QR de cobro (de una venta al contado o del pago de una cuota) y
+ *  para consultar si el cliente ya pagó. Si el servicio real no
+ *  responde (red del campus caída, sin credenciales), genera un QR
+ *  "de mentira" local para que la pantalla no se rompa y el
+ *  operador pueda confirmar el pago a mano.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tipo: Service (App\Services). Integración HTTP con API externa.
+ *  - Usa: Http (cliente HTTP de Laravel), Cache (guarda el Bearer
+ *    token 1 hora), Log (diagnóstico), Str.
+ *  - Configuración en config/services.php -> pagofacil (base_url,
+ *    api_url, tc_token_service, tc_token_secret, callback_url,
+ *    override_amount, response_language), leída del .env.
+ *  - Flujo: obtenerBearerToken() -> obtenerHeaders() -> generateQr().
+ *    generarQRVentaSimulado()/generarQRCuotaSimulado() arman el
+ *    payload; consultarTransaccion()/verificarEstadoPago() revisan
+ *    el estado; determinarEstadoPago() traduce el estado a
+ *    completed/pending/cancelled/expired.
+ *  - IMPORTANTE: las claves del payload (transactionId, paymentNumber,
+ *    amount, currency=2 BOB, documentType=1 CI...) son el contrato
+ *    de la API externa y van en inglés a propósito, no se traducen.
+ *  - Fallback: generarQrSimuladoLocal() NO es un QR bancario real.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
@@ -7,9 +38,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-/**
- * Servicio de PagoFácil Bolivia - Integración con API Real
- */
 class PagoFacilService
 {
     protected $baseUrl;
@@ -47,12 +75,9 @@ class PagoFacilService
         $this->responseLanguage = $config['response_language'] ?? 'es';
     }
 
-    /**
-     * Autenticar y obtener Bearer token
-     */
     protected function obtenerBearerToken(): string
     {
-        // Verificar si hay un token en caché (válido por 1 hora)
+
         $tokenCacheKey = 'pagofacil_bearer_token';
         $cachedToken = Cache::get($tokenCacheKey);
 
@@ -88,11 +113,10 @@ class PagoFacilService
             if ($response->successful()) {
                 $data = $response->json();
 
-                // El token está en values.accessToken según la respuesta de PagoFácil
                 $token = $data['values']['accessToken'] ?? $data['accessToken'] ?? $data['token'] ?? $data['access_token'] ?? $data['data']['token'] ?? null;
 
                 if ($token) {
-                    // Guardar en caché por 1 hora
+
                     Cache::put($tokenCacheKey, $token, now()->addHour());
                     Log::info('✅ [PagoFácil] Token obtenido exitosamente');
 
@@ -112,9 +136,6 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Obtener headers con autenticación
-     */
     protected function obtenerHeaders(): array
     {
         $token = $this->obtenerBearerToken();
@@ -130,9 +151,6 @@ class PagoFacilService
         return $headers;
     }
 
-    /**
-     * Generar QR para pago (método principal de la API)
-     */
     public function generateQr(array $datos): array
     {
         try {
@@ -152,7 +170,6 @@ class PagoFacilService
                 $data = $response->json();
                 Log::info('✅ [PagoFácil] Respuesta exitosa de generate-qr', ['data' => $data]);
 
-                // La respuesta puede estar en values según la estructura de PagoFácil
                 $responseData = $data['values'] ?? $data;
 
                 $result = [
@@ -176,13 +193,10 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Generar QR para una venta online (método compatible con código existente)
-     */
     public function generarQRVentaSimulado($ventaId, $monto, $glosa = null)
     {
         try {
-            // Generar ID de transacción único
+
             $companyTransactionId = 'VENTA-'.$ventaId.'-'.time();
 
             Log::info('🔑 [PagoFácil] Generando QR para venta', [
@@ -191,8 +205,6 @@ class PagoFacilService
                 'company_transaction_id' => $companyTransactionId,
             ]);
 
-            // Preparar datos para PagoFácil
-            // Normalizar APP_URL (quitar barra final si existe)
             $baseUrl = rtrim(config('app.url'), '/');
             $callbackUrl = $baseUrl.'/webhook/pagofacil-simulado/venta';
 
@@ -207,13 +219,13 @@ class PagoFacilService
             $qrData = [
                 'paymentMethod' => 34,
                 'clientName' => 'Cliente',
-                'documentType' => 1, // CI
+                'documentType' => 1,
                 'documentId' => '00000000',
                 'phoneNumber' => '70000000',
                 'email' => '',
                 'paymentNumber' => $companyTransactionId,
                 'amount' => $montoQr,
-                'currency' => 2, // BOB
+                'currency' => 2,
                 'clientCode' => (string) $ventaId,
                 'companyTransactionId' => $companyTransactionId,
                 'callbackUrl' => $callbackUrl,
@@ -273,13 +285,10 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Generar QR para pago de cuota (método compatible con código existente)
-     */
     public function generarQRCuotaSimulado($cuotaId, $monto, $glosa = null)
     {
         try {
-            // Generar ID de transacción único
+
             $companyTransactionId = 'CUOTA-'.$cuotaId.'-'.time();
 
             Log::info('🔑 [PagoFácil] Generando QR para cuota', [
@@ -288,8 +297,6 @@ class PagoFacilService
                 'company_transaction_id' => $companyTransactionId,
             ]);
 
-            // Preparar datos para PagoFácil
-            // Normalizar APP_URL (quitar barra final si existe)
             $baseUrl = rtrim(config('app.url'), '/');
             $callbackUrl = $baseUrl.'/webhook/pagofacil-simulado/cuota';
 
@@ -304,13 +311,13 @@ class PagoFacilService
             $qrData = [
                 'paymentMethod' => 34,
                 'clientName' => 'Cliente',
-                'documentType' => 1, // CI
+                'documentType' => 1,
                 'documentId' => '00000000',
                 'phoneNumber' => '70000000',
                 'email' => '',
                 'paymentNumber' => $companyTransactionId,
                 'amount' => $montoQr,
-                'currency' => 2, // BOB
+                'currency' => 2,
                 'clientCode' => (string) $cuotaId,
                 'companyTransactionId' => $companyTransactionId,
                 'callbackUrl' => $callbackUrl,
@@ -370,9 +377,6 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Consultar estado de transacción
-     */
     public function consultarTransaccion(string $transactionId, ?string $paymentNumber = null): array
     {
         try {
@@ -417,9 +421,6 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Verificar estado de pago (método compatible con código existente)
-     */
     public function verificarEstadoPago($transactionId, ?string $paymentNumber = null)
     {
         try {
@@ -451,9 +452,6 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Simular confirmación de pago (mantener para compatibilidad con endpoints de prueba)
-     */
     public function simularConfirmacionPago($transactionId)
     {
         Log::info('Simulando confirmación de pago', ['transaction_id' => $transactionId]);
@@ -467,9 +465,6 @@ class PagoFacilService
         ];
     }
 
-    /**
-     * Validar webhook simulado (mantener para compatibilidad)
-     */
     public function validarWebhookSimulado($data)
     {
         $requiredFields = ['transaction_id', 'status'];
@@ -485,9 +480,6 @@ class PagoFacilService
         return true;
     }
 
-    /**
-     * Determinar si es una transacción de venta o cuota
-     */
     public function getTipoTransaccion($transactionId)
     {
         if (Str::startsWith($transactionId, 'PF-VENTA-') || Str::startsWith($transactionId, 'VENTA-')) {
@@ -499,10 +491,6 @@ class PagoFacilService
         return 'unknown';
     }
 
-    /**
-     * Consulta los servicios habilitados para la empresa (diagnóstico).
-     * endpoint: POST /list-enabled-services
-     */
     protected function listarServiciosHabilitados(): void
     {
         try {
@@ -525,12 +513,6 @@ class PagoFacilService
         }
     }
 
-    /**
-     * Genera un QR simulado local cuando la API de PagoFácil no está disponible.
-     * ⚠️ Este QR NO es un código de pago real — solo codifica texto con los datos
-     * de la transacción. Ningún banco lo reconocerá. Es un fallback para que la
-     * interfaz no se rompa y el operador pueda confirmar manualmente con "Ya pagó".
-     */
     protected function generarQrSimuladoLocal(string $transactionId, float $monto, string $glosa): array
     {
         $dataCodificada = urlencode("Pago RAO MOTOS - {$glosa} - {$transactionId}");
@@ -549,9 +531,6 @@ class PagoFacilService
         ];
     }
 
-    /**
-     * Determina el monto que se enviará al QR (permite override via .env)
-     */
     protected function resolverMontoQr($montoOriginal): float
     {
         if ($this->qrOverrideAmount !== null) {
@@ -561,9 +540,6 @@ class PagoFacilService
         return (float) $montoOriginal;
     }
 
-    /**
-     * Extrae la sección útil de la respuesta de PagoFácil sin importar la clave.
-     */
     protected function extraerDatosRespuesta(array $result): array
     {
         foreach (['values', 'data', 'response'] as $key) {
@@ -575,9 +551,6 @@ class PagoFacilService
         return $result;
     }
 
-    /**
-     * Determina el estado del pago a partir de la respuesta de PagoFácil.
-     */
     protected function determinarEstadoPago(array $responseData): string
     {
         $statusValue = $responseData['paymentStatus']
@@ -609,9 +582,6 @@ class PagoFacilService
         return $this->mapearEstadoDesdeTexto((string) $statusValue);
     }
 
-    /**
-     * Convierte estados en texto a los valores usados por el sistema.
-     */
     protected function mapearEstadoDesdeTexto(string $status): string
     {
         $normalized = strtolower(trim($status));

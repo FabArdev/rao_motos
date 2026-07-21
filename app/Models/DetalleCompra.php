@@ -1,5 +1,20 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  DetalleCompra — Una línea de una compra
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Cada producto que aparece en una compra, con su cantidad y
+ *  precio unitario. Una compra tiene muchas de estas líneas.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: detalle_compra. Extiende ModeloBase.
+ *  - Campos: compra_id, producto_id, cantidad, precio_unitario.
+ *  - Relaciones: compra(), producto().
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class DetalleCompra extends ModeloBase

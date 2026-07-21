@@ -1,5 +1,25 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Producto — Repuesto/artículo que se vende
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Es cada repuesto de moto del catálogo: su código, nombre, marca,
+ *  fotos y precios. Sabe decir qué precio corresponde según cuánto
+ *  se compre (normal o mayorista si se lleva bastante).
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: producto. Extiende ModeloBase.
+ *  - Campos clave: precio_venta_base, precio_mayorista,
+ *    cantidad_minima_mayorista, foto_url, activo.
+ *  - Accessor foto_completa: arma la URL pública desde storage.
+ *  - Relaciones: inventario() (1:1), imagenes() (galería ordenada).
+ *  - precioPara($cantidad): devuelve precio mayorista si la cantidad
+ *    alcanza el umbral del producto, si no el minorista (RN3).
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class Producto extends ModeloBase
@@ -31,16 +51,11 @@ class Producto extends ModeloBase
         return $this->hasOne(Inventario::class, 'producto_id');
     }
 
-    /** Galería de imágenes adicionales (además de la portada foto_url). */
     public function imagenes()
     {
         return $this->hasMany(ProductoImagen::class, 'producto_id')->orderBy('orden');
     }
 
-    /**
-     * Precio aplicable a una cantidad: mayorista si alcanza el umbral del producto,
-     * minorista si no. No depende de tipo de cliente (no existe).
-     */
     public function precioPara(int $cantidad): float
     {
         return $cantidad >= $this->cantidad_minima_mayorista

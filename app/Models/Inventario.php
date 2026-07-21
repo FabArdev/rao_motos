@@ -1,5 +1,24 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Inventario — Stock de un producto
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Lleva cuántas unidades hay de un producto y cuál es el mínimo
+ *  antes de tener que reponer. Sabe avisar cuando el stock cayó
+ *  por debajo de ese mínimo.
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: inventario. Extiende ModeloBase. 1:1 con producto.
+ *  - Campos: stock_actual, stock_minimo, tecnica_inventario,
+ *    tecnica_costo, fecha_actualizacion.
+ *  - Relaciones: producto(), movimientos() (historial).
+ *  - bajoMinimo(): true si stock_actual < stock_minimo.
+ *  - El stock se mueve sólo vía InventarioService.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class Inventario extends ModeloBase

@@ -1,5 +1,22 @@
 <?php
 
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  Credito — Venta a cuotas (financiamiento)
+ * ─────────────────────────────────────────────────────────────
+ *  EXPLICACIÓN
+ *  Cuando una venta se paga en cuotas, este registro guarda el
+ *  crédito: cuántas cuotas, el interés, cuánto falta por pagar y
+ *  su estado (vigente, pagado o en mora).
+ *
+ *  IMPLEMENTACIÓN
+ *  - Tabla: credito. Extiende ModeloBase. 1:1 con una venta.
+ *  - Campos: numero_cuotas, tasa_interes, saldo_pendiente, estado.
+ *  - Relaciones: venta(), cuotas() (calendario de PagoCuota).
+ *  - Lo arma y mantiene CreditoService (RN8, RN16).
+ * ─────────────────────────────────────────────────────────────
+ */
+
 namespace App\Models;
 
 class Credito extends ModeloBase
