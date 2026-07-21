@@ -43,7 +43,7 @@ class Producto extends ModeloBase
 
     public function getFotoCompletaAttribute(): ?string
     {
-        return $this->foto_url ? asset('storage/'.$this->foto_url) : null;
+        return \App\Support\Media::url($this->foto_url);
     }
 
     public function inventario()

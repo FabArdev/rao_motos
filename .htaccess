@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────
+#  RAO MOTOS — la app se atiende desde esta carpeta
+# ─────────────────────────────────────────────────────────────
+#  EXPLICACIÓN
+#  El index.php de al lado atiende las páginas. Faltan dos cosas:
+#  (1) los archivos sueltos (el build del frontend, el logo, las
+#  fotos subidas) siguen viviendo dentro de public/, así que las
+#  peticiones a /build/... o /storage/... se redirigen ahí; y
+#  (2) como esta carpeta quedó expuesta al navegador, se bloquea
+#  todo lo que no debe verse desde afuera: .env, código, vendor.
+#
+#  IMPLEMENTACIÓN
+#  - Requiere mod_rewrite y AllowOverride All (activos en tecnoweb).
+#  - El bloqueo va PRIMERO: si no, Apache entregaría .env como
+#    archivo estático antes de llegar a las demás reglas.
+#  - Orden: bloqueos → estáticos de public/ → index.php.
+# ─────────────────────────────────────────────────────────────
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ── Nada de esto se sirve por HTTP ───────────────────────────
+    RewriteRule ^\.env - [F,L]
+    RewriteRule ^\.git - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|node_modules|resources|routes|tests|vendor)(/|$) - [F,L]
+    # De storage/ solo se bloquean las carpetas internas del framework: la
+    # dirección /storage/<foto> es pública (es el enlace public/storage) y la
+    # atiende la regla de archivos estáticos de más abajo.
+    RewriteRule ^storage/(app|framework|logs)(/|$) - [F,L]
+    RewriteRule ^(artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml|vite\.config\.js)$ - [F,L]
+
+    # ── Archivos estáticos: viven en public/ ─────────────────────
+    # (build = frontend compilado, storage = fotos subidas si existe el enlace)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(build|img|storage|css|js|images|fonts|vendor-assets)(/.*)?$ public/$1$2 [L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(favicon\.ico|robots\.txt|apple-touch-icon.*\.png)$ public/$1 [L]
+
+    # ── Todo lo demás lo atiende Laravel ─────────────────────────
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Sin mod_rewrite no habría forma de bloquear nada: al menos que no se
+# pueda listar el contenido de las carpetas.
+Options -Indexes

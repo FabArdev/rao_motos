@@ -1,0 +1,1 @@
+import{Q as o,c as s,u as c,o as r}from"./app-FfAOtYwp.js";const a=["src","height"],l={__name:"AppLogo",props:{height:{type:Number,default:40}},setup(t){const e=o();return(n,p)=>(r(),s("img",{src:c(e).props.asset_url??"/img/logo.png",alt:"RAO MOTOS",height:t.height,class:"d-block rounded",style:{width:"auto","object-fit":"contain"}},null,8,a))}};export{l as _};

@@ -239,6 +239,61 @@ ALCANCE.md                # alcance, reglas de negocio y esquema (fuente de verd
 - Correr `php artisan migrate --seed` en el servidor (incluye la extensión `unaccent`; si el usuario de BD no puede `CREATE EXTENSION`, coordinar con el DBA del laboratorio).
 - Las credenciales y el nombre de la BD del entorno de tecnoweb van en `.env` (no se suben al entregable público).
 
+### Dirección del sitio (sin `/public`)
+
+El **`index.php` está en la raíz del proyecto** (no en `public/`), así que el sitio se
+abre en `.../proyecto2` y no en `.../proyecto2/public`. El `.htaccess` de la raíz
+encamina los archivos estáticos (`/build`, `/img`, `/storage`) hacia `public/`, manda
+el resto a ese `index.php` y **bloquea por HTTP lo que no debe verse** (`.env`, `app/`,
+`vendor/`, `storage/`…), porque al servir desde la raíz esas carpetas quedan al alcance
+del navegador. Requiere `mod_rewrite` y `AllowOverride All` (ambos activos en tecnoweb).
+
+`public/index.php` sigue existiendo pero solo llama al de la raíz, para que el entorno
+local (Herd, que sirve `public/`) funcione sin cambios.
+
+**`APP_URL` debe ser la dirección real y completa**, incluida la subcarpeta:
+
+```
+APP_URL=https://www.tecnoweb.org.bo/inf513/grupo02sa/proyecto2
+```
+
+De ahí salen las direcciones de imágenes, del build de Vite y los enlaces absolutos.
+Al cambiarla hay que **recompilar** el frontend (`deploy.sh` ya lo hace), porque el
+prefijo queda dentro del build.
+
+### Imágenes
+
+Las fotos **no dependen del enlace `public/storage`**. Se intenta `php artisan storage:link`,
+pero si el hosting no permite enlaces simbólicos la app lo detecta sola y sirve los
+archivos por la ruta `/media/{ruta}` (`App\Support\Media` decide cuál usar).
+
+### Actualizar el servidor: `git pull` y listo
+
+**`public/build` se versiona a propósito** (ver `.gitignore`): el frontend viaja ya
+compilado en el repositorio, así que en el servidor **no hay que correr nada** después
+del `git pull`.
+
+Qué se actualiza solo con el pull, y qué no:
+
+| Qué cambiaste | ¿Basta el `git pull`? |
+|---|---|
+| Controlador, modelo, ruta, servicio (`.php`) | ✅ Sí, al instante |
+| Texto o etiqueta de una vista (`.vue`) | ✅ Sí, **si hiciste `npm run build` antes del commit** |
+| Migración nueva | ❌ Falta `php artisan migrate --force` |
+| Dependencia nueva de composer | ❌ Falta `composer install` |
+| Algo de `config/` con la config cacheada | ❌ Falta `php artisan config:clear` |
+
+> **Lo único que hay que recordar:** las vistas Vue viven dentro del paquete compilado.
+> Si tocaste algo de `resources/js`, corré `npm run build` **antes** del commit y sumá
+> `public/build` al mismo commit; si no, el servidor seguirá mostrando la versión
+> anterior de esa pantalla aunque el `.vue` ya esté actualizado en el repo.
+>
+> Para no olvidarlo, se puede dejar que git lo haga solo al hacer commit:
+> ```bash
+> printf '#!/bin/sh\nnpm run build && git add public/build\n' > .git/hooks/pre-commit
+> chmod +x .git/hooks/pre-commit
+> ```
+
 ---
 
 *Repositorio del grupo02sa — INF-513, FICCT, UAGRM.*

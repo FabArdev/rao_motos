@@ -11,7 +11,9 @@ defineProps({
 });
 
 const fmt = (n) => `Bs. ${Number(n).toFixed(2)}`;
-const img = (p) => p.foto_completa ?? p.foto_url ?? null;
+// Solo foto_completa: foto_url es la ruta cruda del disco ("productos/x.jpg") y
+// como dirección se rompe al desplegar en un subdirectorio.
+const img = (p) => p.foto_completa ?? null;
 
 // Scroll suave al catálogo — funciona siempre (no depende del hash de la URL).
 const verRepuestos = () => {

@@ -144,6 +144,17 @@ class Usuario extends Authenticatable
         return Attribute::make(get: fn () => trim($this->nombre.' '.$this->apellidos));
     }
 
+    /**
+     * Jetstream arma esta dirección con Storage::url(), que asume el enlace
+     * public/storage. Se reemplaza por App\Support\Media para que la foto se vea
+     * también donde ese enlace no existe (servidor de la facultad).
+     */
+    public function getProfilePhotoUrlAttribute(): string
+    {
+        return \App\Support\Media::url($this->profile_photo_path)
+            ?? $this->defaultProfilePhotoUrl();
+    }
+
     protected function defaultProfilePhotoUrl(): string
     {
         $iniciales = trim(collect(explode(' ', $this->nombre_completo))

@@ -22,6 +22,7 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 /*
@@ -31,6 +32,27 @@ use Inertia\Inertia;
 | Las rutas de autenticación las registra Jetstream/Fortify.
 | Las rutas de negocio se agregan por CU (usuarios, productos, ventas, ...).
 */
+
+/*
+ * Entrega de archivos subidos (fotos de producto, galería, foto de perfil)
+ * SIN depender del enlace public/storage. En el servidor de la facultad
+ * `artisan storage:link` normalmente no puede crear el enlace simbólico y todas
+ * las imágenes salen rotas; App\Support\Media usa esta ruta como respaldo.
+ * Es pública a propósito: son las mismas imágenes que serviría public/storage.
+ */
+Route::get('media/{ruta}', function (string $ruta) {
+    $disco = Storage::disk('public');
+
+    // El archivo debe quedar dentro del disco: corta ../ y rutas absolutas.
+    $ruta = ltrim(str_replace('\\', '/', $ruta), '/');
+    if (str_contains($ruta, '..') || ! $disco->exists($ruta)) {
+        abort(404);
+    }
+
+    return $disco->response($ruta, null, [
+        'Cache-Control' => 'public, max-age=31536000',
+    ]);
+})->where('ruta', '.*')->name('media.mostrar');
 
 Route::get('/', function () {
     // Catálogo público de repuestos para la vitrina de inicio.

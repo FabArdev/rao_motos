@@ -6,6 +6,10 @@
 *.md diff=markdown
 *.php diff=php
 
+# Frontend compilado: se versiona para que el servidor lo reciba con el pull,
+# pero no tiene sentido leer sus diferencias (son archivos generados).
+public/build/** linguist-generated -diff
+
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore

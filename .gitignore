@@ -1,6 +1,8 @@
 /.phpunit.cache
 /node_modules
-/public/build
+# /public/build SÍ se versiona a propósito: así el servidor recibe el frontend
+# ya compilado con el `git pull` y no hace falta correr npm allá.
+# Antes de hacer push, si tocaste algo de resources/js: npm run build
 /public/hot
 /public/storage
 /storage/*.key
@@ -17,4 +19,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
-vite.config.js
+
+# OJO: vite.config.js NO va aquí. Sin él el servidor no puede compilar el
+# frontend con `npm run build` y el despliegue automático (deploy.sh) falla.

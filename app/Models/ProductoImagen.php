@@ -32,7 +32,7 @@ class ProductoImagen extends ModeloBase
 
     public function getUrlAttribute(): ?string
     {
-        return $this->ruta ? asset('storage/'.$this->ruta) : null;
+        return \App\Support\Media::url($this->ruta);
     }
 
     public function producto()
