@@ -71,10 +71,10 @@ class PagoFacilService
             $this->qrOverrideAmount = (float) $config['override_amount'];
         }
 
-        $this->callbackUrl = $config['callback_url'] ?: null;
+        $this->callbackUrl = ($config['callback_url'] ?? null) ?: null;
 
         $this->responseLanguage = $config['response_language'] ?? 'es';
-        $this->timezone = $config['timezone'] ?: 'America/La_Paz';
+        $this->timezone = ($config['timezone'] ?? null) ?: 'America/La_Paz';
         $this->minutosVigenciaQr = max(1, (int) ($config['qr_minutos_vigencia'] ?? 2));
     }
 
