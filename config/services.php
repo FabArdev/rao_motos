@@ -34,8 +34,10 @@ return [
     'pagofacil' => [
         'base_url' => env('PAGOFACIL_BASE_URL', 'https://masterqr.pagofacil.com.bo'),
         'api_url' => env('PAGOFACIL_API_URL', 'https://masterqr.pagofacil.com.bo/api/services/v2'),
-        'tc_token_service' => env('PAGOFACIL_TC_TOKEN_SERVICE'),
-        'tc_token_secret' => env('PAGOFACIL_TC_TOKEN_SECRET'),
+        // Se aceptan ambos nombres: PAGOFACIL_TC_* (este proyecto) y PAGOFACIL_*
+        // (el que usa el proyecto Java de referencia y el .env de la materia).
+        'tc_token_service' => env('PAGOFACIL_TC_TOKEN_SERVICE', env('PAGOFACIL_TOKEN_SERVICE')),
+        'tc_token_secret' => env('PAGOFACIL_TC_TOKEN_SECRET', env('PAGOFACIL_TOKEN_SECRET')),
         'override_amount' => env('PAGOFACIL_QR_OVERRIDE_AMOUNT'),
         'callback_url' => env('PAGOFACIL_CALLBACK_URL'),
         'response_language' => env('PAGOFACIL_RESPONSE_LANGUAGE', 'es'),

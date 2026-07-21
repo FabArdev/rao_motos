@@ -67,10 +67,7 @@ class PagoFacilService
             $this->qrOverrideAmount = (float) $config['override_amount'];
         }
 
-        $this->callbackUrl = $config['callback_url'] ?? null;
-        if (! $this->callbackUrl) {
-            $this->callbackUrl = rtrim(config('app.url'), '/').'/pagofacil/callback';
-        }
+        $this->callbackUrl = $config['callback_url'] ?: null;
 
         $this->responseLanguage = $config['response_language'] ?? 'es';
     }
@@ -205,12 +202,10 @@ class PagoFacilService
                 'company_transaction_id' => $companyTransactionId,
             ]);
 
-            $baseUrl = rtrim(config('app.url'), '/');
-            $callbackUrl = $baseUrl.'/webhook/pagofacil-simulado/venta';
+            $callbackUrl = $this->resolverCallbackUrl('/webhook/pagofacil-simulado/venta');
 
             Log::info('🔗 [PagoFácil] URL de callback construida', [
                 'app_url' => config('app.url'),
-                'base_url' => $baseUrl,
                 'callback_url' => $callbackUrl,
             ]);
 
@@ -297,12 +292,10 @@ class PagoFacilService
                 'company_transaction_id' => $companyTransactionId,
             ]);
 
-            $baseUrl = rtrim(config('app.url'), '/');
-            $callbackUrl = $baseUrl.'/webhook/pagofacil-simulado/cuota';
+            $callbackUrl = $this->resolverCallbackUrl('/webhook/pagofacil-simulado/cuota');
 
             Log::info('🔗 [PagoFácil] URL de callback construida', [
                 'app_url' => config('app.url'),
-                'base_url' => $baseUrl,
                 'callback_url' => $callbackUrl,
             ]);
 
@@ -386,10 +379,19 @@ class PagoFacilService
 
             $headers = $this->obtenerHeaders();
 
-            $body = [
-                'pagofacilTransactionId' => $transactionId,
-                'companyTransactionId' => $paymentNumber ?? $transactionId,
-            ];
+            // La API exige que pagofacilTransactionId sea entero; si el id que
+            // tenemos es nuestro código interno (VENTA-…/CUOTA-…) se consulta
+            // solo por companyTransactionId.
+            $body = [];
+
+            if (is_numeric($transactionId)) {
+                $body['pagofacilTransactionId'] = (int) $transactionId;
+            }
+
+            $companyTransactionId = $paymentNumber ?: (is_numeric($transactionId) ? null : $transactionId);
+            if ($companyTransactionId) {
+                $body['companyTransactionId'] = $companyTransactionId;
+            }
 
             Log::info('📤 [PagoFácil] Enviando consulta', [
                 'endpoint' => "{$this->apiUrl}/query-transaction",
@@ -531,6 +533,35 @@ class PagoFacilService
         ];
     }
 
+    /**
+     * PagoFácil valida el callbackUrl y rechaza (500 "Invalid Url Callback")
+     * cualquier host que no sea público: localhost, 127.0.0.1, *.test de Herd,
+     * o http sin TLS. En desarrollo se usa el callback-dummy de PagoFácil —
+     * igual que el proyecto Java de referencia — y el pago se confirma
+     * consultando query-transaction.
+     */
+    protected function resolverCallbackUrl(string $ruta): string
+    {
+        if ($this->callbackUrl) {
+            return $this->callbackUrl;
+        }
+
+        $appUrl = rtrim((string) config('app.url'), '/');
+        $host = parse_url($appUrl, PHP_URL_HOST) ?: '';
+        $esPublica = str_starts_with($appUrl, 'https://')
+            && $host !== ''
+            && ! in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            && ! str_ends_with($host, '.test')
+            && ! str_ends_with($host, '.local')
+            && str_contains($host, '.');
+
+        if ($esPublica) {
+            return $appUrl.$ruta;
+        }
+
+        return rtrim($this->apiUrl, '/').'/callback-dummy';
+    }
+
     protected function resolverMontoQr($montoOriginal): float
     {
         if ($this->qrOverrideAmount !== null) {
@@ -574,6 +605,7 @@ class PagoFacilService
                 2 => 'completed',
                 3 => 'cancelled',
                 4 => 'expired',
+                5 => 'completed',   // "Revisión": el banco ya recibió el dinero
             ];
 
             return $statusMap[(int) $statusValue] ?? 'pending';
@@ -586,7 +618,7 @@ class PagoFacilService
     {
         $normalized = strtolower(trim($status));
 
-        $completed = ['completed', 'complete', 'success', 'successful', 'paid', 'pagado', 'aprobado'];
+        $completed = ['completed', 'complete', 'success', 'successful', 'paid', 'pagado', 'aprobado', 'revisión', 'revision'];
         $cancelled = ['cancelled', 'canceled', 'rechazado', 'denied', 'failed', 'error'];
         $expired = ['expired', 'expirado', 'timeout', 'timeout_interrupted'];
 
