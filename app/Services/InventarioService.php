@@ -36,7 +36,6 @@ use App\Models\Usuario;
 
 class InventarioService
 {
-
     public function ingreso(int $productoId, int $cantidad, string $motivo): void
     {
         $inv = $this->inventarioDe($productoId);

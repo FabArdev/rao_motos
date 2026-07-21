@@ -9,7 +9,6 @@ use App\Models\Pedido;
 use App\Models\Venta;
 use App\Services\CreditoService;
 use App\Services\PagoFacilService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -44,36 +43,18 @@ class PagoController extends Controller
 
         $metodoQr = MetodoPago::where('nombre', 'QR')->value('id');
 
-        // Si ya hay un QR pendiente y no ha expirado, reusarlo
-        // Si no tiene expires_at (QR previo a la migración), se considera expirado
-        $qrExpirado = ! $cuota->pago_facil_expira_en || Carbon::parse($cuota->pago_facil_expira_en)->isPast();
-        if ($cuota->pago_facil_id_transaccion && $cuota->pago_facil_imagen_qr && $cuota->pago_facil_estado === 'pending' && ! $qrExpirado) {
-            $qrExistente = [
-                'success' => true,
-                'transaction_id' => $cuota->pago_facil_id_transaccion,
-                'payment_number' => $cuota->pago_facil_numero_pago,
-                'qr_image' => $cuota->pago_facil_imagen_qr,
-                'status' => 'pending',
-                'monto' => $monto,
-                'glosa' => "Pago cuota #{$cuota->numero_cuota}",
-                // Un QR real es data-URI base64; el fallback simulado es una URL http externa.
-                'simulado' => ! str_starts_with((string) $cuota->pago_facil_imagen_qr, 'data:'),
-            ];
+        $glosa = "Pago cuota #{$cuota->numero_cuota}";
 
-            return $this->renderQrCuota($cuota, $monto, $qrExistente, $esAdminOVendedor);
+        // Se reutiliza el QR guardado solo mientras siga vigente; si venció se
+        // genera uno nuevo y el anterior se descarta (ver TieneQrPagoFacil).
+        if ($cuota->qrPagoFacilVigente()) {
+            return $this->renderQrCuota($cuota, $monto, $cuota->datosQrPagoFacil($monto, $glosa), $esAdminOVendedor);
         }
 
         try {
-            $qr = $this->pagofacil->generarQRCuotaSimulado($cuota->id, $monto, "Pago cuota #{$cuota->numero_cuota}");
+            $qr = $this->pagofacil->generarQRCuotaSimulado($cuota->id, $monto, $glosa);
 
-            $cuota->update([
-                'metodo_pago_id' => $metodoQr,
-                'pago_facil_id_transaccion' => $qr['transaction_id'] ?? null,
-                'pago_facil_numero_pago' => $qr['payment_number'] ?? null,
-                'pago_facil_imagen_qr' => $qr['qr_image'] ?? null,
-                'pago_facil_expira_en' => isset($qr['expiration']) ? Carbon::parse($qr['expiration']) : null,
-                'pago_facil_estado' => $qr['status'] ?? 'pending',
-            ]);
+            $cuota->guardarQrPagoFacil($qr, ['metodo_pago_id' => $metodoQr]);
 
             return $this->renderQrCuota($cuota, $monto, $qr, $esAdminOVendedor);
         } catch (\Throwable $e) {
@@ -228,30 +209,19 @@ class PagoController extends Controller
 
         $monto = (float) $venta->monto_total;
 
-        // Reutilizar un QR pendiente si ya existe (evita crear una transacción por recarga).
-        if ($venta->pago_facil_id_transaccion && $venta->pago_facil_imagen_qr && $venta->pago_facil_estado === 'pending') {
-            $qrExistente = [
-                'success' => true,
-                'transaction_id' => $venta->pago_facil_id_transaccion,
-                'payment_number' => $venta->pago_facil_numero_pago,
-                'qr_image' => $venta->pago_facil_imagen_qr,
-                'status' => 'pending',
-                // Un QR real es data-URI base64; el fallback simulado es una URL http externa.
-                'simulado' => ! str_starts_with((string) $venta->pago_facil_imagen_qr, 'data:'),
-            ];
+        $glosa = "Venta {$venta->numero_venta}";
 
-            return $this->renderQrVenta($venta, $monto, $qrExistente);
+        // Se reutiliza el QR guardado solo mientras siga vigente (evita crear una
+        // transacción por recarga); si venció se genera uno nuevo y el anterior
+        // se descarta (ver TieneQrPagoFacil).
+        if ($venta->qrPagoFacilVigente()) {
+            return $this->renderQrVenta($venta, $monto, $venta->datosQrPagoFacil($monto, $glosa));
         }
 
         try {
-            $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, "Venta {$venta->numero_venta}");
+            $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, $glosa);
 
-            $venta->update([
-                'pago_facil_id_transaccion' => $qr['transaction_id'] ?? null,
-                'pago_facil_numero_pago' => $qr['payment_number'] ?? null,
-                'pago_facil_imagen_qr' => $qr['qr_image'] ?? null,
-                'pago_facil_estado' => $qr['status'] ?? 'pending',
-            ]);
+            $venta->guardarQrPagoFacil($qr);
 
             return $this->renderQrVenta($venta, $monto, $qr);
         } catch (\Throwable $e) {

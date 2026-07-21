@@ -176,6 +176,7 @@ sus compras (contado/crédito) en "Mi cuenta".
 | RN11 | Los **totales** (venta, compra) los **calcula el servidor** desde el detalle; el usuario nunca teclea el monto. |
 | RN12 | Una **tarea programada diaria** marca cuotas vencidas, calcula mora y actualiza el estado del crédito (MOROSO). |
 | RN13 | El pago por **QR se confirma por callback de PagoFácil** y la transacción se guarda en la **BD** (no en archivos). El webhook exige un identificador (payment_number/transaction_id) antes de marcar nada pagado. |
+| RN13b | El **QR de PagoFácil vence** (≈2 min, `pago_facil_expira_en` en `venta` y `pago_cuota`). Un QR guardado se reutiliza solo mientras esté vigente; al vencer se genera uno nuevo y **el anterior se descarta**. La pantalla de pago muestra la cuenta regresiva y renueva sola (máx. 5 veces seguidas, luego pide confirmación). |
 | RN14 | El registro de un cliente es **atómico**: usuario + fila `cliente` en una sola transacción. |
 | RN15 | **Anular** una compra/venta ya procesada **revierte** sus movimientos de inventario (o se restringe la anulación). |
 | RN16 | **Mora = diaria proporcional sobre la cuota vencida**, con tope: `monto_cuota × (tasa_mora_diaria/100) × días_retraso`, máx. `tope_mora_pct%` de la cuota. |
@@ -256,7 +257,7 @@ detalle_pedido : id, pedido_id→pedido(cascade), producto_id→producto, cantid
 venta : id, numero_venta(unique), cliente_id→cliente, vendedor_id→usuario, fecha, monto_total(>0),
         tipo_venta[CONTADO|CREDITO], metodo_pago[EFECTIVO|QR],
         estado[PENDIENTE|PAGADA|COMPLETADA|ANULADA] def PENDIENTE,
-        + pago_facil_(id_transaccion, imagen_qr, estado, numero_pago, respuesta_cruda)
+        + pago_facil_(id_transaccion, imagen_qr, expira_en, estado, numero_pago, respuesta_cruda)
 detalle_venta : id, venta_id→venta(cascade), producto_id→producto(null), descripcion(null),
                 cantidad(>0), precio_unitario(>0)
 

@@ -39,7 +39,6 @@ use Carbon\Carbon;
 
 class CreditoService
 {
-
     public function generar(Venta $venta, int $numeroCuotas, ?float $tasaInteres = null): Credito
     {
         $tasaInteres ??= (float) Configuracion::valor('tasa_interes_credito', 5.00);

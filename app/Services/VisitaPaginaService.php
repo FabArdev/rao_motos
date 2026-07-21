@@ -26,7 +26,6 @@ use App\Models\VisitaPagina;
 
 class VisitaPaginaService
 {
-
     private array $excluidas = ['webhook', 'pagofacil', 'livewire', 'build', 'storage'];
 
     public function debeContabilizar(string $ruta): bool

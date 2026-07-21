@@ -53,26 +53,16 @@ class MisPedidosController extends Controller
 
         $monto = (float) $venta->monto_total;
 
-        // Reutilizar un QR pendiente si ya existe.
-        if ($venta->pago_facil_id_transaccion && $venta->pago_facil_imagen_qr && $venta->pago_facil_estado === 'pending') {
-            $qr = [
-                'success' => true,
-                'transaction_id' => $venta->pago_facil_id_transaccion,
-                'payment_number' => $venta->pago_facil_numero_pago,
-                'qr_image' => $venta->pago_facil_imagen_qr,
-                'status' => 'pending',
-                'simulado' => ! str_starts_with((string) $venta->pago_facil_imagen_qr, 'data:'),
-            ];
+        $glosa = "Pedido #{$pedido->id}";
+
+        // Se reutiliza el QR guardado solo mientras siga vigente; si venció se
+        // genera uno nuevo y el anterior se descarta (ver TieneQrPagoFacil).
+        if ($venta->qrPagoFacilVigente()) {
+            $qr = $venta->datosQrPagoFacil($monto, $glosa);
         } else {
             try {
-                $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, "Pedido #{$pedido->id}");
-                $venta->update([
-                    'metodo_pago' => 'QR',
-                    'pago_facil_id_transaccion' => $qr['transaction_id'] ?? null,
-                    'pago_facil_numero_pago' => $qr['payment_number'] ?? null,
-                    'pago_facil_imagen_qr' => $qr['qr_image'] ?? null,
-                    'pago_facil_estado' => $qr['status'] ?? 'pending',
-                ]);
+                $qr = $this->pagofacil->generarQRVentaSimulado($venta->id, $monto, $glosa);
+                $venta->guardarQrPagoFacil($qr, ['metodo_pago' => 'QR']);
             } catch (\Throwable $e) {
                 Log::error('PagoFácil QR pedido cliente falló', ['pedido' => $pedido->id, 'error' => $e->getMessage()]);
 

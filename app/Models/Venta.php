@@ -21,20 +21,25 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\TieneQrPagoFacil;
+
 class Venta extends ModeloBase
 {
+    use TieneQrPagoFacil;
+
     protected $table = 'venta';
 
     protected $fillable = [
         'numero_venta', 'cliente_id', 'vendedor_id', 'fecha', 'monto_total',
         'tipo_venta', 'metodo_pago', 'estado',
         'pago_facil_id_transaccion', 'pago_facil_numero_pago',
-        'pago_facil_imagen_qr', 'pago_facil_estado', 'pago_facil_respuesta_cruda',
+        'pago_facil_imagen_qr', 'pago_facil_expira_en', 'pago_facil_estado', 'pago_facil_respuesta_cruda',
     ];
 
     protected $casts = [
         'fecha' => 'datetime',
         'monto_total' => 'decimal:2',
+        'pago_facil_expira_en' => 'datetime',
     ];
 
     public function cliente()

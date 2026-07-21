@@ -41,6 +41,10 @@ return [
         'override_amount' => env('PAGOFACIL_QR_OVERRIDE_AMOUNT'),
         'callback_url' => env('PAGOFACIL_CALLBACK_URL'),
         'response_language' => env('PAGOFACIL_RESPONSE_LANGUAGE', 'es'),
+        // PagoFácil devuelve expirationDate en hora local de Bolivia, sin offset.
+        'timezone' => env('PAGOFACIL_TIMEZONE', 'America/La_Paz'),
+        // Vigencia asumida si la respuesta no trae expirationDate (minutos).
+        'qr_minutos_vigencia' => env('PAGOFACIL_QR_MINUTOS_VIGENCIA', 2),
     ],
 
 ];

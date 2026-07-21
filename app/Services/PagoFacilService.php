@@ -54,6 +54,10 @@ class PagoFacilService
 
     protected ?string $responseLanguage = null;
 
+    protected string $timezone = 'America/La_Paz';
+
+    protected int $minutosVigenciaQr = 2;
+
     public function __construct()
     {
         $config = config('services.pagofacil', []);
@@ -70,6 +74,42 @@ class PagoFacilService
         $this->callbackUrl = $config['callback_url'] ?: null;
 
         $this->responseLanguage = $config['response_language'] ?? 'es';
+        $this->timezone = $config['timezone'] ?: 'America/La_Paz';
+        $this->minutosVigenciaQr = max(1, (int) ($config['qr_minutos_vigencia'] ?? 2));
+    }
+
+    /**
+     * El QR de PagoFácil vive poco (≈2 min) y su expirationDate viene en hora
+     * local de Bolivia SIN offset ("2026-07-21 00:15:31"). Si se guardara tal
+     * cual, con la app en UTC quedaría 4 horas corrida y el QR se vería
+     * eternamente vencido (o eternamente vigente). Se interpreta en la zona de
+     * PagoFácil y se devuelve en ISO-8601 con offset, listo para el navegador.
+     */
+    protected function normalizarExpiracion(?string $valor): string
+    {
+        $porDefecto = now()->addMinutes($this->minutosVigenciaQr);
+
+        if (! $valor) {
+            return $porDefecto->toIso8601String();
+        }
+
+        try {
+            // Si ya trae zona/offset (ISO-8601), se respeta tal cual.
+            $traeZona = (bool) preg_match('/(Z|[+-]\d{2}:?\d{2})$/', trim($valor));
+
+            $fecha = $traeZona
+                ? \Carbon\Carbon::parse($valor)
+                : \Carbon\Carbon::parse($valor, $this->timezone);
+
+            return $fecha->setTimezone(config('app.timezone'))->toIso8601String();
+        } catch (\Throwable $e) {
+            Log::warning('⚠️ [PagoFácil] expirationDate no interpretable', [
+                'valor' => $valor,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $porDefecto->toIso8601String();
+        }
     }
 
     protected function obtenerBearerToken(): string
@@ -260,7 +300,7 @@ class PagoFacilService
                     'status' => 'pending',
                     'monto' => $monto,
                     'glosa' => $glosa ?? "Venta #{$ventaId}",
-                    'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
+                    'expiration' => $this->normalizarExpiracion($response['expirationDate'] ?? null),
                 ];
             } catch (\Exception $e) {
                 Log::warning('⚠️ [PagoFácil] API real falló, consultando servicios habilitados...', [
@@ -350,7 +390,7 @@ class PagoFacilService
                     'status' => 'pending',
                     'monto' => $monto,
                     'glosa' => $glosa ?? "Pago Cuota #{$cuotaId}",
-                    'expiration' => $response['expirationDate'] ?? now()->addHours(2)->toIso8601String(),
+                    'expiration' => $this->normalizarExpiracion($response['expirationDate'] ?? null),
                 ];
             } catch (\Exception $e) {
                 Log::warning('⚠️ [PagoFácil] API real falló, consultando servicios habilitados...', [
@@ -528,7 +568,7 @@ class PagoFacilService
             'status' => 'pending',
             'monto' => $monto,
             'glosa' => $glosa,
-            'expiration' => now()->addHours(2)->toIso8601String(),
+            'expiration' => now()->addMinutes($this->minutosVigenciaQr)->toIso8601String(),
             'simulado' => true,
         ];
     }

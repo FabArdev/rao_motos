@@ -19,8 +19,12 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\TieneQrPagoFacil;
+
 class PagoCuota extends ModeloBase
 {
+    use TieneQrPagoFacil;
+
     protected $table = 'pago_cuota';
 
     protected $fillable = [
